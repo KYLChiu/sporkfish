@@ -21,10 +21,10 @@ def test_engine_e2e():
 
     # Simulate play
     board = chess.Board()
-    result = engine.play(board, chess.engine.Limit(time=30.0))
-    assert result is not None
-    # result2 = engine.play(board, chess.engine.Limit(time=30.0))
-    # assert result2 is not None
+    for _ in range(4):
+        result = engine.play(board, chess.engine.Limit(time=30.0))
+        assert result is not None
+        board.push(chess.Move.from_uci(str(result.move)))
 
     # Clean up: remove the 'dist' directory
     subprocess.run(f"rm -r {dist_path}", shell=True)

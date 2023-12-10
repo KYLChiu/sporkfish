@@ -1,22 +1,19 @@
 import chess
-from typing import Optional
+from typing import Optional, Dict, Tuple
 
 
 class TranspositionTable:
-    def __init__(self) -> None:
+    def __init__(self, dct: Dict[int, Tuple[int, float]]) -> None:
         """
-        Initialize the TranspositionTable object.
+        Initialize the TranspositionTable object, wrapping a shared_dict.
         """
-        # Eventually use Manager.dict() here from multiprocessing
-        # Issues arise when attempting to pickle any object with Manager, needs rethinking
-        self._table = {}
+        self._table = dct
 
     def store(
         self,
         zobrist_hash: int,
         depth: int,
         score: float,
-        best_move: Optional[chess.Move] = None,
     ) -> None:
         """
         Store an entry in the transposition table.
@@ -25,9 +22,8 @@ class TranspositionTable:
         - zobrist_hash (int): The Zobrist hash value for the board position.
         - depth (int): The depth at which the score was calculated.
         - score (float): The score associated with the board position.
-        - best_move (Optional[chess.Move]): The best move associated with the board position.
         """
-        entry = {"depth": depth, "score": score, "best_move": best_move}
+        entry = {"depth": depth, "score": score}
         self._table[zobrist_hash] = entry
 
     def probe(self, zobrist_hash: int, depth: int) -> Optional[dict]:

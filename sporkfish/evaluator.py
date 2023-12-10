@@ -1,5 +1,6 @@
 import chess
 from typing import Tuple
+import numpy as np
 
 
 # Piece-Square Table Only (PeSTO) evaluation
@@ -876,19 +877,39 @@ class Evaluator:
         return phase_value
 
     def evaluate(self, board: chess.Board) -> float:
+        if board.is_stalemate():
+            return 0.0
+
+        if board.is_checkmate():
+            return float("inf") if board.turn == chess.WHITE else -float("inf")
+
         phase = self._compute_phase(board)
-        scores = {chess.WHITE: 0, chess.BLACK: 0}
+
+        mg = {
+            chess.WHITE: 0,
+            chess.BLACK: 0,
+        }
+        eg = {
+            chess.WHITE: 0,
+            chess.BLACK: 0,
+        }
 
         for square in range(64):
             piece = board.piece_at(square)
             if piece:
-                scores[piece.color] += (
+                mg[piece.color] += (
                     self.MG_PESTO[piece.piece_type][63 - square]
                     + self.MG_PIECE_VALUES[piece.piece_type]
                 )
+                eg[piece.color] += (
+                    self.EG_PESTO[piece.piece_type][63 - square]
+                    + self.EG_PIECE_VALUES[piece.piece_type]
+                )
 
-        mg_score, eg_score = (
-            scores[board.turn] - scores[not board.turn],
-            scores[board.turn] - scores[not board.turn],
-        )
-        return ((mg_score * (256 - phase)) + (eg_score * phase)) / 256
+        mg_score = mg[board.turn] - mg[not board.turn]
+        eg_score = eg[board.turn] - eg[not board.turn]
+
+        mg_phase = min(24, phase)
+        eg_phase = 24 - mg_phase
+
+        return ((mg_score * mg_phase) + (eg_score * eg_phase)) / 24

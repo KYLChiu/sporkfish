@@ -1,3 +1,5 @@
 chess==1.10.0
+numpy==1.25.0
+pathos==0.3.0
 pyinstaller==6.2.0
 pytest==7.3.1
