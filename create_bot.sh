@@ -34,5 +34,5 @@ rm -r build
 
 # Run the bot
 cd ../lichess-bot/
-source ./venv/bin/activate
+# source ./venv/bin/activate
 python3 lichess-bot.py -v

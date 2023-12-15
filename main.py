@@ -9,7 +9,7 @@ import sporkfish.utils as utils
 
 if __name__ == "__main__":
     # Config should eventually go in engine_config
-    depth = 3
+    depth = 4
     board = chess.Board()
     evaluator = evaluator.Evaluator()
     searcher = searcher.Searcher(evaluator, depth)

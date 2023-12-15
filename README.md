@@ -9,7 +9,7 @@ Sporkfish is a Python-based chess engine. Within the realm of chess programming,
 
 ### Lichess
 
-Check out the bot on lichess [here](https://lichess.org/@/Sporkfish)! It currently plays at approximately **1400** lichess rating (a beginner/intermediate club player). To set up your own bot, follow the instructions at [lichess-bot](https://github.com/lichess-bot-devs/lichess-bot) API. The executable can be created using [PyInstaller](https://pypi.org/project/pyinstaller/):
+Check out the bot on lichess [here](https://lichess.org/@/Sporkfish)! To set up your own bot, follow the instructions at [lichess-bot](https://github.com/lichess-bot-devs/lichess-bot) API. The executable can be created using [PyInstaller](https://pypi.org/project/pyinstaller/):
 
 ```
 pip install -r requirements.txt
@@ -37,12 +37,7 @@ Evaluation:
 Communication:
 * [UCI](https://www.chessprogramming.org/UCI)
 
-## Work in progress
-
-* [NNUE evaluation](https://www.chessprogramming.org/NNUE)
-* Running on AWS as a systemd process, automating the bot on lichess
-
-## Things to consider for future
-
-* Speed (Numba / CUDA / SIMD)
-* Parallelisation
+Resources:
+* [Some techniques](https://stackoverflow.com/questions/16500739/chess-high-branching-factor/16642804#16642804)
+* [Black Marlin](https://github.com/jnlt3/blackmarlin?tab=readme-ov-file#efficiently-updatable-neural-networks
+* [Explaining beta-cutoff](https://stackoverflow.com/questions/2533219/alpha-beta-cutoff)

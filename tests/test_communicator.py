@@ -35,4 +35,5 @@ def test_uci(run_command):
 
 def test_go(run_command):
     captured_output = run_command("go")
+    print(captured_output)
     assert "bestmove" in captured_output

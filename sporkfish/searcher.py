@@ -1,13 +1,19 @@
 import chess
-from typing import Tuple
-from concurrent.futures import ProcessPoolExecutor
-from copy import deepcopy
+from typing import Tuple, Callable, List
+from pathos.multiprocessing import ProcessPool
+from multiprocessing import Manager
 import os
 
-from . import evaluator
-from . import statistics
-from . import transposition_table
-from . import zobrist_hash
+from .evaluator import Evaluator
+from .statistics import Statistics
+from .transposition_table import TranspositionTable
+from .zobrist_hash import ZobristHash
+from enum import Enum, auto
+
+
+class SearchMode(Enum):
+    SINGLE_PROCESS = auto()
+    LAZY_SMP = auto()
 
 
 class Searcher:
@@ -19,7 +25,16 @@ class Searcher:
     - max_depth (int): The maximum search depth for the minimax algorithm.
     """
 
-    def __init__(self, evaluator: evaluator.Evaluator, max_depth: int = 5) -> None:
+    _manager = Manager()
+    _dict = _manager.dict()
+    _value = _manager.Value("i", 0)
+
+    def __init__(
+        self,
+        evaluator: Evaluator,
+        max_depth: int = 5,
+        mode: SearchMode = SearchMode.SINGLE_PROCESS,
+    ) -> None:
         """
         Initialize the Searcher instance with mutable statistics
 
@@ -28,15 +43,19 @@ class Searcher:
         :param max_depth: The maximum search depth for the minimax algorithm.
                          Default is 5.
         :type max_depth: int
+        :param node: Search type to use (e.g negamax single process or lazy SMP)
+        :type mode: SearchMode
         :return: None
         """
 
         self._evaluator = evaluator
         self._max_depth = max_depth
-        self._statistics = statistics.Statistics()
-        self._zorbist_hash = zobrist_hash.ZobristHash()
-        self._transposition_table = transposition_table.TranspositionTable()
-        self._killer_moves = {}
+        self._zorbist_hash = ZobristHash()
+        self._statistics = Statistics(Searcher._value)
+        self._transposition_table = TranspositionTable(Searcher._dict)
+        self._mode = mode
+        if self._mode is SearchMode.LAZY_SMP:
+            self._pool = ProcessPool()
 
     def _mvv_lva_heuristic(self, board: chess.Board, move: chess.Move) -> int:
         """
@@ -49,28 +68,33 @@ class Searcher:
         Returns:
             int: The heuristic value of the capturing move based on the value of the captured piece.
         """
-        piece_values = {
-            chess.PAWN: 1,
-            chess.KNIGHT: 3,
-            chess.BISHOP: 3,
-            chess.ROOK: 5,
-            chess.QUEEN: 9,
-        }
+        # Columns: attacker P, N, B, R, Q, K
+        MVV_LVA = [
+            [15, 14, 13, 12, 11, 10],  # victim P
+            [25, 24, 23, 22, 21, 10],  # victim N
+            [35, 34, 33, 32, 31, 30],  # victim B
+            [45, 44, 43, 42, 41, 40],  # victim R
+            [55, 54, 53, 52, 51, 50],  # victim Q
+            [0, 0, 0, 0, 0, 0],  # victim K
+        ]
 
         captured_piece = board.piece_at(move.to_square)
-        if captured_piece is not None and board.is_capture(move):
-            return piece_values.get(captured_piece.piece_type, 0)
+        moving_piece = board.piece_at(move.from_square)
+
+        if (
+            captured_piece is not None
+            and moving_piece is not None
+            and board.is_capture(move)
+        ):
+            return MVV_LVA[captured_piece.piece_type - 1][moving_piece.piece_type - 1]
         else:
             return 0
 
-    def _killer_heuristic(self, move: chess.Move) -> int:
-        return -self._killer_moves.get(move, 0)
-
-    def _quiescence_search(
+    def _quiescence(
         self, board: chess.Board, depth: int, alpha: float, beta: float
     ) -> float:
         """
-        Perform a quiescence search to improve the evaluation in non-capturing positions.
+        Quiescence search to help the horizon effect (improving checking of tactical possibilities).
 
         Parameters:
             board (chess.Board): The chess board.
@@ -81,6 +105,9 @@ class Searcher:
         Returns:
             int: The evaluated score after quiescence search.
         """
+
+        self._statistics.increment()
+
         stand_pat = self._evaluator.evaluate(board)
         if depth == 0:
             return stand_pat
@@ -92,7 +119,7 @@ class Searcher:
 
         for move in (move for move in board.legal_moves if board.is_capture(move)):
             board.push(move)
-            score = -self._quiescence_search(board, depth - 1, -beta, -alpha)
+            score = -self._quiescence(board, depth - 1, -beta, -alpha)
             board.pop()
 
             if score >= beta:
@@ -103,47 +130,66 @@ class Searcher:
 
         return alpha
 
-    def _task(self, board, depth, alpha, beta):
+    def _negamax(
+        self,
+        board: chess.Board,
+        depth: int,
+        alpha: float,
+        beta: float,
+    ) -> float:
+        """
+        Negamax implementation alpha-beta pruning. For non-root nodes.
+
+        Args:
+            board: The current state of the chess board.
+            depth: The remaining depth to search.
+            alpha: The alpha value for alpha-beta pruning.
+            beta: The beta value for alpha-beta pruning.
+
+        Returns:
+            The evaluation score of the current board position.
+
+        Note:
+            This method uses alpha-beta pruning for efficiency and includes
+            move ordering using MVV-LVA.
+
+        """
         self._statistics.increment()
         value = -float("inf")
-        best_move = None
 
         # Probe the transposition table for an existing entry
-        hash = self._zorbist_hash.hash(board)
-        tt_entry = self._transposition_table.probe(hash, depth)
+        hash_value = self._zorbist_hash.hash(board)
+        tt_entry = self._transposition_table.probe(hash_value, depth)
         if tt_entry:
             return tt_entry["score"]
 
-        # Base case: devolve to static evaluation via quiescence search
+        # Base case: devolve to quiescence search
+        # We currently only expect max 4 captures to reach a quiet position
         if depth == 0:
-            return self._quiescence_search(board, self._max_depth // 3, alpha, beta)
+            return self._quiescence(board, 4, alpha, beta)
 
-        # Move ordering via MVV-LVA and killer heuristic to encourage aggressive pruning
+        # Move ordering via MVV-LVA to encourage aggressive pruning
         legal_moves = sorted(
             board.legal_moves,
-            key=lambda move: (
-                self._mvv_lva_heuristic(board, move),
-                self._killer_heuristic(move),
-            ),
+            key=lambda move: (self._mvv_lva_heuristic(board, move),),
             reverse=True,
         )
 
         for move in legal_moves:
-            # Depth first search
             board.push(move)
-            child_value = -self._task(board, depth - 1, -beta, -alpha)
+            child_value = -self._negamax(board, depth - 1, -beta, -alpha)
             board.pop()
 
             value = max(value, child_value)
             alpha = max(alpha, value)
+
             if alpha >= beta:
-                self._transposition_table.store(hash, depth, value, best_move)
-                self._killer_moves[best_move] = depth
+                self._transposition_table.store(hash, depth, value)
                 break
 
         return value
 
-    def _negamax_search(
+    def _negamax_sp(
         self,
         board: chess.Board,
         depth: int,
@@ -151,7 +197,52 @@ class Searcher:
         beta: float,
     ) -> Tuple[float, chess.Move]:
         """
-        Negamax search with fail-soft alpha-beta pruning.
+        Entry point for negamax search with fail-soft alpha-beta pruning, single process.
+
+        :param board: The current chess board position.
+        :type board: chess.Board
+        :param depth: The current search depth.
+        :type depth: int
+        :param alpha: Alpha value for alpha-beta pruning.
+        :type alpha: float
+        :param beta: Beta value for alpha-beta pruning.
+        :type beta: float
+        :return: Tuple containing the best move and its value.
+        :rtype: Tuple[float, chess.Move]
+        """
+        value = -float("inf")
+        best_move = None
+
+        legal_moves = sorted(
+            board.legal_moves,
+            key=lambda move: (self._mvv_lva_heuristic(board, move),),
+            reverse=True,
+        )
+
+        for move in legal_moves:
+            board.push(move)
+            child_value = -self._negamax(board, depth - 1, -beta, -alpha)
+            board.pop()
+
+            if value < child_value:
+                value = child_value
+                best_move = move
+
+            alpha = max(alpha, value)
+            if alpha >= beta:
+                break
+
+        return -value, best_move
+
+    def _negamax_lazy_smp(
+        self,
+        board: chess.Board,
+        depth: int,
+        alpha: float,
+        beta: float,
+    ) -> Tuple[float, chess.Move]:
+        """
+        Entry point for negamax search with fail-soft alpha-beta pruning with lazy symmetric multiprocessing.
 
         :param board: The current chess board position.
         :type board: chess.Board
@@ -165,43 +256,19 @@ class Searcher:
         :rtype: Tuple[float, chess.Move]
         """
 
-        value = -float("inf")
-        best_move = None
+        # Let processes race down lazily and see who completes first
+        # Where does the asymmetry come from?
+        task = lambda _: self._negamax_sp(board, depth, alpha, beta)
+        futures = []
+        for i in range(os.cpu_count() // 2):
+            futures.append(self._pool.apipe(task, i))
 
-        legal_moves = sorted(
-            board.legal_moves,
-            key=lambda move: (
-                self._mvv_lva_heuristic(board, move),
-                self._killer_heuristic(move),
-            ),
-            reverse=True,
-        )
-
-        for move in legal_moves:
-            board.push(move)
-            child_value = -self._task(board, depth - 1, -beta, -alpha)
-            board.pop()
-
-            if child_value > value:
-                value = child_value
-                best_move = move
-
-        return value, best_move
-
-        # with ProcessPoolExecutor(max_workers=os.cpu_count()) as executor:
-        #     results = []
-        #     for move in legal_moves:
-        #         new_board = board.copy()
-        #         new_board.push(move)
-        #         results.append(
-        #             -executor.submit(
-        #                 self._task, new_board, depth - 1, -beta, -alpha
-        #             ).result()
-        #         )
-
-        #     idx, value = max(enumerate(results), key=lambda x: x[1])
-        #     best_move = legal_moves[idx]
-        #     return value, best_move
+        while True:
+            for future in futures:
+                if future.ready():
+                    return future.get()
+            else:
+                continue  # Continue the loop if no result is ready yet
 
     def search(self, board: chess.Board) -> chess.Move:
         """
@@ -213,18 +280,26 @@ class Searcher:
         :rtype: chess.Move
         """
         self._statistics.reset()
-        best_move = None
-        best_value = -float("inf")
         alpha = -float("inf")
         beta = float("inf")
 
-        # Iterative deepening
-        # for depth in range(1, self._max_depth + 1):
-        value, move = self._negamax_search(board, self._max_depth, alpha, beta)
-        if value > best_value:
-            best_value = value
-            best_move = move
+        # TODO: add iterative deepening
+        if self._mode is SearchMode.SINGLE_PROCESS:
+            score, move = self._negamax_sp(board, self._max_depth, alpha, beta)
+        elif self._mode is SearchMode.LAZY_SMP:
+            score, move = self._negamax_lazy_smp(board, self._max_depth, alpha, beta)
+        else:
+            raise TypeError("Invalid enum type given for SearchMode.")
 
-        print(f"Nodes per second: {self._statistics.nodes_per_second()}")
-        print(f"Total nodes visited: {self._statistics.nodes()}")
-        return best_move
+        fields = {
+            "depth": self._max_depth,
+            "time": round(1000 * self._statistics.start_time),
+            "nodes": self._statistics.nodes_visited.value,
+            "nps": int(self._statistics.nodes_per_second()),
+            "score cp": int(score),
+            "pv": move,  # Incorrect but will do for now
+        }
+        info_str = " ".join(f"{k} {v}" for k, v in fields.items())
+        print(f"info {info_str}", flush=True)
+
+        return move
