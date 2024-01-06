@@ -8,7 +8,7 @@ from . import opening_book
 
 
 def create_engine():
-    depth = 3
+    depth = 4
     eval = evaluator.Evaluator()
     search = searcher.Searcher(eval, depth)
     ob = opening_book.OpeningBook()
