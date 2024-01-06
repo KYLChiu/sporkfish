@@ -3,6 +3,7 @@ from typing import Tuple, Callable, List
 from pathos.multiprocessing import ProcessPool
 from multiprocessing import Manager
 import os
+import logging
 
 from .evaluator import Evaluator
 from .statistics import Statistics
@@ -257,7 +258,7 @@ class Searcher:
         """
 
         # Let processes race down lazily and see who completes first
-        # Where does the asymmetry come from?
+        # We need to add more asymmetry but a task for later
         task = lambda _: self._negamax_sp(board, depth, alpha, beta)
         futures = []
         for i in range(os.cpu_count() // 2):
@@ -296,10 +297,12 @@ class Searcher:
             "time": round(1000 * self._statistics.start_time),
             "nodes": self._statistics.nodes_visited.value,
             "nps": int(self._statistics.nodes_per_second()),
-            "score cp": int(score),
+            "score cp": int(score)
+            if score not in {float("inf"), -float("inf")}
+            else float("nan"),
             "pv": move,  # Incorrect but will do for now
         }
         info_str = " ".join(f"{k} {v}" for k, v in fields.items())
-        print(f"info {info_str}", flush=True)
+        logging.info(f"info {info_str}")
 
         return move

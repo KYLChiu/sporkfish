@@ -1,4 +1,5 @@
 import multiprocessing
+import logging
 
 
 def run_uci():
@@ -21,6 +22,13 @@ if __name__ == "__main__":
     multiprocessing.freeze_support()
     from sporkfish import uci_client, uci_communicator, lichess_bot
 
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="[%(levelname)s][%(asctime)s] %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+
+    # Should really be an enum but a nice task to move everything to Sporkfish config
     if mode == "LICHESS":
         run_lichess()
     else:
