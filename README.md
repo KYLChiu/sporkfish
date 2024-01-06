@@ -11,9 +11,14 @@ Sporkfish is a Python-based chess engine. Within the realm of chess programming,
 
 Check out the bot on lichess [here](https://lichess.org/@/Sporkfish)! To run the bot, create a file called `api_token.txt` containing your Lichess bot API token. Then run:
 ```
-python main.py
+python3 main.py
 ```
-Once you create a game via your bot account, the bot will automatically play. We currently only support playing a single game at once, and do not support reconnecting to an existing game.
+Once you create a game via your bot account, the bot will automatically play. We currently do not support simultaneous games.
+
+The code is also pypy compatible, i.e. you can instead use:
+```
+pypy3 main.py
+```
 
 ### UCI Engine
 
