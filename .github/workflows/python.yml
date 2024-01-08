@@ -34,4 +34,4 @@ jobs:
         env:
           API_TOKEN: ${{ secrets.API_TOKEN }}
       - name: Run tests
-        run: pytest
+        run: pytest -sv
