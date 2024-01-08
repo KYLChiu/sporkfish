@@ -109,12 +109,6 @@ class Searcher:
 
         self._statistics.increment()
 
-        if board.is_checkmate():
-            return -float("inf")
-
-        if board.is_stalemate():
-            return 0.0
-
         stand_pat = self._evaluator.evaluate(board)
         if depth == 0:
             return stand_pat
@@ -169,12 +163,6 @@ class Searcher:
         """
         self._statistics.increment()
         value = -float("inf")
-
-        if board.is_checkmate():
-            return value
-
-        if board.is_stalemate():
-            return 0.0
 
         # Probe the transposition table for an existing entry
         hash_value = self._zorbist_hash.hash(board)

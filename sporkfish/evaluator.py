@@ -893,17 +893,16 @@ class Evaluator:
             chess.BLACK: 0,
         }
 
-        # Flips the board vertically
-        # The first square in the table [0] is square A8 and the last square [63] is H1.
-        # This means that it can be used directly for black, for white you have flip it vertically so you can take the square XOR 56 for white.
-        # So if you want to calculate the MG PST value of a rook on square 'sq', if the rook is WHITE you take value pieceSquareScore[MG][ROOK][sq ^ 56]
-        # If the rook is BLACK you take pieceSquareScore[MG][ROOK][sq].
-        flip = lambda square, color: square ^ 56 if not color else square
+        # Flips the board vertically for black
+        # Assumes:
+        # - Chess board implements A1 as first element, H8 as last
+        # - Piece square table implements A8 as first element, H1 as last element
+        flip = lambda square, color: square ^ 56 if color else square
 
         phase = 0
 
         for square in range(64):
-            piece = board.piece_at(square)
+            piece = board.piece_at(square ^ 56)
             if piece:
                 # Could initialise these at init time - task for future
                 mg[piece.color] += (
