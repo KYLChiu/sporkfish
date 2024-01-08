@@ -1,6 +1,5 @@
 import random
 import chess
-from . import utils
 
 
 class ZobristHash:

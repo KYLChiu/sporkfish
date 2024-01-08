@@ -3,7 +3,7 @@ import logging
 
 
 def run_uci():
-    print("Running UCI...")
+    logging.info("Running UCI...")
     client = uci_client.UCIClient(uci_communicator.ResponseMode.PRINT)
     while True:
         message = input()
@@ -11,7 +11,7 @@ def run_uci():
 
 
 def run_lichess():
-    print("Running Lichess...")
+    logging.info("Running Lichess...")
     lichess_client = lichess_bot.LichessBot(token=open("api_token.txt").read())
     lichess_client.run()
 
@@ -27,6 +27,8 @@ if __name__ == "__main__":
         format="[%(levelname)s][%(asctime)s] %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
+
+    logging.info("----- Sporkfish -----")
 
     # Should really be an enum but a nice task to move everything to Sporkfish config
     if mode == "LICHESS":

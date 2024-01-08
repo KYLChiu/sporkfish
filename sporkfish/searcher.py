@@ -1,5 +1,5 @@
 import chess
-from typing import Tuple, Callable, List
+from typing import Tuple
 from pathos.multiprocessing import ProcessPool
 from multiprocessing import Manager
 import os
@@ -19,11 +19,7 @@ class SearchMode(Enum):
 
 class Searcher:
     """
-    Move searching class.
-
-    Attributes:
-    - evaluator (Evaluator): The chess board evaluator.
-    - max_depth (int): The maximum search depth for the minimax algorithm.
+    Dynamic best move searching class.
     """
 
     _manager = Manager()
@@ -37,7 +33,7 @@ class Searcher:
         mode: SearchMode = SearchMode.SINGLE_PROCESS,
     ) -> None:
         """
-        Initialize the Searcher instance with mutable statistics
+        Initialize the Searcher instance with mutable statistics.
 
         :param evaluator: The chess board evaluator.
         :type evaluator: evaluator.Evaluator
@@ -57,6 +53,10 @@ class Searcher:
         self._mode = mode
         if self._mode is SearchMode.LAZY_SMP:
             self._pool = ProcessPool()
+
+    @property
+    def evaluator(self):
+        return self._evaluator
 
     def _mvv_lva_heuristic(self, board: chess.Board, move: chess.Move) -> int:
         """
@@ -109,6 +109,12 @@ class Searcher:
 
         self._statistics.increment()
 
+        if board.is_checkmate():
+            return -float("inf")
+
+        if board.is_stalemate():
+            return 0.0
+
         stand_pat = self._evaluator.evaluate(board)
         if depth == 0:
             return stand_pat
@@ -118,7 +124,13 @@ class Searcher:
         if alpha < stand_pat:
             alpha = stand_pat
 
-        for move in (move for move in board.legal_moves if board.is_capture(move)):
+        legal_moves = sorted(
+            (move for move in board.legal_moves if board.is_capture(move)),
+            key=lambda move: (self._mvv_lva_heuristic(board, move),),
+            reverse=True,
+        )
+
+        for move in legal_moves:
             board.push(move)
             score = -self._quiescence(board, depth - 1, -beta, -alpha)
             board.pop()
@@ -158,6 +170,12 @@ class Searcher:
         self._statistics.increment()
         value = -float("inf")
 
+        if board.is_checkmate():
+            return value
+
+        if board.is_stalemate():
+            return 0.0
+
         # Probe the transposition table for an existing entry
         hash_value = self._zorbist_hash.hash(board)
         tt_entry = self._transposition_table.probe(hash_value, depth)
@@ -166,6 +184,7 @@ class Searcher:
 
         # Base case: devolve to quiescence search
         # We currently only expect max 4 captures to reach a quiet position
+        # This is not ideal, but otherwise the search becomes incredibly slow
         if depth == 0:
             return self._quiescence(board, 4, alpha, beta)
 
@@ -185,8 +204,9 @@ class Searcher:
             alpha = max(alpha, value)
 
             if alpha >= beta:
-                self._transposition_table.store(hash, depth, value)
                 break
+
+        self._transposition_table.store(hash_value, depth, value)
 
         return value
 
@@ -212,13 +232,19 @@ class Searcher:
         :rtype: Tuple[float, chess.Move]
         """
         value = -float("inf")
-        best_move = None
+
+        hash_value = self._zorbist_hash.hash(board)
 
         legal_moves = sorted(
             board.legal_moves,
             key=lambda move: (self._mvv_lva_heuristic(board, move),),
             reverse=True,
         )
+
+        # Guarantee a move if available
+        best_move = legal_moves[0] if len(legal_moves) > 0 else None
+        if not best_move:
+            return value, None
 
         for move in legal_moves:
             board.push(move)
@@ -233,7 +259,9 @@ class Searcher:
             if alpha >= beta:
                 break
 
-        return -value, best_move
+        self._transposition_table.store(hash_value, depth, value)
+
+        return value, best_move
 
     def _negamax_lazy_smp(
         self,
@@ -271,14 +299,14 @@ class Searcher:
             else:
                 continue  # Continue the loop if no result is ready yet
 
-    def search(self, board: chess.Board) -> chess.Move:
+    def search(self, board: chess.Board) -> Tuple[float, chess.Move]:
         """
         Perform a chess move search.
 
         :param board: The current chess board position.
         :type board: chess.Board
-        :return: The recommended move based on the search.
-        :rtype: chess.Move
+        :return: The best score and move based on the search.
+        :rtype: Tuple[float, chess.Move]
         """
         self._statistics.reset()
         alpha = -float("inf")
@@ -305,4 +333,4 @@ class Searcher:
         info_str = " ".join(f"{k} {v}" for k, v in fields.items())
         logging.info(f"info {info_str}")
 
-        return move
+        return score, move

@@ -30,9 +30,9 @@ r2qnrnk/p2b2b1/1p1p2pp/2pPpp2/1PP1P3/PRNBB3/3QNPPP/5RK1 w - - bm f4; id "BK.24";
 
 
 def analyser(epd: str):
-    engine = uci_client.UCIClient(uci_communicator.ResponseMode.RETURN)
-    epd_info = engine._board.set_epd(epd)
-    best_move = chess.Move.from_uci(engine.send_command("go").split()[1])
+    client = uci_client.UCIClient(uci_communicator.ResponseMode.RETURN)
+    epd_info = client.board.set_epd(epd)
+    best_move = chess.Move.from_uci(client.send_command("go").split()[1])
     print(best_move, epd_info["bm"])
     if best_move in epd_info["bm"]:
         return 1.0

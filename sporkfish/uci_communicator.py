@@ -1,7 +1,8 @@
 from enum import Enum, auto
 import chess
-import chess.polyglot
 import sys
+import logging
+
 from . import engine
 
 
@@ -63,8 +64,11 @@ class UCICommunicator:
                     board.push_uci(move)
 
         elif msg.startswith("go"):
-            move = engine.make_move(board)
+            move = engine.best_move(board)
+            board.push(move)
             response = f"bestmove {move}" or "(none)"
+
+        logging.info(f"UCI Response: {response}")
 
         if self._response_mode == ResponseMode.PRINT:
             print(response)
