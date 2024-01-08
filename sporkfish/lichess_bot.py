@@ -23,7 +23,7 @@ class LichessBot:
     - _set_position(moves: str):
         Set the chess position based on a sequence of moves.
 
-    - _play_game(game_id: str):
+    - play_game(game_id: str):
         Play a game on Lichess by streaming game states, setting positions, and making moves.
 
     - run():
@@ -47,6 +47,10 @@ class LichessBot:
             response_mode=uci_client.UCIClient.UCIProtocol.ResponseMode.RETURN
         )
 
+    @property
+    def client(self):
+        return self._client
+
     def _make_bot_move(self, game_id: str):
         """
         Make a move for the bot using the Sporkfish engine.
@@ -66,7 +70,7 @@ class LichessBot:
         """
         self._sporkfish.send_command(f"position startpos moves {moves}")
 
-    def _play_game(self, game_id: str):
+    def play_game(self, game_id: str):
         """
         Play a game on Lichess by streaming game states, setting positions, and making moves.
 
@@ -97,11 +101,12 @@ class LichessBot:
                     self._set_position(state["moves"])
                     self._make_bot_move(game_id)
 
-    def run(self):
+    def run_sp(self):
         """
-        Start the Lichess bot, listening to incoming events and playing games accordingly.
+        Start the Lichess bot, listening to incoming events sequentially and playing games accordingly.
         """
         events = self._client.bots.stream_incoming_events()
+        # Needs check for variant and speed
         for event in events:
             if event.get("type") == "gameStart":
-                self._play_game(event["game"]["fullId"])
+                self.play_game(event["game"]["fullId"])

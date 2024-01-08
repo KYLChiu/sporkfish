@@ -39,8 +39,8 @@ def analyser(epd: str):
     return 0.0
 
 
-def test_bratko_kopec():
-    score = 0.0
-    for epd in epds.split("\n"):
-        score += analyser(epd)
-    print(score)
+# def test_bratko_kopec():
+#     score = 0.0
+#     for epd in epds.split("\n"):
+#         score += analyser(epd)
+#     print(score)
