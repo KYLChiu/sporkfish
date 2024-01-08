@@ -1,6 +1,8 @@
-import os
 import chess
-from . import uci_communicator
+import sys
+from enum import Enum, auto
+import logging
+
 from . import evaluator
 from . import engine
 from . import searcher
@@ -8,11 +10,12 @@ from . import opening_book
 
 
 class UCIClient:
+
     """
-    A class representing a client for the Universal Chess Interface (UCI).
+    A class representing a client for the Universal Chess Interface (UCI). It wraps the communicator, engine and board in one.
 
     Attributes:
-    - _uci_communicator (uci_communicator.UCICommunicator): The UCI communicator for handling communication with the chess engine.
+    - _uci_communicator (uci_communicator.UCIProtocol): The UCI communicator for handling communication with the chess engine.
     - _engine (engine.Engine): The chess engine used by the UCI client.
     - _board (chess.Board): The current chess board state.
 
@@ -31,17 +34,118 @@ class UCIClient:
 
     """
 
-    def __init__(self, response_mode: uci_communicator.ResponseMode):
+    class UCIProtocol:
+        """
+        Implements the Universal Chess Interface (UCI) protocol for Sporkfish.
+
+        Attributes:
+        - _response_mode (ResponseMode): The mode for handling the response.
+
+        Methods:
+        - communicate(msg: str, board: chess.Board, engine: engine.Engine) -> str:
+            Process a UCI command and respond accordingly.
+
+        Parameters:
+        - msg (str): The UCI command received.
+        - board (chess.Board): The chess board.
+        - engine (engine.Engine): The chess engine.
+
+        Returns:
+        - str: The UCI response if response_mode is ResponseMode.RETURN.
+
+        Supported UCI Commands:
+        - "uci": Returns information about the engine.
+        - "quit": Exits the engine.
+        - "isready": Signals readiness of the engine.
+        - "position startpos ...": Sets up the board with the starting position.
+        - "position moves ...": Updates the board with the specified moves.
+        - "go ...": Initiates the engine to search for the best move.
+
+        Examples:
+        >>> uci_protocol = UCIProtocol()
+        >>> uci_protocol.communicate("uci", chess.Board(), engine.Engine())
+        'id name Sporkfish\nid author Sporkfish dev team\nuciok'
+        """
+
+        class ResponseMode(Enum):
+            PRINT = auto()
+            RETURN = auto()
+
+        def __init__(self, response_mode=ResponseMode.PRINT):
+            self._response_mode = response_mode
+
+        def communicate(
+            self, msg: str, board: chess.Board, engine: engine.Engine
+        ) -> str:
+            """
+            Process a UCI command and respond accordingly.
+            This currently only implements a subset of the full UCI commands. Commands implemented:
+            "uci", "quit", "isready", "position startpos ...", "position moves ...", "go ..."
+
+            :param msg: The UCI command received.
+            :type msg: str
+            :param board: The chess board.
+            :type board: chess.Board
+            :param engine: The engine.
+            :type engine: engine.Engine
+            :param response_mode: The mode for handling the response (ResponseMode.PRINT or ResponseMode.RETURN).
+            :type response_mode: ResponseMode
+            :return: The UCI response if response_mode is ResponseMode.RETURN.
+            :rtype: str
+            """
+            tokens = msg.strip().split(" ")
+            while "" in tokens:
+                tokens.remove("")
+
+            response = ""
+
+            if msg == "uci":
+                response = "id name Sporkfish\nid author Sporkfish dev team\nuciok"
+
+            elif msg == "quit":
+                sys.exit()
+
+            elif msg == "isready":
+                response = "readyok"
+
+            elif msg.startswith("position"):
+                if len(tokens) < 2:
+                    return ""
+
+                if tokens[1] == "startpos":
+                    board.reset()
+                    moves_start = 2
+
+                if len(tokens) > moves_start and tokens[moves_start] == "moves":
+                    for move in tokens[(moves_start + 1) :]:
+                        board.push_uci(move)
+
+            elif msg.startswith("go"):
+                move = engine.best_move(board)
+                board.push(move)
+                response = f"bestmove {move}" or "(none)"
+
+            logging.info(f"UCI Response: {response}")
+
+            if self._response_mode == UCIClient.UCIProtocol.ResponseMode.PRINT:
+                print(response)
+            elif self._response_mode == UCIClient.UCIProtocol.ResponseMode.RETURN:
+                return response
+
+            # Return an empty string for unrecognized commands or cases where no response is needed
+            return ""
+
+    def __init__(self, response_mode: UCIProtocol.ResponseMode):
         """
         Initialize the UCIClient with the specified response mode.
 
         :param response_mode: The response mode for UCI commands.
         :type response_mode: uci_communicator.ResponseMode
         """
-        self._uci_communicator = uci_communicator.UCICommunicator(response_mode)
+        self._uci_communicator = UCIClient.UCIProtocol(response_mode)
         self._engine = UCIClient.create_engine()
         self._board = chess.Board()
-        if response_mode is uci_communicator.ResponseMode.RETURN:
+        if response_mode is UCIClient.UCIProtocol.ResponseMode.RETURN:
             response = self.send_command("uci")
             assert "uciok" in response, "UCIClient failed to initialize correctly."
 

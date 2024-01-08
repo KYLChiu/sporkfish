@@ -1,6 +1,6 @@
 import pytest
 import chess
-from sporkfish import uci_client, uci_communicator
+from sporkfish import uci_client
 
 epds = """\
 1k1r4/pp1b1R2/3q2pp/4p3/2B5/4Q3/PPP2B2/2K5 b - - bm Qd1+; id "BK.01";
@@ -30,7 +30,7 @@ r2qnrnk/p2b2b1/1p1p2pp/2pPpp2/1PP1P3/PRNBB3/3QNPPP/5RK1 w - - bm f4; id "BK.24";
 
 
 def analyser(epd: str):
-    client = uci_client.UCIClient(uci_communicator.ResponseMode.RETURN)
+    client = uci_client.UCIClient(uci_client.UCIClient.UCIProtocol.ResponseMode.RETURN)
     epd_info = client.board.set_epd(epd)
     best_move = chess.Move.from_uci(client.send_command("go").split()[1])
     print(best_move, epd_info["bm"])

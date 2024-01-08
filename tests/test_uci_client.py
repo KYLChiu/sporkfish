@@ -1,11 +1,10 @@
 import sporkfish.uci_client as uci_client
-import sporkfish.uci_communicator as uci_communicator
 import pytest
 
 
 @pytest.fixture
 def init_client() -> uci_client.UCIClient:
-    return uci_client.UCIClient(uci_communicator.ResponseMode.RETURN)
+    return uci_client.UCIClient(uci_client.UCIClient.UCIProtocol.ResponseMode.RETURN)
 
 
 def test_uci_client_init(init_client):

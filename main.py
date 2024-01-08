@@ -4,7 +4,7 @@ import logging
 
 def run_uci():
     logging.info("Running UCI...")
-    client = uci_client.UCIClient(uci_communicator.ResponseMode.PRINT)
+    client = uci_client.UCIClient(uci_client.UCIClient.UCIProtocol.ResponseMode.PRINT)
     while True:
         message = input()
         client.send_command(message)
@@ -20,7 +20,7 @@ if __name__ == "__main__":
     mode = "LICHESS"
 
     multiprocessing.freeze_support()
-    from sporkfish import uci_client, uci_communicator, lichess_bot
+    from sporkfish import uci_client, lichess_bot
 
     logging.basicConfig(
         level=logging.DEBUG,

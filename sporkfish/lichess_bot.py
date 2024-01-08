@@ -1,7 +1,6 @@
 import berserk
 import sporkfish.uci_client as uci_client
 import logging
-from . import uci_communicator
 
 
 class LichessBot:
@@ -45,7 +44,7 @@ class LichessBot:
         self._client = berserk.Client(session=self._session)
         self._bot_id = bot_id
         self._sporkfish = uci_client.UCIClient(
-            response_mode=uci_communicator.ResponseMode.RETURN
+            response_mode=uci_client.UCIClient.UCIProtocol.ResponseMode.RETURN
         )
 
     def _make_bot_move(self, game_id: str):
@@ -60,7 +59,7 @@ class LichessBot:
 
     def _set_position(self, moves: str):
         """
-        Set the chess position based on a sequence of moves.
+        Set the chess position based on a sequence of UCI moves (space delimited).
 
         :param moves: A sequence of chess moves.
         :type moves: str
