@@ -71,7 +71,7 @@ jobs:
         run: pip install -r requirements.txt
       - name: Write API_TOKEN to file
         run: |
-          echo "$API_TOKEN" > api_token.txt
+          'echo "$API_TOKEN" >> api_token.txt'
         shell: bash
         env:
           API_TOKEN: ${{ secrets.API_TOKEN }}
