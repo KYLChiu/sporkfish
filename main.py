@@ -13,7 +13,7 @@ def run_uci():
 def run_lichess():
     logging.info("Running Lichess...")
     lichess_client = lichess_bot.LichessBot(token=open("api_token.txt").read())
-    lichess_client.run_sp()
+    lichess_client.run()
 
 
 if __name__ == "__main__":

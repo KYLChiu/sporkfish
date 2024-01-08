@@ -101,7 +101,7 @@ class LichessBot:
                     self._set_position(state["moves"])
                     self._make_bot_move(game_id)
 
-    def run_sp(self):
+    def run(self):
         """
         Start the Lichess bot, listening to incoming events sequentially and playing games accordingly.
         """
