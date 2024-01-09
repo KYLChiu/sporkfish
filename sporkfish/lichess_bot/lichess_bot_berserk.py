@@ -1,11 +1,8 @@
 import berserk
 import berserk.exceptions
 import logging
-import concurrent.futures
 import time
 from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type
-
-import sporkfish.uci_client as uci_client
 from sporkfish.lichess_bot.lichess_bot import LichessBot
 
 
@@ -124,14 +121,13 @@ class LichessBotBerserk(LichessBot):
         start_time = time.time()
 
         events = self.client.bots.stream_incoming_events()
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as exec:
-            while True:
-                try:
-                    event = next(events)
-                    if event.get("type") == "gameStart":
-                        exec.submit(self._play_game, event["game"]["fullId"])
-                except StopIteration:
-                    break  # End of iterator
+        while True:
+            try:
+                event = next(events)
+                if event.get("type") == "gameStart":
+                    self._play_game(event["game"]["fullId"])
+            except StopIteration:
+                break  # End of iterator
 
-                if timeout and time.time() - start_time > timeout:
-                    break
+            if timeout and time.time() - start_time > timeout:
+                break
