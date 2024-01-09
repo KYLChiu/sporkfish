@@ -5,7 +5,7 @@ from .opening_book import OpeningBook
 
 class Engine:
     """
-    Class responsible for making chess moves based on the opening book and searcher.
+    Class wrapping the opening book and searcher into a convenient interface.
 
     Attributes:
     - _searcher (Searcher): The chess move searcher.
