@@ -80,8 +80,6 @@ class LichessBotBerserk(LichessBot):
 
         :param game_id: The ID of the game on Lichess.
         :type game_id: str
-        :param test: Whether it's a test game. Default is False.
-        :type test: bool
         """
 
         def set_pos_and_play_move(num_moves, color, prev_moves, game_id):

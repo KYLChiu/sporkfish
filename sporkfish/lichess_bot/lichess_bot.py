@@ -5,6 +5,7 @@ import sporkfish.uci_client as uci_client
 class LichessBot(ABC):
     """
     An abstract base class representing a Lichess bot.
+    This can be extended for different variants, warranting the base class.
 
     Methods:
     - run():
@@ -23,9 +24,6 @@ class LichessBot(ABC):
     def _get_best_move(self) -> str:
         """
         Get the best move for the bot using the Sporkfish engine.
-
-        :param game_id: The ID of the game on Lichess.
-        :type game_id: str
         """
         return self._sporkfish.send_command("go").split()[1]
 

@@ -3,6 +3,7 @@ import chess
 import chess.polyglot
 import sys
 import os
+import logging
 
 
 class OpeningBook:
@@ -73,5 +74,6 @@ class OpeningBook:
                 with db:
                     entry = db.find(board)
                     return entry.move if entry else None
-        except Exception as _:
+        except Exception as e:
+            logging.info(f"Caught exception when querying opening_book: {e}")
             return None

@@ -42,7 +42,7 @@ class Engine:
 
         :param board: The current chess board position.
         :type board: chess.Board
-        :return: The score of the searcher.
+        :return: The score of the evaluator.
         :rtype: float
         """
         score, _ = self._searcher.evaluator.evaluate(board)
