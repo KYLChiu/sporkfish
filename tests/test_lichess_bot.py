@@ -1,14 +1,45 @@
-from sporkfish import lichess_bot
-import berserk.exceptions
+from sporkfish.lichess_bot import lichess_bot_berserk
+import pytest
+import sys
+import multiprocessing
+import time
+
+error_queue = multiprocessing.Queue()
 
 
-def test_lichess_bot_playing_ai():
-    try:
-        bot = lichess_bot.LichessBot(token=open("api_token.txt").read())
-        challenge = bot.client.challenges.create_ai(level=1, color="white")
-        game_id = challenge["id"]
-        # Ideally we don't test private functionality but no need to play the whole game
-        bot._make_bot_move(game_id)
-        bot.client.bots.resign_game(game_id)
-    except berserk.exceptions.ResponseError as e:
-        assert False, f"LichessBot failed with exception: {e}"
+@pytest.mark.skipif(
+    sys.platform != "linux",
+    reason="Don't create multiple challenges to exceed rate limit of Lichess",
+)
+def test_lichess_bot_playing_ai_timed():
+    time_limit = 30
+
+    def run_game():
+        try:
+            api_token_file = "api_token.txt"
+            with open(api_token_file) as f:
+                bot = lichess_bot_berserk.LichessBotBerserk(f.read())
+                bot.client.challenges.create(
+                    username="maia9",
+                    color="white",
+                    rated=False,
+                    clock_limit=time_limit,
+                    clock_increment=0,
+                )
+                bot.run()
+        except Exception as e:
+            error_queue.put(e)
+
+    proc = multiprocessing.Process(target=run_game)
+    proc.start()
+
+    time.sleep(time_limit * 2)
+
+    if not error_queue.empty():
+        raise RuntimeError(
+            f"Caught exception when running LichessBot: {error_queue.get()}"
+        )
+    else:
+        proc.terminate()
+
+    # If no exceptions, we pass the test.

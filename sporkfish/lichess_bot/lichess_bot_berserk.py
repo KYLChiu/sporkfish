@@ -1,6 +1,7 @@
 import berserk
 import berserk.exceptions
 import logging
+import concurrent.futures
 import time
 from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type
 
@@ -12,7 +13,7 @@ class LichessBotBerserk(LichessBot):
     """
     A class representing a Lichess bot powered by the Sporkfish chess engine.
     Powered by the synchronous berserk lichess API.
-    Not thread-safe (do not use with multithreading, might exceed rate limit of Lichess.
+    Not thread-safe (do not use with multithreading, might exceed rate limit of Lichess).
 
     Attributes:
     - _session (berserk.TokenSession): The session object for interacting with the Lichess API.
@@ -51,17 +52,14 @@ class LichessBotBerserk(LichessBot):
 
     def __init__(self, token: str, bot_id: str = "sporkfish") -> None:
         """
-        Initialize the LichessBot with a Lichess API token and a bot identifier.
+        Initialize the LichessBot with a Lichess API token.
 
         :param token: The Lichess API token.
         :type token: str
         :param bot_id: The identifier for the bot on Lichess. Default is "sporkfish".
         :type bot_id: str
         """
-        self._bot_id = bot_id
-        self._sporkfish = uci_client.UCIClient(
-            response_mode=uci_client.UCIClient.UCIProtocol.ResponseMode.RETURN
-        )
+        super().__init__(bot_id)
         self._berserk = LichessBotBerserk.Berserk(token)
 
     @property
@@ -73,25 +71,6 @@ class LichessBotBerserk(LichessBot):
         :rtype: berserk.Client
         """
         return self._berserk._client
-
-    def _make_bot_move(self, game_id: str) -> None:
-        """
-        Make a move for the bot using the Sporkfish engine.
-
-        :param game_id: The ID of the game on Lichess.
-        :type game_id: str
-        """
-        best_move = self._sporkfish.send_command("go").split()[1]
-        self.client.bots.make_move(game_id, best_move)
-
-    def _set_position(self, moves: str) -> None:
-        """
-        Set the chess position based on a sequence of UCI moves (space delimited).
-
-        :param moves: A sequence of chess moves.
-        :type moves: str
-        """
-        self._sporkfish.send_command(f"position startpos moves {moves}")
 
     @retry(
         stop=stop_after_attempt(2),
@@ -111,10 +90,10 @@ class LichessBotBerserk(LichessBot):
         def set_pos_and_play_move(num_moves, color, prev_moves, game_id):
             if num_moves & 1 == color:
                 self._set_position(prev_moves)
-                self._make_bot_move(game_id)
+                best_move = self._get_best_move()
+                self.client.bots.make_move(game_id, best_move)
 
         states = self.client.bots.stream_game_state(game_id)
-
         game_full = next(states)
         logging.debug(f"Full game data: {game_full}")
         color = 0 if game_full["white"].get("id") == self._bot_id else 1
@@ -139,17 +118,20 @@ class LichessBotBerserk(LichessBot):
         """
         Start the Lichess bot, listening to incoming events sequentially and playing games accordingly.
 
-        :param timeout: time till the bot stops running.
+        :param timeout: seconds until the bot stops running.
         :type float
         """
         start_time = time.time()
 
         events = self.client.bots.stream_incoming_events()
-        print(events)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as exec:
+            while True:
+                try:
+                    event = next(events)
+                    if event.get("type") == "gameStart":
+                        exec.submit(self._play_game, event["game"]["fullId"])
+                except StopIteration:
+                    break  # End of iterator
 
-        for event in events:
-            if event.get("type") == "gameStart":
-                self._play_game, event["game"]["fullId"]
-
-            if timeout and time.time() - start_time > timeout:
-                break
+                if timeout and time.time() - start_time > timeout:
+                    break

@@ -17,14 +17,15 @@ class SearchMode(Enum):
     LAZY_SMP = auto()
 
 
+_manager = Manager()
+_dict = _manager.dict()
+_value = _manager.Value("i", 0)
+
+
 class Searcher:
     """
     Dynamic best move searching class.
     """
-
-    _manager = Manager()
-    _dict = _manager.dict()
-    _value = _manager.Value("i", 0)
 
     def __init__(
         self,
@@ -48,8 +49,8 @@ class Searcher:
         self._evaluator = evaluator
         self._max_depth = max_depth
         self._zorbist_hash = ZobristHash()
-        self._statistics = Statistics(Searcher._value)
-        self._transposition_table = TranspositionTable(Searcher._dict)
+        self._statistics = Statistics(_value)
+        self._transposition_table = TranspositionTable(_dict)
         self._mode = mode
         if self._mode is SearchMode.LAZY_SMP:
             self._pool = ProcessPool()
