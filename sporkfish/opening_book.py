@@ -3,6 +3,7 @@ import chess
 import chess.polyglot
 import sys
 import os
+import logging
 
 
 class OpeningBook:
@@ -18,10 +19,8 @@ class OpeningBook:
         :return: None
         """
 
-        self.opening_book_path = (
-            opening_book_path
-            if opening_book_path
-            else self._resource_path("data/opening.bin")
+        self._opening_book_path = opening_book_path or self._resource_path(
+            "data/opening.bin"
         )
 
     def _resource_path(self, relative_path: str):
@@ -70,10 +69,11 @@ class OpeningBook:
         """
 
         try:
-            db = self._load(self.opening_book_path)
+            db = self._load(self._opening_book_path)
             if db:
                 with db:
                     entry = db.find(board)
                     return entry.move if entry else None
-        except Exception as _:
+        except Exception as e:
+            logging.info(f"Caught exception when querying opening_book: {e}")
             return None
