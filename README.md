@@ -33,7 +33,7 @@ This has been tested succesfully on Linux only.
 
 Change main.py flag to "UCI" and run as usual.
 
-### Principles
+## Principles
 
 * Functional library: encourage free functions whilst avoiding mutable data unless the task specifically and inherently demands it (e.g. statistics, transposition table, board state).
 * Well documented: functions should always have docstrings. Where the code complex, additional inline comments should be made.
@@ -58,6 +58,6 @@ Communication:
 
 ## Resources
 * [Some techniques](https://stackoverflow.com/questions/16500739/chess-high-branching-factor/16642804#16642804)
-* [engine improvement tier list](https://www.reddit.com/r/ComputerChess/comments/yln9ef/comparative_advantage_of_engine_improvements/)
+* [Engine improvement tier list](https://www.reddit.com/r/ComputerChess/comments/yln9ef/comparative_advantage_of_engine_improvements/)
 * [Black Marlin](https://github.com/jnlt3/blackmarlin?tab=readme-ov-file#efficiently-updatable-neural-networks)
 * [Explaining beta-cutoff](https://stackoverflow.com/questions/2533219/alpha-beta-cutoff)
