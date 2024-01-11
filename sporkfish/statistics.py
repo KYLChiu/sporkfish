@@ -1,5 +1,5 @@
 import time
-from multiprocessing import Value
+from multiprocessing import Value, Lock
 
 
 class Statistics:
@@ -10,7 +10,7 @@ class Statistics:
         Initialize the Statistics object.
 
         Attributes:
-        - nodes_visited (int): The number of nodes visited.
+        - nodes_visited (Value): The number of nodes visited. Shared across processes.
         """
         self.nodes_visited = nodes_visited
 
@@ -21,11 +21,10 @@ class Statistics:
         Parameters:
         - count (int): The number of nodes to increment the count by. Default is 1.
         """
-        # Not entirely accurate as not atomic, but will do for now
-        self.nodes_visited.value += count
+        self.nodes_visited += count
 
     def reset(self) -> None:
         """
         Reset the statistics by setting nodes_visited to 0 and updating start_time to the current time.
         """
-        self.nodes_visited.value = 0
+        self.nodes_visited = 0

@@ -45,7 +45,7 @@ class LichessBot(ABC):
             inc_ms = increment * 1000
             time_command = (
                 f" wtime {time_ms} winc {inc_ms}"
-                if ~color
+                if not bool(color)
                 else f" btime {time_ms} binc {inc_ms}"
             )
             command += time_command

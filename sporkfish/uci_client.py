@@ -128,13 +128,14 @@ class UCIClient:
                 # We get to make (1.0 - 0.1)^n * S number of (half) moves, where S = start_time in seconds
                 # To reach 1 second:
                 # (0.9)^n * S < 1
-                # n > ln (1/S) / ln 0.9                                        (Switch signs as ln 0.9 < 0)
+                # n > ln (1/S) / ln 0.9                                            (Switch signs as ln 0.9 < 0)
                 # Assuming a blitz game of 5 mins (S = 300), we can make 54 half moves before reaching 1 second
                 # Assuming a bullet game of 1 min (S = 60), we can make 38 half moves before reaching 1 second
                 # In future this should be a) configurable and b) improved.
                 tokens = msg.split()
                 idx = 0
                 timeout = None
+
                 while idx < len(tokens):
                     # Assumes inc comes straight after time
                     if tokens[idx] == "wtime" or tokens[idx] == "btime":
@@ -149,8 +150,9 @@ class UCIClient:
                         )
                         break
                     idx += 1
+
                 move = engine.best_move(board, timeout)
-                print(f"Move: {move}")
+                print(board.fen())
                 board.push(move)
                 response = f"bestmove {move}" or "(none)"
 

@@ -6,6 +6,8 @@ class TranspositionTable:
     def __init__(self, dct: Dict[int, Tuple[int, float]]) -> None:
         """
         Initialize the TranspositionTable object, wrapping a shared_dict.
+        Note that we do not lock the dictionary, as this slows down the run considerably.
+        
         """
         self._table = dct
 

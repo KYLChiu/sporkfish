@@ -90,21 +90,22 @@ class LichessBotBerserk(LichessBot):
             ):
                 return None, None
 
+            game_state = state["state"] if state["type"] == "gameFull" else state
+
             def extract_second(obj):
                 if isinstance(obj, datetime.datetime):
                     return obj.timestamp()
                 elif isinstance(obj, int):
-                    return obj
+                    return obj / 1000
                 else:
                     return None
 
-            time_str = "wtime" if ~color else "btime"
-            inc_str = "winc" if ~color else "binc"
-            time_obj = state.get(time_str, None)
-            inc_obj = state.get(inc_str, None)
+            time_str = "wtime" if not bool(color) else "btime"
+            inc_str = "winc" if not bool(color) else "binc"
+            time_obj = game_state.get(time_str, None)
+            inc_obj = game_state.get(inc_str, None)
             time = extract_second(time_obj)
             inc = extract_second(inc_obj)
-            logging.debug(f"Time, increment: {time}, {inc}")
             return time, inc
 
         def set_pos_and_play_move(num_moves, color, prev_moves, game_id, state):
