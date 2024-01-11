@@ -5,13 +5,26 @@ import numpy as np
 
 # Piece-Square Table Only (PeSTO) evaluation
 class Evaluator:
+
+    """
+    A class responsible for evaluating the chess position.
+
+    Methods:
+    - __init__():
+        Initialize the Evaluator.
+
+    - evaluate(board: chess.Board) -> float:
+        Evaluate the chess position based on material and piece-square tables.
+
+    """
+
     MG_PIECE_VALUES = {
         chess.PAWN: 82,
         chess.KNIGHT: 337,
         chess.BISHOP: 365,
         chess.ROOK: 477,
         chess.QUEEN: 1025,
-        chess.KING: 24000,
+        chess.KING: 12000,
     }
 
     EG_PIECE_VALUES = {
@@ -20,7 +33,7 @@ class Evaluator:
         chess.BISHOP: 297,
         chess.ROOK: 512,
         chess.QUEEN: 936,
-        chess.KING: 24000,
+        chess.KING: 12000,
     }
 
     MG_PAWN = [
@@ -845,45 +858,31 @@ class Evaluator:
         chess.KING: EG_KING,
     }
 
-    PAWN_PHASE, KNIGHT_PHASE, BISHOP_PHASE, ROOK_PHASE, QUEEN_PHASE = 0, 1, 1, 2, 4
-    TOTAL_PHASE = (
-        PAWN_PHASE * 16
-        + KNIGHT_PHASE * 4
-        + BISHOP_PHASE * 4
-        + ROOK_PHASE * 4
-        + QUEEN_PHASE * 2
-    )
+    # PAWN_PHASE, KNIGHT_PHASE, BISHOP_PHASE, ROOK_PHASE, QUEEN_PHASE, KING_PHASE
+    PHASES = {
+        chess.PAWN: 0,
+        chess.KNIGHT: 1,
+        chess.BISHOP: 1,
+        chess.ROOK: 2,
+        chess.QUEEN: 4,
+        chess.KING: 0,
+    }
 
     def __init__(self):
+        """
+        Initialize the Evaluator.
+        """
         pass
 
-    def _compute_phase(self, board: chess.Board) -> Tuple[float, Tuple[int]]:
-        piece_phases = [
-            self.PAWN_PHASE,
-            self.KNIGHT_PHASE,
-            self.BISHOP_PHASE,
-            self.ROOK_PHASE,
-            self.QUEEN_PHASE,
-        ]
-
-        pieces = [
-            (len(board.pieces(piece, color)), phase)
-            for color in (chess.WHITE, chess.BLACK)
-            for piece, phase in enumerate(piece_phases, start=1)
-        ]
-
-        total_phase = self.TOTAL_PHASE - sum(count * phase for count, phase in pieces)
-        phase_value = (total_phase * 256 + self.TOTAL_PHASE / 2) / self.TOTAL_PHASE
-        return phase_value
-
     def evaluate(self, board: chess.Board) -> float:
-        if board.is_stalemate():
-            return 0.0
+        """
+        Evaluate the chess position based on material and piece-square tables.
 
-        if board.is_checkmate():
-            return float("inf") if board.turn == chess.WHITE else -float("inf")
-
-        phase = self._compute_phase(board)
+        :param board: The current chess board position.
+        :type board: chess.Board
+        :return: The evaluation score.
+        :rtype: float
+        """
 
         mg = {
             chess.WHITE: 0,
@@ -894,17 +893,27 @@ class Evaluator:
             chess.BLACK: 0,
         }
 
+        # Flips the board vertically for black
+        # Assumes:
+        # - Chess board implements A1 as first element, H8 as last
+        # - Piece square table implements A8 as first element, H1 as last element
+        flip = lambda square, color: square ^ 56 if color else square
+
+        phase = 0
+
         for square in range(64):
-            piece = board.piece_at(square)
+            piece = board.piece_at(square ^ 56)
             if piece:
+                # Could initialise these at init time - task for future
                 mg[piece.color] += (
-                    self.MG_PESTO[piece.piece_type][63 - square]
+                    self.MG_PESTO[piece.piece_type][flip(square, piece.color)]
                     + self.MG_PIECE_VALUES[piece.piece_type]
                 )
                 eg[piece.color] += (
-                    self.EG_PESTO[piece.piece_type][63 - square]
+                    self.EG_PESTO[piece.piece_type][flip(square, piece.color)]
                     + self.EG_PIECE_VALUES[piece.piece_type]
                 )
+                phase += self.PHASES[piece.piece_type]
 
         mg_score = mg[board.turn] - mg[not board.turn]
         eg_score = eg[board.turn] - eg[not board.turn]

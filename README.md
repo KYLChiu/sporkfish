@@ -1,31 +1,47 @@
-# sporkfish
+# Sporkfish
 
 [![Actions Status](https://github.com/KYLChiu/sporkfish/workflows/Python/badge.svg)](https://github.com/KYLChiu/sporkfish/actions)
 
-
-Sporkfish is a Python-based chess engine. Within the realm of chess programming, the abundance of resources can be overwhelming. This repository's primary objective is to provide code that is both readable and well organised, demystifying techniques that may be perceived as esoteric or challenging to grasp.
+Sporkfish is a Python-based chess engine. Chess programming techniques, although numerous, are not always well-documented. This project aims to bridge that gap by offering clear, working, and accessible code, providing a resource for developers interested in understanding and implementing chess engine algorithms.
 
 ## Usage
 
-### Lichess
+### Lichess (main.py, recommended)
 
-Check out the bot on lichess [here](https://lichess.org/@/Sporkfish)! To run the bot, create a file called `api_token.txt` containing your Lichess bot API token. Then run:
+Check out the bot on lichess [here](https://lichess.org/@/Sporkfish)! To run the bot, create a file in the root directory named `api_token.txt`. Add your Lichess bot API token. Then run:
 ```
 python3 main.py
 ```
+
 Once you create a game via your bot account, the bot will automatically play. We currently do not support simultaneous games.
 
 The code is also pypy compatible, i.e. you can instead use:
+
 ```
 pypy3 main.py
 ```
+
+### Lichess (PyInstaller)
+
+Alternatively, to create an executable that can be run with [lichess-bot](https://github.com/lichess-bot-devs/lichess-bot), simply use `PyInstaller`:
+```
+pyinstaller -F main.py --add-data "data/opening.bin:data" --distpath "<your_dist_path>"
+```
+This has been tested succesfully on Linux only.
 
 ### UCI Engine
 
 Change main.py flag to "UCI" and run as usual.
 
+## Principles
+
+* Functional library: encourage free functions whilst avoiding mutable data unless the task specifically and inherently demands it (e.g. statistics, transposition table, board state).
+* Well documented: functions should always have docstrings. Where the code complex, additional inline comments should be made.
+
 ## Features
+
 Search:
+
 * [Negamax with fail-soft alpha-beta pruning](https://www.cs.cornell.edu/courses/cs312/2002sp/lectures/rec21.htm)
 * [MVV-LVA move ordering](https://www.chessprogramming.org/Move_Ordering)
 * [PolyGlot opening book querying](https://python-chess.readthedocs.io/en/latest/polyglot.html)
@@ -33,12 +49,15 @@ Search:
 * [Transposition tables with Zorbist hashing](https://mediocrechess.blogspot.com/2007/01/guide-transposition-tables.html)
 
 Evaluation:
+
 * [PeSTO](https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function)
 
 Communication:
+
 * [UCI](https://www.chessprogramming.org/UCI)
 
-Resources:
+## Resources
 * [Some techniques](https://stackoverflow.com/questions/16500739/chess-high-branching-factor/16642804#16642804)
+* [Engine improvement tier list](https://www.reddit.com/r/ComputerChess/comments/yln9ef/comparative_advantage_of_engine_improvements/)
 * [Black Marlin](https://github.com/jnlt3/blackmarlin?tab=readme-ov-file#efficiently-updatable-neural-networks)
 * [Explaining beta-cutoff](https://stackoverflow.com/questions/2533219/alpha-beta-cutoff)
