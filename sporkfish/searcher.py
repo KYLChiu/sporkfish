@@ -1,7 +1,7 @@
 import chess
 from typing import Tuple
 from pathos.multiprocessing import ProcessPool
-from multiprocessing import Manager,
+from multiprocessing import Manager
 import stopit
 import os
 import logging
@@ -26,7 +26,7 @@ class SearchMode(Enum):
 # This might cause underestimation of statistics.
 # _dict = _manager.dict()
 # _stats = _manager.Value("i", 0)
-    
+
 _stats = 0
 
 
