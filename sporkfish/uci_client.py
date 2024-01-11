@@ -214,7 +214,7 @@ class UCIClient:
         return self._board
 
     @staticmethod
-    def create_engine(depth: int = 10):
+    def create_engine(depth: int = 6):
         """
         Create and return an instance of the chess engine for the UCI client.
         The engine is configured with an evaluator, searcher, and opening book.
