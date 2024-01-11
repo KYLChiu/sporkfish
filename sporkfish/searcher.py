@@ -62,7 +62,7 @@ class Searcher:
         self._mode = mode
 
         if self._mode == SearchMode.LAZY_SMP:
-            self._num_processes = 1 if SearchMode.SINGLE_PROCESS else os.cpu_count()
+            self._num_processes = os.cpu_count()
             self._pool = ProcessPool(nodes=self._num_processes)
 
     @property
