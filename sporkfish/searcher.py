@@ -336,7 +336,9 @@ class Searcher:
                     # time in ms
                     "time": int(1000 * elapsed),
                     "nodes": self._statistics.nodes_visited,
-                    "nps": int(self._statistics.nodes_visited / elapsed),
+                    "nps": int(self._statistics.nodes_visited / elapsed)
+                    if elapsed > 0
+                    else 0,
                     "score cp": int(score)
                     if score not in {float("inf"), -float("inf")}
                     else float("nan"),
@@ -347,6 +349,8 @@ class Searcher:
                 return score, move, elapsed, 0  # Last element is error code
             except stopit.utils.TimeoutException:
                 return float("-inf"), chess.Move.null(), 0.0, 1
+            except Exception:
+                raise
 
         # Iterative deepening
         time_left = timeout
@@ -370,7 +374,7 @@ class Searcher:
             )
             if error_code:
                 logging.warning(
-                    f"Search for position {new_board.fen()} timed out after {timeout:.1f} seconds, returning best move from depth {depth - 1}."
+                    f"Search for position {board.fen()} timed out after {timeout:.1f} seconds, returning best move from depth {depth - 1}."
                 )
                 break
             else:
@@ -380,6 +384,6 @@ class Searcher:
                     if time_left <= 0:
                         break
 
-        logging.info(f"End search for FEN {new_board.fen()}")
+        logging.info(f"End search for FEN {board.fen()}")
 
         return score, move

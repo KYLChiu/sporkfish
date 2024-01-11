@@ -10,6 +10,6 @@ def test_timeout():
     board = chess.Board()
     eng = UCIClient.create_engine(100)
     start = time.time()
-    score = eng.score(board, 1e-3)
-    # Not the most reliable way to test but don't have better ideas
+    _ = eng.score(board, 1e-3)
+    # Timed out, impossible that depth 100 is <1 sec
     assert time.time() - start < 1
