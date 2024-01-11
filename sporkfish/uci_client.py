@@ -145,8 +145,8 @@ class UCIClient:
                         time = tokens[idx + 1]
                         inc = tokens[idx + 3]
                         # Convert to ms -> s
-                        timeout = 0.05 * (int(float(time)) / 1000) + 0.01 * (
-                            int(float(inc)) / 1000
+                        timeout = 0.05 * (float(time) / 1000) + 0.01 * (
+                            float(inc) / 1000
                         )
                         break
                     idx += 1
@@ -180,7 +180,7 @@ class UCIClient:
             response = self.send_command("uci")
             assert "uciok" in response, "UCIClient failed to initialize correctly."
 
-    def send_command(self, command):
+    def send_command(self, command: str):
         """
         Send a command to the UCI engine and return the response.
 

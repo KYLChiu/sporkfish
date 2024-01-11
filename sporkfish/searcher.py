@@ -1,5 +1,5 @@
 import chess
-from typing import Tuple
+from typing import Tuple, Optional
 from pathos.multiprocessing import ProcessPool
 from multiprocessing import Manager
 import stopit
@@ -298,7 +298,7 @@ class Searcher:
                 continue  # Continue the loop if no result is ready yet
 
     def search(
-        self, board: chess.Board, timeout: int = None
+        self, board: chess.Board, timeout: Optional[float] = None
     ) -> Tuple[float, chess.Move]:
         """
         Finds the best move (and associated score) via negamax and iterative deepening.
@@ -307,6 +307,7 @@ class Searcher:
         :type board: chess.Board
         :return: The best score and move based on the search.
         :param timeout: Time in seconds until we stop the search, returning the best depth if we timeout.
+        :type timeout: Optional[float]
         :rtype: Tuple[float, chess.Move]
         """
         logging.info(f"Begin search for FEN {board.fen()}")
@@ -317,7 +318,7 @@ class Searcher:
         def do_search_with_info(
             board_to_search: chess.Board,
             depth: int,
-            start_time: int,
+            start_time: float,
             alpha: float,
             beta: float,
         ):
@@ -347,24 +348,27 @@ class Searcher:
                 }
                 info_str = " ".join(f"{k} {v}" for k, v in fields.items())
                 logging.info(f"info {info_str}")
-                return score, move, elapsed, 0  # Last element is error code
+                return score, move, elapsed, 0
             except stopit.utils.TimeoutException:
                 return float("-inf"), chess.Move.null(), 0.0, 1
             except Exception:
                 raise
 
-        # Iterative deepening
         time_left = timeout
+
         score = -float("inf")
         move = chess.Move.null()
 
+        # Iterative deepening
         for depth in range(1, self._max_depth + 1):
             new_board = copy.deepcopy(board)
+
             alpha = -float("inf")
             beta = float("inf")
 
             self._statistics.reset()
             start_time = time.time()
+
             new_score, new_move, elapsed, error_code = do_search_with_info(
                 timeout=time_left,
                 board_to_search=new_board,
@@ -373,11 +377,14 @@ class Searcher:
                 alpha=alpha,
                 beta=beta,
             )
+
+            # Timed out, return best move from previous depth.
             if error_code:
                 logging.warning(
                     f"Search for position {board.fen()} timed out after {timeout:.1f} seconds, returning best move from depth {depth - 1}."
                 )
                 break
+            # Else move onto next depth, unless we have no more time already.
             else:
                 score, move = new_score, new_move
                 if timeout:
@@ -385,6 +392,6 @@ class Searcher:
                     if time_left <= 0:
                         break
 
-        logging.info(f"End search for FEN {board.fen()}")
+        logging.info(f"End search for FEN {board.fen()}.")
 
         return score, move
