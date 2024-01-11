@@ -32,7 +32,7 @@ class LichessBot(ABC):
         Get the best move for the bot using the Sporkfish engine.
 
         :param color: Player color. 0 for white and 1 for black.
-        :type color: chess.Color
+        :type color: int
         :param time: Time (in ms) left for player.
         :type time: int
         :param increment: Increment (in ms) for player.

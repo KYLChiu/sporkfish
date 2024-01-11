@@ -1,5 +1,5 @@
 import time
-from multiprocessing import Value, Lock
+from multiprocessing import Value
 
 
 class Statistics:
