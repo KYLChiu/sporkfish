@@ -1,8 +1,6 @@
 # Use the official Ubuntu base image
 FROM ubuntu:latest
 
-CMD pwd
-
 WORKDIR /app
 
 # Copy your application code into the container
@@ -27,5 +25,6 @@ RUN python3 -m pip install --upgrade pip
 RUN pypy3 -m pip install --upgrade pip
 
 RUN pip install -r requirements.txt
+RUN pypy3 -m pip install -r requirements.txt
 
 CMD ["bash"]
