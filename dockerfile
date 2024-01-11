@@ -3,11 +3,6 @@ FROM ubuntu:latest
 
 CMD pwd
 
-# # Set the working directory to the current working directory
-# WORKDIR ../lichess-bot
-# COPY . /app/lichess-bot
-
-
 WORKDIR /app
 
 # Copy your application code into the container
@@ -24,10 +19,12 @@ RUN apt-get update -y && \
     python3.10-dev \
     python3.10-venv \
     python3-pip \ 
+    pypy3 \
     binutils
 
 # Update pip and install any Python packages you need
 RUN python3 -m pip install --upgrade pip
+RUN pypy3 -m pip install --upgrade pip
 
 RUN pip install -r requirements.txt
 
