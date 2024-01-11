@@ -22,6 +22,7 @@ class OpeningBook:
         self._opening_book_path = opening_book_path or self._resource_path(
             "data/opening.bin"
         )
+        self._db = self._load(self._opening_book_path)
 
     def _resource_path(self, relative_path: str):
         """
@@ -69,11 +70,7 @@ class OpeningBook:
         """
 
         try:
-            db = self._load(self._opening_book_path)
-            if db:
-                with db:
-                    entry = db.find(board)
-                    return entry.move if entry else None
-        except Exception as e:
-            logging.info(f"Caught exception when querying opening_book: {e}")
+            entry = self._db.find(board)
+            return entry.move if entry else None
+        except Exception:
             return None

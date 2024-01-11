@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import sporkfish.uci_client as uci_client
+import chess
 
 
 class LichessBot(ABC):
@@ -21,11 +22,38 @@ class LichessBot(ABC):
         )
         self._bot_id = bot_id
 
-    def _get_best_move(self) -> str:
+    def _get_best_move(
+        self,
+        color: int,
+        time: int = None,
+        increment: int = None,
+    ) -> str:
         """
         Get the best move for the bot using the Sporkfish engine.
+
+        :param color: Player color. 0 for white and 1 for black.
+        :type color: chess.Color
+        :param time: Time (in ms) left for player.
+        :type time: int
+        :param increment: Increment (in ms) for player.
+        :type increment: int
         """
-        return self._sporkfish.send_command("go").split()[1]
+        command = "go"
+
+        if time is not None and increment is not None:
+            time_ms = time * 1000
+            inc_ms = increment * 1000
+            time_command = (
+                f" wtime {time_ms} winc {inc_ms}"
+                if ~color
+                else f" btime {time_ms} binc {inc_ms}"
+            )
+            command += time_command
+
+        response = self._sporkfish.send_command(command)
+
+        # Remove "bestmove" from the start
+        return response.split()[1]
 
     def _set_position(self, moves: str) -> None:
         """

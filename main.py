@@ -25,7 +25,7 @@ if __name__ == "__main__":
     from sporkfish.uci_client import UCIClient
 
     logging.basicConfig(
-        level=logging.DEBUG,
+        level=logging.INFO,
         format="[%(levelname)s][%(asctime)s] %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )

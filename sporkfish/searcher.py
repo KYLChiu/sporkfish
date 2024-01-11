@@ -2,8 +2,10 @@ import chess
 from typing import Tuple
 from pathos.multiprocessing import ProcessPool
 from multiprocessing import Manager
+import multiprocess.context
 import os
 import logging
+import time
 
 from .evaluator import Evaluator
 from .statistics import Statistics
@@ -52,8 +54,9 @@ class Searcher:
         self._statistics = Statistics(_value)
         self._transposition_table = TranspositionTable(_dict)
         self._mode = mode
-        if self._mode is SearchMode.LAZY_SMP:
-            self._pool = ProcessPool()
+
+        self._num_processes = 1 if SearchMode.SINGLE_PROCESS else os.cpu_count()
+        self._pool = ProcessPool(nodes=self._num_processes)
 
     @property
     def evaluator(self):
@@ -162,7 +165,6 @@ class Searcher:
             move ordering using MVV-LVA.
 
         """
-        self._statistics.increment()
         value = -float("inf")
 
         # Probe the transposition table for an existing entry
@@ -170,6 +172,8 @@ class Searcher:
         tt_entry = self._transposition_table.probe(hash_value, depth)
         if tt_entry:
             return tt_entry["score"]
+
+        self._statistics.increment()
 
         # Base case: devolve to quiescence search
         # We currently only expect max 4 captures to reach a quiet position
@@ -221,6 +225,8 @@ class Searcher:
         :rtype: Tuple[float, chess.Move]
         """
         value = -float("inf")
+
+        self._statistics.increment()
 
         hash_value = self._zorbist_hash.hash(board)
 
@@ -278,7 +284,7 @@ class Searcher:
         # We need to add more asymmetry but a task for later
         task = lambda _: self._negamax_sp(board, depth, alpha, beta)
         futures = []
-        for i in range(os.cpu_count() // 2):
+        for i in range(os.cpu_count() - 2):
             futures.append(self._pool.apipe(task, i))
 
         while True:
@@ -288,38 +294,69 @@ class Searcher:
             else:
                 continue  # Continue the loop if no result is ready yet
 
-    def search(self, board: chess.Board) -> Tuple[float, chess.Move]:
+    def search(
+        self, board: chess.Board, timeout: int = None
+    ) -> Tuple[float, chess.Move]:
         """
-        Perform a chess move search.
+        Finds the best move (and associated score) via negamax and iterative deepening.
 
         :param board: The current chess board position.
         :type board: chess.Board
         :return: The best score and move based on the search.
+        :param timeout: Time in seconds until we stop the search, returning the best depth if we timeout.
         :rtype: Tuple[float, chess.Move]
         """
-        self._statistics.reset()
+        logging.info(f"Begin to search for FEN {board.fen()}")
+
         alpha = -float("inf")
         beta = float("inf")
+        score = -float("inf")
+        move = next(iter(board.legal_moves), None)
 
-        # TODO: add iterative deepening
-        if self._mode is SearchMode.SINGLE_PROCESS:
-            score, move = self._negamax_sp(board, self._max_depth, alpha, beta)
-        elif self._mode is SearchMode.LAZY_SMP:
-            score, move = self._negamax_lazy_smp(board, self._max_depth, alpha, beta)
-        else:
-            raise TypeError("Invalid enum type given for SearchMode.")
+        def do_search_with_info(depth: int, start_time: int):
+            if self._mode is SearchMode.SINGLE_PROCESS:
+                score, move = self._negamax_sp(board, depth, alpha, beta)
+            elif self._mode is SearchMode.LAZY_SMP:
+                score, move = self._negamax_lazy_smp(board, depth, alpha, beta)
+            else:
+                raise TypeError("Invalid enum type given for SearchMode.")
 
-        fields = {
-            "depth": self._max_depth,
-            "time": round(1000 * self._statistics.start_time),
-            "nodes": self._statistics.nodes_visited.value,
-            "nps": int(self._statistics.nodes_per_second()),
-            "score cp": int(score)
-            if score not in {float("inf"), -float("inf")}
-            else float("nan"),
-            "pv": move,  # Incorrect but will do for now
-        }
-        info_str = " ".join(f"{k} {v}" for k, v in fields.items())
-        logging.info(f"info {info_str}")
+            elapsed = time.time() - start_time
+            fields = {
+                "depth": depth,
+                # time in ms
+                "time": int(1000 * elapsed),
+                "nodes": self._statistics.nodes_visited.value,
+                "nps": int(self._statistics.nodes_visited.value / elapsed),
+                "score cp": int(score)
+                if score not in {float("inf"), -float("inf")}
+                else float("nan"),
+                "pv": move,  # Incorrect but will do for now
+            }
+            info_str = " ".join(f"{k} {v}" for k, v in fields.items())
+            logging.info(f"info {info_str}")
+            return score, move, elapsed
+
+        # Iterative deepening
+        time_left = timeout
+        for depth in range(1, self._max_depth + 1):
+            self._statistics.reset()
+            start_time = time.time()
+            result = self._pool.apipe(do_search_with_info, depth, start_time)
+            try:
+                # We don't care if we busy wait since there is nothing else of value to do
+                score, move, elapsed = result.get(timeout=time_left)
+                if timeout:
+                    time_left -= round(elapsed)
+            except multiprocess.context.TimeoutError:
+                logging.warning(
+                    f"Search for position {board.fen()} timed out after {timeout:.1f} seconds, returning best move from depth {depth - 1}"
+                )
+                break
+            except Exception as e:
+                logging.error(
+                    f"Caught exception when searching for position {board.fen()} at depth {depth}: {e}"
+                )
+                raise
 
         return score, move

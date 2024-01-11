@@ -1,13 +1,12 @@
 from unittest.mock import MagicMock
 import chess
 from sporkfish.engine import Engine
+from sporkfish.uci_client import UCIClient
 import sporkfish.opening_book as opening_book
 
 
-def test_make_move():
+def test_timeout():
     board = chess.Board()
-    searcher = MagicMock()
-    searcher.search.return_value = (1.0, chess.Move.from_uci("e2e4"))
-    engine = Engine(searcher, opening_book.OpeningBook())
-    move = engine.best_move(board=board)
-    assert move == chess.Move.from_uci("e2e4")
+    eng = UCIClient.create_engine(100)
+    score = eng.score(board, 1e-12)
+    assert score == -float("inf")
