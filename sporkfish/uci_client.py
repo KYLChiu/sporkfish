@@ -3,10 +3,11 @@ import sys
 from enum import Enum, auto
 import logging
 
-from . import evaluator
-from . import engine
-from . import searcher
-from . import opening_book
+
+from .evaluator import Evaluator
+from .searcher import Searcher
+from .engine import Engine
+from .opening_book import OpeningBook
 
 
 class UCIClient:
@@ -71,12 +72,10 @@ class UCIClient:
             PRINT = auto()
             RETURN = auto()
 
-        def __init__(self, response_mode=ResponseMode.PRINT):
+        def __init__(self, response_mode: ResponseMode = ResponseMode.PRINT) -> None:
             self._response_mode = response_mode
 
-        def communicate(
-            self, msg: str, board: chess.Board, engine: engine.Engine
-        ) -> str:
+        def communicate(self, msg: str, board: chess.Board, engine: Engine) -> str:
             """
             Process a UCI command and respond accordingly.
             This currently only implements a subset of the full UCI commands. Commands implemented:
@@ -87,7 +86,7 @@ class UCIClient:
             :param board: The chess board.
             :type board: chess.Board
             :param engine: The engine.
-            :type engine: engine.Engine
+            :type engine: Engine
             :param response_mode: The mode for handling the response (ResponseMode.PRINT or ResponseMode.RETURN).
             :type response_mode: ResponseMode
             :return: The UCI response if response_mode is ResponseMode.RETURN.
@@ -151,8 +150,8 @@ class UCIClient:
                         break
                     idx += 1
 
-                move = engine.best_move(board, timeout)
-                board.push(move)
+                move = engine.best_move(board, timeout)  # type: ignore
+                board.push(move)  # type: ignore
                 response = f"bestmove {move}" or "(none)"
 
             if response:
@@ -166,7 +165,7 @@ class UCIClient:
             # Return an empty string for unrecognized commands or cases where no response is needed
             return ""
 
-    def __init__(self, response_mode: UCIProtocol.ResponseMode):
+    def __init__(self, response_mode: UCIProtocol.ResponseMode) -> None:
         """
         Initialize the UCIClient with the specified response mode.
 
@@ -180,7 +179,7 @@ class UCIClient:
             response = self.send_command("uci")
             assert "uciok" in response, "UCIClient failed to initialize correctly."
 
-    def send_command(self, command: str):
+    def send_command(self, command: str) -> str:
         """
         Send a command to the UCI engine and return the response.
 
@@ -193,7 +192,7 @@ class UCIClient:
         return self._uci_protocol.communicate(command, self._board, self._engine)
 
     @property
-    def engine(self):
+    def engine(self) -> Engine:
         """
         Get the chess engine instance.
 
@@ -203,7 +202,7 @@ class UCIClient:
         return self._engine
 
     @property
-    def board(self):
+    def board(self) -> chess.Board:
         """
         Get the current chess board state.
 
@@ -213,7 +212,7 @@ class UCIClient:
         return self._board
 
     @staticmethod
-    def create_engine(depth: int = 6):
+    def create_engine(depth: int = 6) -> Engine:
         """
         Create and return an instance of the chess engine for the UCI client.
         The engine is configured with an evaluator, searcher, and opening book.
@@ -221,8 +220,8 @@ class UCIClient:
         :return: An instance of the chess engine.
         :rtype: engine.Engine
         """
-        eval = evaluator.Evaluator()
-        search = searcher.Searcher(eval, depth)
-        ob = opening_book.OpeningBook()
-        eng = engine.Engine(search, ob)
+        eval = Evaluator()
+        search = Searcher(eval, depth)
+        ob = OpeningBook()
+        eng = Engine(search, ob)
         return eng

@@ -27,7 +27,7 @@ class ZobristHash:
         for castling_right in range(4):
             self._castling_hashes[castling_right] = random.getrandbits(64)
 
-    def hash(self, board: chess.Board) -> None:
+    def hash(self, board: chess.Board) -> int:
         """
         Update the Zobrist hash value for the entire board based on the current board state.
 

@@ -66,7 +66,7 @@ class Searcher:
             self._pool = ProcessPool(nodes=self._num_processes)
 
     @property
-    def evaluator(self):
+    def evaluator(self) -> Evaluator:
         return self._evaluator
 
     def _mvv_lva_heuristic(self, board: chess.Board, move: chess.Move) -> int:
@@ -287,13 +287,14 @@ class Searcher:
         # We need to add more asymmetry but a task for later
         task = lambda _: self._negamax_sp(board, depth, alpha, beta)
         futures = []
-        for i in range(os.cpu_count() - 2):
+        for i in range(self._num_processes):  # type: ignore
             futures.append(self._pool.apipe(task, i))
 
         while True:
             for future in futures:
                 if future.ready():
-                    return future.get()
+                    res: Tuple[float, chess.Move] = future.get()
+                    return res
             else:
                 continue  # Continue the loop if no result is ready yet
 
@@ -321,7 +322,7 @@ class Searcher:
             start_time: float,
             alpha: float,
             beta: float,
-        ):
+        ) -> Tuple[float, chess.Move, float, int]:
             try:
                 if self._mode is SearchMode.SINGLE_PROCESS:
                     score, move = self._negamax_sp(board_to_search, depth, alpha, beta)
@@ -387,9 +388,9 @@ class Searcher:
             # Else move onto next depth, unless we have no more time already.
             else:
                 score, move = new_score, new_move
-                if timeout:
+                if time_left is not None:
                     time_left -= elapsed
-                    if time_left <= 0:
+                    if time_left <= 0:  # type: ignore
                         break
 
         logging.info(f"End search for FEN {board.fen()}.")

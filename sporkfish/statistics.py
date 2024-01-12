@@ -1,11 +1,10 @@
 import time
-from multiprocessing import Value
 
 
 class Statistics:
     """A class for tracking statistics related to node visits."""
 
-    def __init__(self, nodes_visited: Value):
+    def __init__(self, nodes_visited: int):
         """
         Initialize the Statistics object.
 

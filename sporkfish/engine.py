@@ -63,5 +63,4 @@ class Engine:
         :return: The score of the evaluator.
         :rtype: float
         """
-        score = self._searcher.evaluator.evaluate(board)
-        return score
+        return self._searcher.evaluator.evaluate(board)

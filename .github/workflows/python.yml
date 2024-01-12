@@ -34,5 +34,7 @@ jobs:
         shell: bash
         env:
           API_TOKEN: ${{ secrets.API_TOKEN }}
+      - name: Static type checks
+        run: mypy
       - name: Run tests
         run: pytest -sv
