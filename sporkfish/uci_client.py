@@ -3,10 +3,11 @@ import sys
 from enum import Enum, auto
 import logging
 
-from . import evaluator
-from . import engine
-from . import searcher
-from . import opening_book
+
+from .evaluator import Evaluator
+from .searcher import Searcher
+from .engine import Engine
+from .opening_book import OpeningBook
 
 
 class UCIClient:
@@ -15,7 +16,7 @@ class UCIClient:
     A class representing a client for the Universal Chess Interface (UCI). It wraps the communicator, engine and board in one.
 
     Attributes:
-    - _uci_communicator (uci_communicator.UCIProtocol): The UCI communicator for handling communication with the chess engine.
+    - _uci_protocol (uci_communicator.UCIProtocol): The UCI communicator for handling communication with the chess engine.
     - _engine (engine.Engine): The chess engine used by the UCI client.
     - _board (chess.Board): The current chess board state.
 
@@ -71,12 +72,10 @@ class UCIClient:
             PRINT = auto()
             RETURN = auto()
 
-        def __init__(self, response_mode=ResponseMode.PRINT):
+        def __init__(self, response_mode: ResponseMode = ResponseMode.PRINT) -> None:
             self._response_mode = response_mode
 
-        def communicate(
-            self, msg: str, board: chess.Board, engine: engine.Engine
-        ) -> str:
+        def communicate(self, msg: str, board: chess.Board, engine: Engine) -> str:
             """
             Process a UCI command and respond accordingly.
             This currently only implements a subset of the full UCI commands. Commands implemented:
@@ -87,7 +86,7 @@ class UCIClient:
             :param board: The chess board.
             :type board: chess.Board
             :param engine: The engine.
-            :type engine: engine.Engine
+            :type engine: Engine
             :param response_mode: The mode for handling the response (ResponseMode.PRINT or ResponseMode.RETURN).
             :type response_mode: ResponseMode
             :return: The UCI response if response_mode is ResponseMode.RETURN.
@@ -121,11 +120,42 @@ class UCIClient:
                         board.push_uci(move)
 
             elif msg.startswith("go"):
-                move = engine.best_move(board)
-                board.push(move)
+                # -------------------------- Basic strategy for time management --------------------------
+                # Allocate tw * time + iw * increment for searching the move
+                # Pick tw (time_weight) = 0.1, iw (increment_weight) = 0.01
+                # Quick analysis without increment:
+                # We get to make (1.0 - 0.1)^n * S number of (half) moves, where S = start_time in seconds
+                # To reach 1 second:
+                # (0.9)^n * S < 1
+                # n > ln (1/S) / ln 0.9
+                # Assuming a blitz game of 5 mins (S = 300), we can make 54 half moves before reaching 1 second
+                # Assuming a bullet game of 1 min (S = 60), we can make 38 half moves before reaching 1 second
+                # In future this should be a) configurable and b) improved.
+                tokens = msg.split()
+                idx = 0
+                timeout = None
+
+                while idx < len(tokens):
+                    # Assumes inc comes straight after time
+                    if tokens[idx] == "wtime" or tokens[idx] == "btime":
+                        assert (
+                            len(tokens) >= idx + 3
+                        ), "wtime or btime given in go string but no time or increment values passed."
+                        time = tokens[idx + 1]
+                        inc = tokens[idx + 3]
+                        # Convert to ms -> s
+                        timeout = 0.1 * (float(time) / 1000) + 0.01 * (
+                            float(inc) / 1000
+                        )
+                        break
+                    idx += 1
+
+                move = engine.best_move(board, timeout)  # type: ignore
+                board.push(move)  # type: ignore
                 response = f"bestmove {move}" or "(none)"
 
-            logging.info(f"UCI Response: {response}")
+            if response:
+                logging.info(f"UCI Response: {response}")
 
             if self._response_mode == UCIClient.UCIProtocol.ResponseMode.PRINT:
                 print(response)
@@ -135,21 +165,21 @@ class UCIClient:
             # Return an empty string for unrecognized commands or cases where no response is needed
             return ""
 
-    def __init__(self, response_mode: UCIProtocol.ResponseMode):
+    def __init__(self, response_mode: UCIProtocol.ResponseMode) -> None:
         """
         Initialize the UCIClient with the specified response mode.
 
         :param response_mode: The response mode for UCI commands.
-        :type response_mode: uci_communicator.ResponseMode
+        :type response_mode: uci_protocol.ResponseMode
         """
-        self._uci_communicator = UCIClient.UCIProtocol(response_mode)
+        self._uci_protocol = UCIClient.UCIProtocol(response_mode)
         self._engine = UCIClient.create_engine()
         self._board = chess.Board()
         if response_mode is UCIClient.UCIProtocol.ResponseMode.RETURN:
             response = self.send_command("uci")
             assert "uciok" in response, "UCIClient failed to initialize correctly."
 
-    def send_command(self, command):
+    def send_command(self, command: str) -> str:
         """
         Send a command to the UCI engine and return the response.
 
@@ -158,10 +188,11 @@ class UCIClient:
         :return: The response from the UCI engine.
         :rtype: str
         """
-        return self._uci_communicator.communicate(command, self._board, self._engine)
+        logging.info(f"Sending UCI comamnd: {command}")
+        return self._uci_protocol.communicate(command, self._board, self._engine)
 
     @property
-    def engine(self):
+    def engine(self) -> Engine:
         """
         Get the chess engine instance.
 
@@ -171,7 +202,7 @@ class UCIClient:
         return self._engine
 
     @property
-    def board(self):
+    def board(self) -> chess.Board:
         """
         Get the current chess board state.
 
@@ -181,7 +212,7 @@ class UCIClient:
         return self._board
 
     @staticmethod
-    def create_engine():
+    def create_engine(depth: int = 6) -> Engine:
         """
         Create and return an instance of the chess engine for the UCI client.
         The engine is configured with an evaluator, searcher, and opening book.
@@ -189,9 +220,8 @@ class UCIClient:
         :return: An instance of the chess engine.
         :rtype: engine.Engine
         """
-        depth = 3
-        eval = evaluator.Evaluator()
-        search = searcher.Searcher(eval, depth)
-        ob = opening_book.OpeningBook()
-        eng = engine.Engine(search, ob)
+        eval = Evaluator()
+        search = Searcher(eval, depth)
+        ob = OpeningBook()
+        eng = Engine(search, ob)
         return eng

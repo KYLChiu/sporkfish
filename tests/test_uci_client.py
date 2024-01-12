@@ -15,3 +15,9 @@ def test_uci_client_go(init_client):
     client = init_client
     response = client.send_command("go")
     assert "bestmove" in response
+
+
+def test_uci_client_time_inc(init_client):
+    client = init_client
+    response = client.send_command("go wtime 1 winc 0")
+    assert "bestmove" in response

@@ -1,4 +1,5 @@
 import chess
+from typing import Optional
 from .searcher import Searcher
 from .opening_book import OpeningBook
 
@@ -24,19 +25,36 @@ class Engine:
         self._searcher = searcher
         self._opening_book = opening_book
 
-    def best_move(self, board: chess.Board) -> chess.Move:
+    def best_move(
+        self, board: chess.Board, timeout: Optional[float] = None
+    ) -> chess.Move:
         """
         Return the best move based on opening book queries and searcher.
 
         :param board: The current chess board position.
         :type board: chess.Board
+        :param timeout: Time in seconds until the engine stops searching.
+        :type timeout: Optional[float]
         :return: The selected chess move.
         :rtype: chess.Move
         """
         opening_move = self._opening_book.query(board)
-        return chess.Move.from_uci(str(opening_move or self._searcher.search(board)[1]))
+        return opening_move or self._searcher.search(board, timeout)[1]
 
-    def score(self, board: chess.Board) -> float:
+    def score(self, board: chess.Board, timeout: Optional[float] = None) -> float:
+        """
+        Returns the dynamic search score, useful for testing.
+
+        :param board: The current chess board position.
+        :type board: chess.Board
+        :return: The score of the searcher.
+        :param timeout: Time in seconds until the engine stops searching.
+        :type timeout: Optional[float]
+        :rtype: float
+        """
+        return self._searcher.search(board, timeout)[0]
+
+    def evaluate(self, board: chess.Board) -> float:
         """
         Returns the (static) leaf evaluation score, useful for testing.
 
@@ -45,5 +63,4 @@ class Engine:
         :return: The score of the evaluator.
         :rtype: float
         """
-        score, _ = self._searcher.evaluator.evaluate(board)
-        return score
+        return self._searcher.evaluator.evaluate(board)

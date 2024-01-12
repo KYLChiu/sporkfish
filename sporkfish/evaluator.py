@@ -1,5 +1,5 @@
 import chess
-from typing import Tuple
+from typing import Callable
 import numpy as np
 
 
@@ -868,7 +868,7 @@ class Evaluator:
         chess.KING: 0,
     }
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Initialize the Evaluator.
         """
@@ -897,7 +897,9 @@ class Evaluator:
         # Assumes:
         # - Chess board implements A1 as first element, H8 as last
         # - Piece square table implements A8 as first element, H1 as last element
-        flip = lambda square, color: square ^ 56 if color else square
+        flip: Callable[[int, chess.Color]] = (
+            lambda square, color: square ^ 56 if color else square
+        )
 
         phase = 0
 

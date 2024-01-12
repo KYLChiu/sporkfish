@@ -9,7 +9,7 @@ import logging
 class OpeningBook:
     """Class for handling the opening book in chess engines."""
 
-    def __init__(self, opening_book_path: Optional[str] = None):
+    def __init__(self, opening_book_path: Optional[str] = None) -> None:
         """
         Initialize the OpeningBook instance.
 
@@ -22,8 +22,9 @@ class OpeningBook:
         self._opening_book_path = opening_book_path or self._resource_path(
             "data/opening.bin"
         )
+        self._db = self._load(self._opening_book_path)
 
-    def _resource_path(self, relative_path: str):
+    def _resource_path(self, relative_path: str) -> str:
         """
         Get the absolute path to a resource.
 
@@ -32,16 +33,16 @@ class OpeningBook:
         :return: Absolute path to the resource.
         :rtype: str
         """
-
-        try:
-            # PyInstaller creates a temp folder and stores path in _MEIPASS
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        if hasattr(sys, "_MEIPASS"):
             base_path = sys._MEIPASS
-        except AttributeError:
-            # In a normal Python environment, use the original path
+        else:
             base_path = os.path.abspath(".")
         return os.path.join(base_path, relative_path)
 
-    def _load(self, opening_book_path):
+    def _load(
+        self, opening_book_path: str
+    ) -> Optional[chess.polyglot.MemoryMappedReader]:
         """
         Load the opening database from the specified path.
 
@@ -57,23 +58,22 @@ class OpeningBook:
         except FileNotFoundError as _:
             return None
 
-    def query(self, board: chess.Board):
+    def query(self, board: chess.Board) -> Optional[chess.Move]:
         """
         Query the opening database for a given chess board position.
 
         :param board: The current chess board position.
         :type board: chess.Board
         :return: The recommended move from the opening database.
-                Returns None if no matching entry is found or an error occurs.
+                Returns None if no matching entry is found.
         :rtype: Optional[chess.Move]
         """
 
         try:
-            db = self._load(self._opening_book_path)
-            if db:
-                with db:
-                    entry = db.find(board)
-                    return entry.move if entry else None
-        except Exception as e:
-            logging.info(f"Caught exception when querying opening_book: {e}")
+            if self._db:
+                entry = self._db.find(board)
+                return entry.move if entry else None
+            else:
+                return None
+        except IndexError:
             return None

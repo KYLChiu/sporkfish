@@ -1,13 +1,17 @@
 from unittest.mock import MagicMock
 import chess
+import time
 from sporkfish.engine import Engine
+from sporkfish.uci_client import UCIClient
 import sporkfish.opening_book as opening_book
 
 
-def test_make_move():
+def test_timeout():
     board = chess.Board()
-    searcher = MagicMock()
-    searcher.search.return_value = (1.0, chess.Move.from_uci("e2e4"))
-    engine = Engine(searcher, opening_book.OpeningBook())
-    move = engine.best_move(board=board)
-    assert move == chess.Move.from_uci("e2e4")
+    eng = UCIClient.create_engine(100)
+    start = time.time()
+    _ = eng.score(board, 1e-3)
+    # Timed out, impossible that depth 100 is <1 sec
+    assert time.time() - start < 1
+
+

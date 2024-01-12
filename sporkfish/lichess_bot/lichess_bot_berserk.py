@@ -1,7 +1,8 @@
 import berserk
 import berserk.exceptions
 import logging
-import time
+import datetime
+
 from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type
 from sporkfish.lichess_bot.lichess_bot import LichessBot
 
@@ -82,10 +83,36 @@ class LichessBotBerserk(LichessBot):
         :type game_id: str
         """
 
-        def set_pos_and_play_move(num_moves, color, prev_moves, game_id):
+        def get_time_and_inc(color, state):
+            if (
+                state.get("perf", None)
+                and state.get("perf").get("name", None) == "Correspondence"
+            ):
+                return None, None
+
+            game_state = state["state"] if state["type"] == "gameFull" else state
+
+            def extract_second(obj):
+                if isinstance(obj, datetime.datetime):
+                    return obj.timestamp()
+                elif isinstance(obj, int):
+                    return obj / 1000
+                else:
+                    return None
+
+            time_str = "wtime" if not bool(color) else "btime"
+            inc_str = "winc" if not bool(color) else "binc"
+            time_obj = game_state.get(time_str, None)
+            inc_obj = game_state.get(inc_str, None)
+            time = extract_second(time_obj)
+            inc = extract_second(inc_obj)
+            return time, inc
+
+        def set_pos_and_play_move(num_moves, color, prev_moves, game_id, state):
             if num_moves & 1 == color:
                 self._set_position(prev_moves)
-                best_move = self._get_best_move()
+                time, inc = get_time_and_inc(color, state)
+                best_move = self._get_best_move(color, time, inc)
                 self.client.bots.make_move(game_id, best_move)
 
         states = self.client.bots.stream_game_state(game_id)
@@ -94,38 +121,30 @@ class LichessBotBerserk(LichessBot):
         color = 0 if game_full["white"].get("id") == self._bot_id else 1
         prev_moves_start = game_full["state"]["moves"] or ""
         num_moves_start = len(prev_moves_start.split())
+
         if num_moves_start > 0:
             logging.info(f"Restarting game with id: {game_id}")
         else:
             logging.info(f"Starting game with id: {game_id}")
 
         # If white (and playing a new game), we need to play a move to get new states
-        set_pos_and_play_move(num_moves_start, color, prev_moves_start, game_id)
+        set_pos_and_play_move(
+            num_moves_start, color, prev_moves_start, game_id, game_full
+        )
 
         for state in states:
             logging.debug(f"Game state: {state}")
             if state["type"] == "gameState":
                 num_moves = len(state["moves"].split())
                 prev_moves = state["moves"]
-                set_pos_and_play_move(num_moves, color, prev_moves, game_id)
+                set_pos_and_play_move(num_moves, color, prev_moves, game_id, state)
 
-    def run(self, timeout: float = None) -> None:
+    def run(self) -> None:
         """
         Start the Lichess bot, listening to incoming events sequentially and playing games accordingly.
-
-        :param timeout: seconds until the bot stops running.
-        :type float
         """
-        start_time = time.time()
 
         events = self.client.bots.stream_incoming_events()
-        while True:
-            try:
-                event = next(events)
-                if event.get("type") == "gameStart":
-                    self._play_game(event["game"]["fullId"])
-            except StopIteration:
-                break  # End of iterator
-
-            if timeout and time.time() - start_time > timeout:
-                break
+        for event in events:
+            if event.get("type") == "gameStart":
+                self._play_game(event["game"]["fullId"])

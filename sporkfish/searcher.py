@@ -1,9 +1,12 @@
 import chess
-from typing import Tuple
+from typing import Tuple, Optional
 from pathos.multiprocessing import ProcessPool
 from multiprocessing import Manager
+import stopit
 import os
 import logging
+import time
+import copy
 
 from .evaluator import Evaluator
 from .statistics import Statistics
@@ -17,9 +20,14 @@ class SearchMode(Enum):
     LAZY_SMP = auto()
 
 
-_manager = Manager()
-_dict = _manager.dict()
-_value = _manager.Value("i", 0)
+# _manager = Manager()
+# We explicitly do not lock these and let race conditions happen
+# Locks are too slow, need to consider atomic maps / values later
+# This might cause underestimation of statistics.
+# _dict = _manager.dict()
+# _stats = _manager.Value("i", 0)
+
+_stats = 0
 
 
 class Searcher:
@@ -49,14 +57,16 @@ class Searcher:
         self._evaluator = evaluator
         self._max_depth = max_depth
         self._zorbist_hash = ZobristHash()
-        self._statistics = Statistics(_value)
-        self._transposition_table = TranspositionTable(_dict)
+        self._statistics = Statistics(_stats)
+        # self._transposition_table = TranspositionTable(_dict)
         self._mode = mode
-        if self._mode is SearchMode.LAZY_SMP:
-            self._pool = ProcessPool()
+
+        if self._mode == SearchMode.LAZY_SMP:
+            self._num_processes = os.cpu_count()
+            self._pool = ProcessPool(nodes=self._num_processes)
 
     @property
-    def evaluator(self):
+    def evaluator(self) -> Evaluator:
         return self._evaluator
 
     def _mvv_lva_heuristic(self, board: chess.Board, move: chess.Move) -> int:
@@ -162,14 +172,15 @@ class Searcher:
             move ordering using MVV-LVA.
 
         """
-        self._statistics.increment()
         value = -float("inf")
 
         # Probe the transposition table for an existing entry
-        hash_value = self._zorbist_hash.hash(board)
-        tt_entry = self._transposition_table.probe(hash_value, depth)
-        if tt_entry:
-            return tt_entry["score"]
+        # hash_value = self._zorbist_hash.hash(board)
+        # tt_entry = self._transposition_table.probe(hash_value, depth)
+        # if tt_entry:
+        #     return tt_entry["score"]
+
+        self._statistics.increment()
 
         # Base case: devolve to quiescence search
         # We currently only expect max 4 captures to reach a quiet position
@@ -195,7 +206,7 @@ class Searcher:
             if alpha >= beta:
                 break
 
-        self._transposition_table.store(hash_value, depth, value)
+        # self._transposition_table.store(hash_value, depth, value)
 
         return value
 
@@ -221,19 +232,16 @@ class Searcher:
         :rtype: Tuple[float, chess.Move]
         """
         value = -float("inf")
+        best_move = chess.Move.null()
+        self._statistics.increment()
 
-        hash_value = self._zorbist_hash.hash(board)
+        # hash_value = self._zorbist_hash.hash(board)
 
         legal_moves = sorted(
             board.legal_moves,
             key=lambda move: (self._mvv_lva_heuristic(board, move),),
             reverse=True,
         )
-
-        # Guarantee a move if available
-        best_move = legal_moves[0] if len(legal_moves) > 0 else None
-        if not best_move:
-            return value, None
 
         for move in legal_moves:
             board.push(move)
@@ -248,10 +256,11 @@ class Searcher:
             if alpha >= beta:
                 break
 
-        self._transposition_table.store(hash_value, depth, value)
+        # self._transposition_table.store(hash_value, depth, value)
 
         return value, best_move
 
+    # This doesn't really work yet. Don't use.
     def _negamax_lazy_smp(
         self,
         board: chess.Board,
@@ -278,48 +287,112 @@ class Searcher:
         # We need to add more asymmetry but a task for later
         task = lambda _: self._negamax_sp(board, depth, alpha, beta)
         futures = []
-        for i in range(os.cpu_count() // 2):
+        for i in range(self._num_processes):  # type: ignore
             futures.append(self._pool.apipe(task, i))
 
         while True:
             for future in futures:
                 if future.ready():
-                    return future.get()
+                    res: Tuple[float, chess.Move] = future.get()
+                    return res
             else:
                 continue  # Continue the loop if no result is ready yet
 
-    def search(self, board: chess.Board) -> Tuple[float, chess.Move]:
+    def search(
+        self, board: chess.Board, timeout: Optional[float] = None
+    ) -> Tuple[float, chess.Move]:
         """
-        Perform a chess move search.
+        Finds the best move (and associated score) via negamax and iterative deepening.
 
         :param board: The current chess board position.
         :type board: chess.Board
         :return: The best score and move based on the search.
+        :param timeout: Time in seconds until we stop the search, returning the best depth if we timeout.
+        :type timeout: Optional[float]
         :rtype: Tuple[float, chess.Move]
         """
-        self._statistics.reset()
-        alpha = -float("inf")
-        beta = float("inf")
+        logging.info(f"Begin search for FEN {board.fen()}")
 
-        # TODO: add iterative deepening
-        if self._mode is SearchMode.SINGLE_PROCESS:
-            score, move = self._negamax_sp(board, self._max_depth, alpha, beta)
-        elif self._mode is SearchMode.LAZY_SMP:
-            score, move = self._negamax_lazy_smp(board, self._max_depth, alpha, beta)
-        else:
-            raise TypeError("Invalid enum type given for SearchMode.")
+        @stopit.threading_timeoutable(
+            default=(float("-inf"), chess.Move.null(), 0.0, 1)
+        )
+        def do_search_with_info(
+            board_to_search: chess.Board,
+            depth: int,
+            start_time: float,
+            alpha: float,
+            beta: float,
+        ) -> Tuple[float, chess.Move, float, int]:
+            try:
+                if self._mode is SearchMode.SINGLE_PROCESS:
+                    score, move = self._negamax_sp(board_to_search, depth, alpha, beta)
+                elif self._mode is SearchMode.LAZY_SMP:
+                    score, move = self._negamax_lazy_smp(
+                        board_to_search, depth, alpha, beta
+                    )
+                else:
+                    raise TypeError("Invalid enum type given for SearchMode.")
 
-        fields = {
-            "depth": self._max_depth,
-            "time": round(1000 * self._statistics.start_time),
-            "nodes": self._statistics.nodes_visited.value,
-            "nps": int(self._statistics.nodes_per_second()),
-            "score cp": int(score)
-            if score not in {float("inf"), -float("inf")}
-            else float("nan"),
-            "pv": move,  # Incorrect but will do for now
-        }
-        info_str = " ".join(f"{k} {v}" for k, v in fields.items())
-        logging.info(f"info {info_str}")
+                elapsed = time.time() - start_time
+                fields = {
+                    "depth": depth,
+                    # time in ms
+                    "time": int(1000 * elapsed),
+                    "nodes": self._statistics.nodes_visited,
+                    "nps": int(self._statistics.nodes_visited / elapsed)
+                    if elapsed > 0
+                    else 0,
+                    "score cp": int(score)
+                    if score not in {float("inf"), -float("inf")}
+                    else float("nan"),
+                    "pv": move,  # Incorrect but will do for now
+                }
+                info_str = " ".join(f"{k} {v}" for k, v in fields.items())
+                logging.info(f"info {info_str}")
+                return score, move, elapsed, 0
+            except stopit.utils.TimeoutException:
+                return float("-inf"), chess.Move.null(), 0.0, 1
+            except Exception:
+                raise
+
+        time_left = timeout
+
+        score = -float("inf")
+        move = chess.Move.null()
+
+        # Iterative deepening
+        for depth in range(1, self._max_depth + 1):
+            new_board = copy.deepcopy(board)
+
+            alpha = -float("inf")
+            beta = float("inf")
+
+            self._statistics.reset()
+            start_time = time.time()
+
+            new_score, new_move, elapsed, error_code = do_search_with_info(
+                timeout=time_left,
+                board_to_search=new_board,
+                depth=depth,
+                start_time=start_time,
+                alpha=alpha,
+                beta=beta,
+            )
+
+            # Timed out, return best move from previous depth.
+            if error_code:
+                logging.warning(
+                    f"Search for position {board.fen()} timed out after {timeout:.1f} seconds, returning best move from depth {depth - 1}."
+                )
+                break
+            # Else move onto next depth, unless we have no more time already.
+            else:
+                score, move = new_score, new_move
+                if time_left is not None:
+                    time_left -= elapsed
+                    if time_left <= 0:  # type: ignore
+                        break
+
+        logging.info(f"End search for FEN {board.fen()}.")
 
         return score, move
