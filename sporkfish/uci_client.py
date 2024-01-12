@@ -144,7 +144,7 @@ class UCIClient:
                         time = tokens[idx + 1]
                         inc = tokens[idx + 3]
                         # Convert to ms -> s
-                        timeout = 0.05 * (float(time) / 1000) + 0.01 * (
+                        timeout = 0.1 * (float(time) / 1000) + 0.01 * (
                             float(inc) / 1000
                         )
                         break
