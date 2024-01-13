@@ -216,6 +216,18 @@ class Searcher:
         if depth == 0:
             return self._quiescence(board, 4, alpha, beta)
 
+        in_check = board.is_check()
+
+
+        # Null move pruning
+        if depth >= 3 and not in_check:
+            null_move_depth = depth - 3
+            board.push(chess.Move.null())
+            value = -self._negamax(board, null_move_depth, -beta, -alpha)
+            board.pop()
+            if value >= beta:
+                return beta
+
         # Move ordering via MVV-LVA to encourage aggressive pruning
         legal_moves = sorted(
             board.legal_moves,
