@@ -35,6 +35,6 @@ jobs:
         env:
           API_TOKEN: ${{ secrets.API_TOKEN }}
       - name: Static type checks
-        run: mypy
+        run: mypy --install-types --non-interactive
       - name: Run tests
         run: pytest -sv

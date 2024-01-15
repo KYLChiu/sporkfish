@@ -15,37 +15,20 @@ docker run -it sporkfish-devenv
 
 This generates an interactive bash shell for you to run the program in.
 
-### Lichess (main.py, recommended)
+### Lichess
 
 Check out the bot on lichess [here](https://lichess.org/@/Sporkfish)! To run the bot, create a file in the root directory named `api_token.txt`. Add your Lichess bot API token. Then run:
+
 ```
 python3 main.py
 ```
 
 Once you create a game via your bot account, the bot will automatically play. We currently do not support simultaneous games.
 
-The code is also pypy compatible, i.e. you can instead use:
-
-```
-pypy3 main.py
-```
-
-### Lichess (PyInstaller)
-
-Alternatively, to create an executable that can be run with [lichess-bot](https://github.com/lichess-bot-devs/lichess-bot), simply use `PyInstaller`:
-```
-pyinstaller -F main.py --add-data "data/opening.bin:data" --distpath "<your_dist_path>"
-```
-This has been tested succesfully on Linux only.
-
-### UCI Engine
-
-Change main.py flag to "UCI" and run as usual.
-
 ## Principles
 
 * Functional library: encourage free functions whilst avoiding mutable data unless the task specifically and inherently demands it (e.g. statistics, transposition table, board state).
-* Well documented: functions should always have docstrings. Where the code complex, additional inline comments should be made.
+* Well documented: classes should always have docstrings. Where the code complex, additional inline comments should be made.
 
 ## Features
 
@@ -55,7 +38,7 @@ Search:
 * [MVV-LVA move ordering](https://www.chessprogramming.org/Move_Ordering)
 * [PolyGlot opening book querying](https://python-chess.readthedocs.io/en/latest/polyglot.html)
 * [Quiescence search](https://www.chessprogramming.org/Quiescence_Search)
-* [Transposition tables with Zorbist hashing](https://mediocrechess.blogspot.com/2007/01/guide-transposition-tables.html)
+* [Transposition tables with Zobrist hashing](https://mediocrechess.blogspot.com/2007/01/guide-transposition-tables.html)
 
 Evaluation:
 

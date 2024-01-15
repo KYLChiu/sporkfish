@@ -4,25 +4,48 @@ import chess.polyglot
 import sys
 import os
 import logging
+from .configurable import Configurable
+
+
+from typing import Optional
+
+
+class OpeningBookConfig(Configurable):
+    """Configuration class for an opening book.
+
+    Attributes:
+        opening_book_path (Optional[str]): Relative (to root directory) or absolute path to opening book binary. Defaults to None.
+
+    """
+
+    def __init__(self, opening_book_path: Optional[str] = None):
+        """
+        Initialize an OpeningBookConfig instance.
+
+        Args:
+            opening_book_path (Optional[str]): Relative (to root directory) or absolute path to opening book binary. Defaults to None.
+        """
+        self.opening_book_path = opening_book_path
 
 
 class OpeningBook:
     """Class for handling the opening book in chess engines."""
 
-    def __init__(self, opening_book_path: Optional[str] = None) -> None:
+    def __init__(self, config: OpeningBookConfig = OpeningBookConfig()) -> None:
         """
         Initialize the OpeningBook instance.
 
-        :param opening_book_path: Path to the opening book file.
-                                 If not provided, a default path is used.
-        :type opening_book_path: Optional[str]
+        :param config: Opening book config. If not provided, the default opening book is used.
+        :type config: OpeningBookConfig
         :return: None
         """
-
-        self._opening_book_path = opening_book_path or self._resource_path(
-            "data/opening.bin"
-        )
-        self._db = self._load(self._opening_book_path)
+        self._config = config
+        if self._config.opening_book_path:
+            self._db = self._load(self._resource_path(self._config.opening_book_path))
+        else:
+            logging.warn(
+                f"Skip loading opening book as the opening book binary path is not passed in configuration."
+            )
 
     def _resource_path(self, relative_path: str) -> str:
         """
@@ -54,8 +77,11 @@ class OpeningBook:
         """
 
         try:
-            return chess.polyglot.open_reader(opening_book_path)
+            r = chess.polyglot.open_reader(opening_book_path)
+            logging.info(f"Opening book succesfully loaded from {opening_book_path}.")
+            return r
         except FileNotFoundError as _:
+            logging.warn(f"No opening book found at {opening_book_path}, skipping.")
             return None
 
     def query(self, board: chess.Board) -> Optional[chess.Move]:

@@ -1,39 +1,24 @@
 import multiprocessing
+import logging.config
 import logging
 
-
-def run_uci():
-    logging.info("Running UCI...")
-    client = UCIClient(UCIClient.UCIProtocol.ResponseMode.PRINT)
-    while True:
-        message = input()
-        client.send_command(message)
-
-
-def run_lichess():
-    logging.info("Running Lichess...")
-    with open("api_token.txt") as f:
-        lichess_client = LichessBotBerserk(token=f.read())
-    lichess_client.run()
+from config import load_config
+from sporkfish.runner import RunConfig, RunMode, run_lichess, run_uci
 
 
 if __name__ == "__main__":
-    mode = "LICHESS"
+    config = load_config()
+
+    logging_config = config.get("LoggingConfig")
+    run_config = RunConfig.from_dict(config.get("RunConfig"))
 
     multiprocessing.freeze_support()
-    from sporkfish.lichess_bot.lichess_bot_berserk import LichessBotBerserk
-    from sporkfish.uci_client import UCIClient
 
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format="[%(levelname)s][%(asctime)s] %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
+    logging.config.dictConfig(logging_config)
 
     logging.info("----- Sporkfish -----")
 
-    # Should really be an enum but a nice task to move everything to Sporkfish config
-    if mode == "LICHESS":
+    if run_config.mode == RunMode.LICHESS:
         run_lichess()
     else:
         run_uci()

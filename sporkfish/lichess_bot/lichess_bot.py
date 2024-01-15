@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 import sporkfish.uci_client as uci_client
-import chess
+from typing import Optional
 
 
 class LichessBot(ABC):
@@ -25,8 +25,8 @@ class LichessBot(ABC):
     def _get_best_move(
         self,
         color: int,
-        time: int = None,
-        increment: int = None,
+        time: Optional[float] = None,
+        increment: Optional[float] = None,
     ) -> str:
         """
         Get the best move for the bot using the Sporkfish engine.
@@ -34,9 +34,9 @@ class LichessBot(ABC):
         :param color: Player color. 0 for white and 1 for black.
         :type color: int
         :param time: Time (in ms) left for player.
-        :type time: int
+        :type time: Optional[float]
         :param increment: Increment (in ms) for player.
-        :type increment: int
+        :type increment: Optional[float]
         """
         command = "go"
 
@@ -65,7 +65,7 @@ class LichessBot(ABC):
         self._sporkfish.send_command(f"position startpos moves {moves}")
 
     @abstractmethod
-    def run(self, timeout: float = None):
+    def run(self) -> None:
         """
         Start the Lichess bot, listening to incoming events and playing games accordingly.
 

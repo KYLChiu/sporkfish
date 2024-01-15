@@ -5,7 +5,7 @@ import chess
 class ZobristHash:
     def __init__(self) -> None:
         """
-        Initialize the Zobrist Hash object.
+        Initialize the Zobrist Hash object, used to hash board positions.
 
         Attributes:
         - _piece_hashes (dict): Dictionary to store Zobrist hash values for each piece on each square.

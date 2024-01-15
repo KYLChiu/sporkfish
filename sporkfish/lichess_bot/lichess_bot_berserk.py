@@ -2,6 +2,7 @@ import berserk
 import berserk.exceptions
 import logging
 import datetime
+from typing import Optional, Any, Tuple
 
 from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type
 from sporkfish.lichess_bot.lichess_bot import LichessBot
@@ -83,7 +84,9 @@ class LichessBotBerserk(LichessBot):
         :type game_id: str
         """
 
-        def get_time_and_inc(color, state):
+        def get_time_and_inc(
+            color: int, state: Any
+        ) -> Tuple[Optional[float], Optional[float]]:
             if (
                 state.get("perf", None)
                 and state.get("perf").get("name", None) == "Correspondence"
@@ -92,7 +95,7 @@ class LichessBotBerserk(LichessBot):
 
             game_state = state["state"] if state["type"] == "gameFull" else state
 
-            def extract_second(obj):
+            def extract_second(obj: Any) -> Optional[float]:
                 if isinstance(obj, datetime.datetime):
                     return obj.timestamp()
                 elif isinstance(obj, int):
@@ -108,7 +111,9 @@ class LichessBotBerserk(LichessBot):
             inc = extract_second(inc_obj)
             return time, inc
 
-        def set_pos_and_play_move(num_moves, color, prev_moves, game_id, state):
+        def set_pos_and_play_move(
+            num_moves: int, color: int, prev_moves: str, game_id: str, state: Any
+        ) -> None:
             if num_moves & 1 == color:
                 self._set_position(prev_moves)
                 time, inc = get_time_and_inc(color, state)

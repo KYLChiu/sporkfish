@@ -3,11 +3,12 @@ import sys
 from enum import Enum, auto
 import logging
 
-
+from config import load_config
 from .evaluator import Evaluator
-from .searcher import Searcher
+from .searcher import SearcherConfig, Searcher
 from .engine import Engine
-from .opening_book import OpeningBook
+from .opening_book import OpeningBookConfig, OpeningBook
+from .time_manager import TimeManagerConfig, TimeManager
 
 
 class UCIClient:
@@ -16,7 +17,7 @@ class UCIClient:
     A class representing a client for the Universal Chess Interface (UCI). It wraps the communicator, engine and board in one.
 
     Attributes:
-    - _uci_protocol (uci_communicator.UCIProtocol): The UCI communicator for handling communication with the chess engine.
+    - _uci_protocol (uci_protocol.UCIProtocol): The UCI protocol for handling communication with the chess engine.
     - _engine (engine.Engine): The chess engine used by the UCI client.
     - _board (chess.Board): The current chess board state.
 
@@ -75,7 +76,13 @@ class UCIClient:
         def __init__(self, response_mode: ResponseMode = ResponseMode.PRINT) -> None:
             self._response_mode = response_mode
 
-        def communicate(self, msg: str, board: chess.Board, engine: Engine) -> str:
+        def communicate(
+            self,
+            msg: str,
+            board: chess.Board,
+            engine: Engine,
+            time_manager: TimeManager,
+        ) -> str:
             """
             Process a UCI command and respond accordingly.
             This currently only implements a subset of the full UCI commands. Commands implemented:
@@ -120,33 +127,21 @@ class UCIClient:
                         board.push_uci(move)
 
             elif msg.startswith("go"):
-                # -------------------------- Basic strategy for time management --------------------------
-                # Allocate tw * time + iw * increment for searching the move
-                # Pick tw (time_weight) = 0.1, iw (increment_weight) = 0.01
-                # Quick analysis without increment:
-                # We get to make (1.0 - 0.1)^n * S number of (half) moves, where S = start_time in seconds
-                # To reach 1 second:
-                # (0.9)^n * S < 1
-                # n > ln (1/S) / ln 0.9
-                # Assuming a blitz game of 5 mins (S = 300), we can make 54 half moves before reaching 1 second
-                # Assuming a bullet game of 1 min (S = 60), we can make 38 half moves before reaching 1 second
-                # In future this should be a) configurable and b) improved.
                 tokens = msg.split()
-                idx = 0
+                idx = 1
                 timeout = None
 
+                # Get the time and increment
                 while idx < len(tokens):
-                    # Assumes inc comes straight after time
+                    # Assumes increment comes straight after time
                     if tokens[idx] == "wtime" or tokens[idx] == "btime":
                         assert (
                             len(tokens) >= idx + 3
                         ), "wtime or btime given in go string but no time or increment values passed."
-                        time = tokens[idx + 1]
-                        inc = tokens[idx + 3]
                         # Convert to ms -> s
-                        timeout = 0.1 * (float(time) / 1000) + 0.01 * (
-                            float(inc) / 1000
-                        )
+                        time = float(tokens[idx + 1]) / 1000.0
+                        increment = float(tokens[idx + 3]) / 1000.0
+                        timeout = time_manager.get_timeout(time, increment)
                         break
                     idx += 1
 
@@ -174,6 +169,11 @@ class UCIClient:
         """
         self._uci_protocol = UCIClient.UCIProtocol(response_mode)
         self._engine = UCIClient.create_engine()
+        self._time_manager = TimeManager(
+            TimeManagerConfig.from_dict(
+                load_config().get("TimeManagerConfig")  # type: ignore
+            )
+        )
         self._board = chess.Board()
         if response_mode is UCIClient.UCIProtocol.ResponseMode.RETURN:
             response = self.send_command("uci")
@@ -189,7 +189,9 @@ class UCIClient:
         :rtype: str
         """
         logging.info(f"Sending UCI comamnd: {command}")
-        return self._uci_protocol.communicate(command, self._board, self._engine)
+        return self._uci_protocol.communicate(
+            command, self._board, self._engine, self._time_manager
+        )
 
     @property
     def engine(self) -> Engine:
@@ -212,16 +214,20 @@ class UCIClient:
         return self._board
 
     @staticmethod
-    def create_engine(depth: int = 6) -> Engine:
+    def create_engine() -> Engine:
         """
         Create and return an instance of the chess engine for the UCI client.
-        The engine is configured with an evaluator, searcher, and opening book.
+        The engine is configured from config yaml file.
 
         :return: An instance of the chess engine.
         :rtype: engine.Engine
         """
-        eval = Evaluator()
-        search = Searcher(eval, depth)
-        ob = OpeningBook()
+
+        config = load_config()
+
+        ev = Evaluator()
+
+        search = Searcher(ev, SearcherConfig.from_dict(config.get("SearcherConfig")))  # type: ignore
+        ob = OpeningBook(OpeningBookConfig.from_dict(config.get("OpeningBookConfig")))  # type: ignore
         eng = Engine(search, ob)
         return eng
