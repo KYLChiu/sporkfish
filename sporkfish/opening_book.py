@@ -40,9 +40,7 @@ class OpeningBook:
         :return: None
         """
         self._config = config
-        self._db = self._load(
-            self._config.opening_book_path or self._resource_path("data/opening.bin")
-        )
+        self._db = self._load(self._resource_path(self._config.opening_book_path))
 
     def _resource_path(self, relative_path: str) -> str:
         """
