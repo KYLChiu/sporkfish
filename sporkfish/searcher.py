@@ -7,17 +7,19 @@ import os
 import logging
 import time
 import copy
+import yaml
 
+from .configurable import Configurable
 from .evaluator import Evaluator
 from .statistics import Statistics
 from .transposition_table import TranspositionTable
 from .zobrist_hash import ZobristHash
-from enum import Enum, auto
+from enum import Enum
 
 
 class SearchMode(Enum):
-    SINGLE_PROCESS = auto()
-    LAZY_SMP = auto()
+    SINGLE_PROCESS = "SINGLE_PROCESS"
+    LAZY_SMP = "LAZY_SMP"
 
 
 # _manager = Manager()
@@ -27,7 +29,31 @@ class SearchMode(Enum):
 # _dict = _manager.dict()
 # _stats = _manager.Value("i", 0)
 
+_dict: dict = dict()
 _stats = 0
+
+
+class SearcherConfig(Configurable):
+    """Configuration class for the searcher.
+
+    :param max_depth: Maximum depth for the search (default: 5).
+    :type max_depth: int
+    :param mode: Search mode (default: SearchMode.SINGLE_PROCESS).
+    :type mode: SearchMode
+    :param enable_transposition_table: Enable transposition table (default: True).
+    :type enable_transposition_table: bool
+    """
+
+    def __init__(
+        self,
+        max_depth: int = 5,
+        mode: SearchMode = SearchMode.SINGLE_PROCESS,
+        enable_transposition_table: bool = True,
+    ) -> None:
+        self.max_depth = max_depth
+        # TODO: register the constructor function in yaml loader instead.
+        self.mode = mode if isinstance(mode, SearchMode) else SearchMode(mode)
+        self.enable_transposition_table = enable_transposition_table
 
 
 class Searcher:
@@ -36,10 +62,7 @@ class Searcher:
     """
 
     def __init__(
-        self,
-        evaluator: Evaluator,
-        max_depth: int = 5,
-        mode: SearchMode = SearchMode.SINGLE_PROCESS,
+        self, evaluator: Evaluator, config: SearcherConfig = SearcherConfig()
     ) -> None:
         """
         Initialize the Searcher instance with mutable statistics.
@@ -49,19 +72,23 @@ class Searcher:
         :param max_depth: The maximum search depth for the minimax algorithm.
                          Default is 5.
         :type max_depth: int
-        :param node: Search type to use (e.g negamax single process or lazy SMP)
-        :type mode: SearchMode
+        :param config: Config to use for searching.
+        :type mode: SearcherConfig
         :return: None
         """
 
         self._evaluator = evaluator
-        self._max_depth = max_depth
-        self._zorbist_hash = ZobristHash()
+        self._config = config
+        self._zobrist_hash = ZobristHash()
         self._statistics = Statistics(_stats)
-        # self._transposition_table = TranspositionTable(_dict)
-        self._mode = mode
 
-        if self._mode == SearchMode.LAZY_SMP:
+        if self._config.enable_transposition_table:
+            logging.info("Enabled transposition table in search.")
+            self._transposition_table = TranspositionTable(_dict)
+        else:
+            logging.info("Disabled transposition table in search.")
+
+        if self._config.mode == SearchMode.LAZY_SMP:
             self._num_processes = os.cpu_count()
             self._pool = ProcessPool(nodes=self._num_processes)
 
@@ -175,10 +202,11 @@ class Searcher:
         value = -float("inf")
 
         # Probe the transposition table for an existing entry
-        # hash_value = self._zorbist_hash.hash(board)
-        # tt_entry = self._transposition_table.probe(hash_value, depth)
-        # if tt_entry:
-        #     return tt_entry["score"]
+        if self._config.enable_transposition_table:
+            hash_value = self._zobrist_hash.hash(board)
+            tt_entry = self._transposition_table.probe(hash_value, depth)
+            if tt_entry:
+                return tt_entry["score"]  # type: ignore
 
         self._statistics.increment()
 
@@ -206,7 +234,8 @@ class Searcher:
             if alpha >= beta:
                 break
 
-        # self._transposition_table.store(hash_value, depth, value)
+        if self._config.enable_transposition_table:
+            self._transposition_table.store(hash_value, depth, value)
 
         return value
 
@@ -235,7 +264,8 @@ class Searcher:
         best_move = chess.Move.null()
         self._statistics.increment()
 
-        # hash_value = self._zorbist_hash.hash(board)
+        if self._config.enable_transposition_table:
+            hash_value = self._zobrist_hash.hash(board)
 
         legal_moves = sorted(
             board.legal_moves,
@@ -256,7 +286,8 @@ class Searcher:
             if alpha >= beta:
                 break
 
-        # self._transposition_table.store(hash_value, depth, value)
+        if self._config.enable_transposition_table:
+            self._transposition_table.store(hash_value, depth, value)
 
         return value, best_move
 
@@ -324,9 +355,9 @@ class Searcher:
             beta: float,
         ) -> Tuple[float, chess.Move, float, int]:
             try:
-                if self._mode is SearchMode.SINGLE_PROCESS:
+                if self._config.mode is SearchMode.SINGLE_PROCESS:
                     score, move = self._negamax_sp(board_to_search, depth, alpha, beta)
-                elif self._mode is SearchMode.LAZY_SMP:
+                elif self._config.mode is SearchMode.LAZY_SMP:
                     score, move = self._negamax_lazy_smp(
                         board_to_search, depth, alpha, beta
                     )
@@ -361,7 +392,7 @@ class Searcher:
         move = chess.Move.null()
 
         # Iterative deepening
-        for depth in range(1, self._max_depth + 1):
+        for depth in range(1, self._config.max_depth + 1):
             new_board = copy.deepcopy(board)
 
             alpha = -float("inf")

@@ -4,12 +4,18 @@ import chess.polyglot
 import sys
 import os
 import logging
+from .configurable import Configurable
+
+
+class OpeningBookConfig(Configurable):
+    def __init__(self, opening_book_path: Optional[str] = None):
+        self.opening_book_path = opening_book_path
 
 
 class OpeningBook:
     """Class for handling the opening book in chess engines."""
 
-    def __init__(self, opening_book_path: Optional[str] = None) -> None:
+    def __init__(self, config: OpeningBookConfig = OpeningBookConfig()) -> None:
         """
         Initialize the OpeningBook instance.
 
@@ -18,11 +24,10 @@ class OpeningBook:
         :type opening_book_path: Optional[str]
         :return: None
         """
-
-        self._opening_book_path = opening_book_path or self._resource_path(
-            "data/opening.bin"
+        self._config = config
+        self._db = self._load(
+            self._config.opening_book_path or self._resource_path("data/opening.bin")
         )
-        self._db = self._load(self._opening_book_path)
 
     def _resource_path(self, relative_path: str) -> str:
         """
@@ -54,8 +59,11 @@ class OpeningBook:
         """
 
         try:
-            return chess.polyglot.open_reader(opening_book_path)
+            r = chess.polyglot.open_reader(opening_book_path)
+            logging.info(f"Opening book succesfully loaded from {opening_book_path}.")
+            return r
         except FileNotFoundError as _:
+            logging.warn(f"No opening book found at {opening_book_path}, skipping.")
             return None
 
     def query(self, board: chess.Board) -> Optional[chess.Move]:

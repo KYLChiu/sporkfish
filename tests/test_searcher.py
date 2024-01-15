@@ -1,12 +1,12 @@
-from sporkfish.searcher import Searcher
+from sporkfish.searcher import SearcherConfig, Searcher
 from sporkfish.evaluator import Evaluator
 import chess
 
 
-def searcher_with_fen(fen: str, depth=5):
+def searcher_with_fen(fen: str, max_depth=5):
     board = chess.Board()
     e = Evaluator()
-    s = Searcher(e, depth)
+    s = Searcher(e, SearcherConfig(max_depth))
     board.set_fen(fen)
     score, move = s.search(board)
     return score, move

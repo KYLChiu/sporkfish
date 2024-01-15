@@ -1,0 +1,29 @@
+RunConfig:
+  mode: LICHESS
+
+SearcherConfig:
+  max_depth: 10
+  mode: SINGLE_PROCESS
+  enable_transposition_table: False
+
+TimeManagerConfig:
+  time_weight: 0.1
+  increment_weight: 0.01
+
+OpeningBookConfig:
+  opening_book_path: data/opening.bin
+
+LoggingConfig:
+  version: 1
+  formatters:
+    detailed:
+      format: '[%(levelname)s][%(asctime)s] %(message)s'
+      datefmt: '%Y-%m-%d %H:%M:%S'
+  handlers:
+    console:
+      class: logging.StreamHandler
+      formatter: detailed
+  root:
+    level: DEBUG
+    handlers: ['console']
+
