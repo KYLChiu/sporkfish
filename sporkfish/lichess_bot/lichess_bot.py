@@ -34,9 +34,9 @@ class LichessBot(ABC):
         :param color: Player color. 0 for white and 1 for black.
         :type color: int
         :param time: Time (in ms) left for player.
-        :type time: float
+        :type time: Optional[float]
         :param increment: Increment (in ms) for player.
-        :type increment: float
+        :type increment: Optional[float]
         """
         command = "go"
 

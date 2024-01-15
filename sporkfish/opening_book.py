@@ -7,8 +7,24 @@ import logging
 from .configurable import Configurable
 
 
+from typing import Optional
+
+
 class OpeningBookConfig(Configurable):
+    """Configuration class for an opening book.
+
+    Attributes:
+        opening_book_path (Optional[str]): Relative (to root directory) or absolute path to opening book binary. Defaults to None.
+
+    """
+
     def __init__(self, opening_book_path: Optional[str] = None):
+        """
+        Initialize an OpeningBookConfig instance.
+
+        Args:
+            opening_book_path (Optional[str]): Relative (to root directory) or absolute path to opening book binary. Defaults to None.
+        """
         self.opening_book_path = opening_book_path
 
 
@@ -19,9 +35,8 @@ class OpeningBook:
         """
         Initialize the OpeningBook instance.
 
-        :param opening_book_path: Path to the opening book file.
-                                 If not provided, a default path is used.
-        :type opening_book_path: Optional[str]
+        :param config: Opening book config. If not provided, the default opening book is used.
+        :type config: OpeningBookConfig
         :return: None
         """
         self._config = config
