@@ -40,7 +40,12 @@ class OpeningBook:
         :return: None
         """
         self._config = config
-        self._db = self._load(self._resource_path(self._config.opening_book_path))
+        if self._config.opening_book_path:
+            self._db = self._load(self._resource_path(self._config.opening_book_path))
+        else:
+            logging.warn(
+                f"Skip loading opening book as the opening book binary path is not passed in configuration."
+            )
 
     def _resource_path(self, relative_path: str) -> str:
         """
