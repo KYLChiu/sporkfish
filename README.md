@@ -38,7 +38,7 @@ Search:
 * [MVV-LVA move ordering](https://www.chessprogramming.org/Move_Ordering)
 * [PolyGlot opening book querying](https://python-chess.readthedocs.io/en/latest/polyglot.html)
 * [Quiescence search](https://www.chessprogramming.org/Quiescence_Search)
-* [Transposition tables with zobrist hashing](https://mediocrechess.blogspot.com/2007/01/guide-transposition-tables.html)
+* [Transposition tables with Zobrist hashing](https://mediocrechess.blogspot.com/2007/01/guide-transposition-tables.html)
 
 Evaluation:
 
