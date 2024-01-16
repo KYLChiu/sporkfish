@@ -1,6 +1,7 @@
 import multiprocessing
 import logging.config
 import logging
+import numba
 
 from config import load_config
 from sporkfish.runner import RunConfig, RunMode, run_lichess, run_uci
