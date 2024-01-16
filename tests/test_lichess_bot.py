@@ -8,7 +8,7 @@ error_queue = multiprocessing.Queue()
 
 
 @pytest.mark.skipif(
-    sys.platform == "linux",
+    sys.platform != "linux",
     reason="Don't create multiple challenges to exceed rate limit of Lichess",
 )
 def test_lichess_bot_playing_ai_timed():

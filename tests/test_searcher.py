@@ -25,7 +25,6 @@ def test_pos1():
     )
 
 
-@pytest.mark.slow
 def test_pos2_perf():
     import cProfile
     import pstats
@@ -46,7 +45,6 @@ def test_pos2_perf():
     stats.strip_dirs().sort_stats("tottime").print_stats(10)
 
 
-@pytest.mark.slow
 def test_pos2_tt_perf():
     import cProfile
     import pstats
