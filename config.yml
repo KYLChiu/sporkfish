@@ -2,7 +2,7 @@ RunConfig:
   mode: LICHESS
 
 SearcherConfig:
-  max_depth: 10
+  max_depth: 6
   mode: SINGLE_PROCESS
   enable_transposition_table: False
 
