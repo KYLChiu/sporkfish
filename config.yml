@@ -6,7 +6,7 @@ SearcherConfig:
   mode: SINGLE_PROCESS # mode of search, choice from: SINGLE_PROCESS, LAZY_SMP
   enable_transposition_table: False # flag to enable position cache, so positions are not evaluated twice
 
-# Current time management strategy is time_weight * current_time + increment_weight * increment
+# Current time management strategy is alloted_move_time = time_weight * current_time + increment_weight * increment
 TimeManagerConfig:
   time_weight: 0.1 
   increment_weight: 0.01
