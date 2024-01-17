@@ -13,7 +13,7 @@ from .configurable import Configurable
 from .evaluator import Evaluator
 from .statistics import Statistics
 from .transposition_table import TranspositionTable
-from .zobrist_hash import ZobristHash
+from .zobrist_hasher import ZobristHasher
 from enum import Enum
 
 
@@ -72,7 +72,7 @@ class Searcher:
         :param evaluator: The chess board evaluator.
         :type evaluator: evaluator.Evaluator
         :param max_depth: The maximum search depth for the minimax algorithm.
-                         Default is 5.
+                         Def.ault is 5.
         :type max_depth: int
         :param config: Config to use for searching.
         :type mode: SearcherConfig
@@ -81,12 +81,13 @@ class Searcher:
 
         self._evaluator = evaluator
         self._config = config
-        self._zobrist_hash = ZobristHash()
+
         self._statistics = Statistics(_stats)
 
         if self._config.enable_transposition_table:
-            logging.info("Enabled transposition table in search.")
+            self._zobrist_hash = ZobristHasher()
             self._transposition_table = TranspositionTable(_dict)
+            logging.info("Enabled transposition table in search.")
         else:
             logging.info("Disabled transposition table in search.")
 
@@ -217,9 +218,6 @@ class Searcher:
         # This is not ideal, but otherwise the search becomes incredibly slow
         if depth == 0:
             return self._quiescence(board, 4, alpha, beta)
-
-
-
 
         # Null move pruning
         if self._config.enable_null_move_pruning:

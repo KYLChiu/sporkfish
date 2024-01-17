@@ -28,7 +28,7 @@ Once you create a game via your bot account, the bot will automatically play. We
 ## Principles
 
 * Functional library: encourage free functions whilst avoiding mutable data unless the task specifically and inherently demands it (e.g. statistics, transposition table, board state).
-* Well documented: classes should always have docstrings. Where the code complex, additional inline comments should be made.
+* Well documented: classes should always have docstrings. Where the code is complex, additional inline comments should be made.
 
 ## Features
 

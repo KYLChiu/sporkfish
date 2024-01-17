@@ -8,3 +8,4 @@ stopit==1.1.2
 tenacity==8.2.3
 mypy==1.8.0
 pyYAML==6.0.1
+numba==0.58.1
