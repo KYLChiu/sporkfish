@@ -224,9 +224,10 @@ class Searcher:
         # Null move pruning
         if self._config.enable_null_move_pruning:
             # TODO: add zugzwang check
+            depth_reduction_factor = 3
             in_check = board.is_check()
-            if depth >= 3 and not in_check:
-                null_move_depth = depth - 3
+            if depth >= depth_reduction_factor and not in_check:
+                null_move_depth = depth - depth_reduction_factor
                 board.push(chess.Move.null())
                 value = -self._negamax(board, null_move_depth, -beta, -alpha)
                 board.pop()
