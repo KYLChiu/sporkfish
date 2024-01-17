@@ -1,17 +1,18 @@
 RunConfig:
-  mode: LICHESS
+  mode: LICHESS # running mode, choose from: LICHESS, UCI
 
 SearcherConfig:
-  max_depth: 10
-  mode: SINGLE_PROCESS
-  enable_transposition_table: False
+  max_depth: 6 # maximum depth for negamax search
+  mode: SINGLE_PROCESS # mode of search, choice of: SINGLE_PROCESS, LAZY_SMP
+  enable_transposition_table: False # flag to enable position cache, so positions are not evaluated twice
 
+# Current time management strategy is alloted_move_time = time_weight * current_time + increment_weight * increment
 TimeManagerConfig:
-  time_weight: 0.1
+  time_weight: 0.1 
   increment_weight: 0.01
 
 OpeningBookConfig:
-  opening_book_path: data/opening.bin
+  opening_book_path: data/opening.bin # path to opening_book binary 
 
 LoggingConfig:
   version: 1

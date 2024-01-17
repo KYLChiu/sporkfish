@@ -163,3 +163,6 @@ api_token.txt
 # Mac
 .DS_Store
 
+# Profiling
+prof/
+

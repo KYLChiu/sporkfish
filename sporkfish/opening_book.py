@@ -43,7 +43,7 @@ class OpeningBook:
         if self._config.opening_book_path:
             self._db = self._load(self._resource_path(self._config.opening_book_path))
         else:
-            logging.warn(
+            logging.warning(
                 f"Skip loading opening book as the opening book binary path is not passed in configuration."
             )
 
@@ -81,7 +81,7 @@ class OpeningBook:
             logging.info(f"Opening book succesfully loaded from {opening_book_path}.")
             return r
         except FileNotFoundError as _:
-            logging.warn(f"No opening book found at {opening_book_path}, skipping.")
+            logging.warning(f"No opening book found at {opening_book_path}, skipping.")
             return None
 
     def query(self, board: chess.Board) -> Optional[chess.Move]:
