@@ -70,7 +70,7 @@ class Searcher:
         :param evaluator: The chess board evaluator.
         :type evaluator: evaluator.Evaluator
         :param max_depth: The maximum search depth for the minimax algorithm.
-                         Default is 5.
+                         Def.ault is 5.
         :type max_depth: int
         :param config: Config to use for searching.
         :type mode: SearcherConfig

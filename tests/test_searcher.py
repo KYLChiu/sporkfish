@@ -2,9 +2,10 @@ from sporkfish.searcher import SearcherConfig, Searcher
 from sporkfish.evaluator import Evaluator
 import chess
 import pytest
+from typing import Any
 
 
-def searcher_with_fen(fen: str, max_depth=5, enable_transposition_table=False):
+def searcher_with_fen(fen: str, max_depth=6, enable_transposition_table=False):
     board = chess.Board()
     e = Evaluator()
     s = Searcher(
@@ -18,6 +19,23 @@ def searcher_with_fen(fen: str, max_depth=5, enable_transposition_table=False):
     return score, move
 
 
+def run_perft(kwargs: Any):
+    import cProfile
+    import pstats
+
+    profiler = cProfile.Profile()
+
+    profiler.enable()
+
+    searcher_with_fen(**kwargs)
+
+    profiler.disable()
+
+    stats = pstats.Stats(profiler)
+
+    stats.strip_dirs().sort_stats("tottime").print_stats(10)
+
+
 # Below just tests if no exceptions are thrown and no null moves made
 def test_pos1():
     searcher_with_fen(
@@ -25,41 +43,17 @@ def test_pos1():
     )
 
 
+# Performance test without transposition table
 def test_pos2_perf():
-    import cProfile
-    import pstats
-
-    profiler = cProfile.Profile()
-
-    profiler.enable()
-
-    searcher_with_fen(
-        "r1r3k1/1ppp1ppp/p7/8/1P1nPPn1/3B1RP1/P1PP3q/R1BQ2K1 w - - 2 18",
+    run_perft(
+        fen="r1r3k1/1ppp1ppp/p7/8/1P1nPPn1/3B1RP1/P1PP3q/R1BQ2K1 w - - 2 18",
         enable_transposition_table=False,
     )
 
-    profiler.disable()
 
-    stats = pstats.Stats(profiler)
-
-    stats.strip_dirs().sort_stats("tottime").print_stats(10)
-
-
+# Performance test with transposition table
 def test_pos2_tt_perf():
-    import cProfile
-    import pstats
-
-    profiler = cProfile.Profile()
-
-    profiler.enable()
-
-    searcher_with_fen(
-        "r1r3k1/1ppp1ppp/p7/8/1P1nPPn1/3B1RP1/P1PP3q/R1BQ2K1 w - - 2 18",
+    run_perft(
+        fen="r1r3k1/1ppp1ppp/p7/8/1P1nPPn1/3B1RP1/P1PP3q/R1BQ2K1 w - - 2 18",
         enable_transposition_table=True,
     )
-
-    profiler.disable()
-
-    stats = pstats.Stats(profiler)
-
-    stats.strip_dirs().sort_stats("tottime").print_stats(10)
