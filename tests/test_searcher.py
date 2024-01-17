@@ -1,11 +1,10 @@
 from sporkfish.searcher import SearcherConfig, Searcher
 from sporkfish.evaluator import Evaluator
 import chess
-import pytest
 from typing import Any
 
 
-def searcher_with_fen(fen: str, max_depth=6, enable_transposition_table=False):
+def searcher_with_fen(fen: str, max_depth=5, enable_transposition_table=False):
     board = chess.Board()
     e = Evaluator()
     s = Searcher(
@@ -19,7 +18,7 @@ def searcher_with_fen(fen: str, max_depth=6, enable_transposition_table=False):
     return score, move
 
 
-def run_perft(kwargs: Any):
+def run_perft(fen: str, max_depth: int, enable_transposition_table: bool):
     import cProfile
     import pstats
 
@@ -27,7 +26,7 @@ def run_perft(kwargs: Any):
 
     profiler.enable()
 
-    searcher_with_fen(**kwargs)
+    searcher_with_fen(fen, max_depth, enable_transposition_table)
 
     profiler.disable()
 
@@ -47,6 +46,7 @@ def test_pos1():
 def test_pos2_perf():
     run_perft(
         fen="r1r3k1/1ppp1ppp/p7/8/1P1nPPn1/3B1RP1/P1PP3q/R1BQ2K1 w - - 2 18",
+        max_depth=6,
         enable_transposition_table=False,
     )
 
@@ -55,5 +55,6 @@ def test_pos2_perf():
 def test_pos2_tt_perf():
     run_perft(
         fen="r1r3k1/1ppp1ppp/p7/8/1P1nPPn1/3B1RP1/P1PP3q/R1BQ2K1 w - - 2 18",
+        max_depth=6,
         enable_transposition_table=True,
     )
