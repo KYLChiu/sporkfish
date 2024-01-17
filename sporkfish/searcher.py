@@ -221,6 +221,7 @@ class Searcher:
 
         # Null move pruning
         if self._config.enable_null_move_pruning:
+            # TODO: add zugzwang check
             in_check = board.is_check()
             if depth >= 3 and not in_check:
                 null_move_depth = depth - 3

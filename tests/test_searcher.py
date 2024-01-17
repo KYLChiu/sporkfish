@@ -4,13 +4,20 @@ import chess
 from typing import Any
 
 
-def searcher_with_fen(fen: str, max_depth=5, enable_transposition_table=False):
+def searcher_with_fen(
+    fen: str,
+    max_depth=5,
+    enable_null_move_pruning=True,
+    enable_transposition_table=False,
+):
     board = chess.Board()
     e = Evaluator()
     s = Searcher(
         e,
         SearcherConfig(
-            max_depth, enable_transposition_table=enable_transposition_table
+            max_depth,
+            enable_null_move_pruning=enable_null_move_pruning,
+            enable_transposition_table=enable_transposition_table,
         ),
     )
     board.set_fen(fen)
@@ -18,7 +25,12 @@ def searcher_with_fen(fen: str, max_depth=5, enable_transposition_table=False):
     return score, move
 
 
-def run_perft(fen: str, max_depth: int, enable_transposition_table: bool):
+def run_perft(
+    fen: str,
+    max_depth: int,
+    enable_null_move_pruning: bool,
+    enable_transposition_table: bool,
+):
     import cProfile
     import pstats
 
@@ -26,7 +38,9 @@ def run_perft(fen: str, max_depth: int, enable_transposition_table: bool):
 
     profiler.enable()
 
-    searcher_with_fen(fen, max_depth, enable_transposition_table)
+    searcher_with_fen(
+        fen, max_depth, enable_null_move_pruning, enable_transposition_table
+    )
 
     profiler.disable()
 
@@ -35,26 +49,31 @@ def run_perft(fen: str, max_depth: int, enable_transposition_table: bool):
     stats.strip_dirs().sort_stats("tottime").print_stats(10)
 
 
-# Below just tests if no exceptions are thrown and no null moves made
-def test_pos1():
-    searcher_with_fen(
-        "r1bqkb1r/1ppp1ppp/p1n2n2/1B2p3/4P3/5N2/PPPP1PPP/RNBQ1RK1 w kq - 0 5"
-    )
-
-
-# Performance test without transposition table
-def test_pos2_perf():
+# Performance test without transposition table and with null-move pruning
+def test_nmp_perf():
     run_perft(
         fen="r1r3k1/1ppp1ppp/p7/8/1P1nPPn1/3B1RP1/P1PP3q/R1BQ2K1 w - - 2 18",
         max_depth=6,
+        enable_null_move_pruning=True,
+        enable_transposition_table=False,
+    )
+
+
+# Performance test without transposition table and without null-move pruning
+def test_perf():
+    run_perft(
+        fen="r1r3k1/1ppp1ppp/p7/8/1P1nPPn1/3B1RP1/P1PP3q/R1BQ2K1 w - - 2 18",
+        max_depth=6,
+        enable_null_move_pruning=False,
         enable_transposition_table=False,
     )
 
 
 # Performance test with transposition table
-def test_pos2_tt_perf():
+def test_tt_perf():
     run_perft(
         fen="r1r3k1/1ppp1ppp/p7/8/1P1nPPn1/3B1RP1/P1PP3q/R1BQ2K1 w - - 2 18",
         max_depth=6,
+        enable_null_move_pruning=False,
         enable_transposition_table=True,
     )
