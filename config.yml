@@ -2,16 +2,10 @@ RunConfig:
   mode: LICHESS # running mode, choose from: LICHESS, UCI
 
 SearcherConfig:
-<<<<<<< HEAD
-  max_depth: 10
-  mode: SINGLE_PROCESS
-  enable_null_move_pruning: True
-  enable_transposition_table: False
-=======
   max_depth: 6 # maximum depth for negamax search
   mode: SINGLE_PROCESS # mode of search, choice of: SINGLE_PROCESS, LAZY_SMP
+  enable_null_move_pruning: True # flag to enable null move pruning (checking for a beta-cutoff by passing our turn)
   enable_transposition_table: False # flag to enable position cache, so positions are not evaluated twice
->>>>>>> 4d735b17183922d51cc4c297f0bb147c7296ef3b
 
 # Current time management strategy is alloted_move_time = time_weight * current_time + increment_weight * increment
 TimeManagerConfig:
