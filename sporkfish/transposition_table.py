@@ -1,5 +1,6 @@
+from typing import Dict, Optional
+
 import chess
-from typing import Optional, Dict
 
 
 class TranspositionTable:

@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
-import sporkfish.uci_client as uci_client
 from typing import Optional
+
+import sporkfish.uci_client as uci_client
 
 
 class LichessBot(ABC):

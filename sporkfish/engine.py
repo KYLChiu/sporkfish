@@ -1,7 +1,9 @@
-import chess
 from typing import Optional
-from .searcher import Searcher
+
+import chess
+
 from .opening_book import OpeningBook
+from .searcher import Searcher
 
 
 class Engine:

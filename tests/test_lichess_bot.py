@@ -1,8 +1,10 @@
-from sporkfish.lichess_bot import lichess_bot_berserk
-import pytest
-import sys
 import multiprocessing
+import sys
 import time
+
+import pytest
+
+from sporkfish.lichess_bot import lichess_bot_berserk
 
 error_queue = multiprocessing.Queue()
 

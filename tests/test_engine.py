@@ -1,7 +1,9 @@
-from unittest.mock import MagicMock
-import chess
 import time
-from sporkfish import evaluator, searcher, opening_book, engine
+from unittest.mock import MagicMock
+
+import chess
+
+from sporkfish import engine, evaluator, opening_book, searcher
 
 
 def create_engine(depth):

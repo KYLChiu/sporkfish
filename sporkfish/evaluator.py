@@ -1,5 +1,6 @@
-import chess
 from typing import Callable
+
+import chess
 import numpy as np
 
 
