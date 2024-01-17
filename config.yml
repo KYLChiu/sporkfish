@@ -1,9 +1,9 @@
 RunConfig:
-  mode: LICHESS
+  mode: LICHESS # running mode, choose from: LICHESS, UCI
 
 SearcherConfig:
   max_depth: 6 # maximum depth for negamax search
-  mode: SINGLE_PROCESS # mode of search, choice from: SINGLE_PROCESS, LAZY_SMP
+  mode: SINGLE_PROCESS # mode of search, choice of: SINGLE_PROCESS, LAZY_SMP
   enable_transposition_table: False # flag to enable position cache, so positions are not evaluated twice
 
 # Current time management strategy is alloted_move_time = time_weight * current_time + increment_weight * increment
