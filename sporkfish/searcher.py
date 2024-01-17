@@ -49,11 +49,13 @@ class SearcherConfig(Configurable):
         max_depth: int = 5,
         mode: SearchMode = SearchMode.SINGLE_PROCESS,
         enable_transposition_table: bool = True,
+        enable_null_move_pruning: bool = True,
     ) -> None:
         self.max_depth = max_depth
         # TODO: register the constructor function in yaml loader instead.
         self.mode = mode if isinstance(mode, SearchMode) else SearchMode(mode)
         self.enable_transposition_table = enable_transposition_table
+        self.enable_null_move_pruning = enable_null_move_pruning
 
 
 class Searcher:
@@ -216,17 +218,19 @@ class Searcher:
         if depth == 0:
             return self._quiescence(board, 4, alpha, beta)
 
-        in_check = board.is_check()
+
 
 
         # Null move pruning
-        if depth >= 3 and not in_check:
-            null_move_depth = depth - 3
-            board.push(chess.Move.null())
-            value = -self._negamax(board, null_move_depth, -beta, -alpha)
-            board.pop()
-            if value >= beta:
-                return beta
+        if self._config.enable_null_move_pruning:
+            in_check = board.is_check()
+            if depth >= 3 and not in_check:
+                null_move_depth = depth - 3
+                board.push(chess.Move.null())
+                value = -self._negamax(board, null_move_depth, -beta, -alpha)
+                board.pop()
+                if value >= beta:
+                    return beta
 
         # Move ordering via MVV-LVA to encourage aggressive pruning
         legal_moves = sorted(

@@ -4,6 +4,7 @@ RunConfig:
 SearcherConfig:
   max_depth: 10
   mode: SINGLE_PROCESS
+  enable_null_move_pruning: True
   enable_transposition_table: False
 
 TimeManagerConfig:
