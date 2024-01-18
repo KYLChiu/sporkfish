@@ -32,7 +32,7 @@ Once you create a game via your bot account, the bot will automatically play. We
 To run all tests:
 
 ```
-python3 -m pytest -sv
+python3 -m pytest -v
 ```
 
 You may also run a specific test class or function, e.g.:
