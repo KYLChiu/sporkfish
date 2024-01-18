@@ -48,6 +48,12 @@ class TestValidMove:
     ],
 )
 class TestPerformance:
+    """
+    Tests only for performance analysis - skipped by marked as slow
+    To run perf tests:
+    python3 -m pytest tests/test_searcher.py::TestPerformance -sv --runslow
+    """
+
     def _run_perf_analytics(
         self, fen: str, max_depth: int, enable_transposition_table: bool
     ) -> None:
@@ -62,16 +68,18 @@ class TestPerformance:
 
         stats.strip_dirs().sort_stats("tottime").print_stats(10)
 
-    # Performance test without transposition table
+    @pytest.mark.slow
     def test_perf_tt_off(self, fen_string: str, max_depth: int) -> None:
+        """Performance test without transposition table"""
         self._run_perf_analytics(
             fen=fen_string,
             max_depth=max_depth,
             enable_transposition_table=False,
         )
 
-    # Performance test with transposition table
+    @pytest.mark.slow
     def test_perf_tt_on(self, fen_string: str, max_depth: int) -> None:
+        """Performance test with transposition table"""
         self._run_perf_analytics(
             fen=fen_string,
             max_depth=max_depth,
