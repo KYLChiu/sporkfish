@@ -6,7 +6,7 @@ import chess
 from sporkfish import engine, evaluator, opening_book, searcher
 
 
-def create_engine(depth):
+def create_engine(depth: int) -> engine.Engine:
     ev = evaluator.Evaluator()
     search = searcher.Searcher(ev, searcher.SearcherConfig(depth))
     ob = opening_book.OpeningBook()
@@ -14,7 +14,7 @@ def create_engine(depth):
     return eng
 
 
-def test_timeout():
+def test_timeout() -> None:
     board = chess.Board()
     eng = create_engine(100)
     start = time.time()

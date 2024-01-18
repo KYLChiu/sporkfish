@@ -19,7 +19,7 @@ black_move = {
 board_setup = {"white": white_move, "black": black_move}
 
 
-def init_board(fen_string: str):
+def init_board(fen_string: str) -> chess.Board:
     """
     Initialise chess board using FEN string
     https://www.dailychess.com/chess/chess-fen-viewer.php

@@ -6,7 +6,7 @@ Sporkfish is a Python-based chess engine. Chess programming techniques, although
 
 ## Usage
 
-# Set up
+### Set up
 
 To quickly set up the environment, you can use docker. From a terminal in the root directory:
 
@@ -17,32 +17,6 @@ docker run -it sporkfish-devenv
 
 This generates an interactive bash shell for you to run the program in.
 
-# Run Tests
-
-To run all tests:
-
-```
-python3 -m pytest -sv
-```
-
-To run a specific file/module:
-
-```
-python3 -m pytest -sv
-```
-
-To run a specific test class:
-
-```
-python3 -m pytest tests/test_searcher.py::TestQuiescence -sv
-```
-
-To run a specific test function:
-
-```
-python3 -m pytest tests/test_searcher.py::test_pos2_perf -sv
-```
-
 ### Lichess
 
 Check out the bot on lichess [here](https://lichess.org/@/Sporkfish)! To run the bot, create a file in the root directory named `api_token.txt`. Add your Lichess bot API token. Then run:
@@ -52,6 +26,20 @@ python3 main.py
 ```
 
 Once you create a game via your bot account, the bot will automatically play. We currently do not support simultaneous games.
+
+### Run Tests
+
+To run all tests:
+
+```
+python3 -m pytest -sv
+```
+
+You may also run a specific test class or function, e.g.:
+
+```
+python3 -m pytest tests/test_searcher.py::TestMvvLvvHeuristic -sv
+```
 
 ## Principles
 

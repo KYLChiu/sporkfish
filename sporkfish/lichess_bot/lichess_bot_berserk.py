@@ -4,7 +4,8 @@ from typing import Any, Optional, Tuple
 
 import berserk
 import berserk.exceptions
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
+from tenacity import (retry, retry_if_exception_type, stop_after_attempt,
+                      wait_fixed)
 
 from sporkfish.lichess_bot.lichess_bot import LichessBot
 

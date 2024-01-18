@@ -13,7 +13,7 @@ error_queue = multiprocessing.Queue()
     sys.platform != "linux",
     reason="Don't create multiple challenges to exceed rate limit of Lichess",
 )
-def test_lichess_bot_playing_ai_timed():
+def test_lichess_bot_playing_ai_timed() -> None:
     time_limit = 30
 
     def run_game():

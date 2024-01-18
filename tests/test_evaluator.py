@@ -11,19 +11,20 @@ from sporkfish import evaluator
 
 
 class TestScore:
-    def test_black_winning_black_to_move(self):
-        score = score_fen("6r1/pNkb4/Pp2p3/2p1np1p/8/1PP4P/R5B1/5K2 b - - 1 34")
+    def test_black_winning_black_to_move(self) -> None:
+        score = score_fen(
+            "6r1/pNkb4/Pp2p3/2p1np1p/8/1PP4P/R5B1/5K2 b - - 1 34")
         assert score > 0
 
-    def test_black_winning_white_to_move(self):
+    def test_black_winning_white_to_move(self) -> None:
         score = score_fen("8/pNkb4/Pp2p3/2p1np1p/8/1PP3rP/R5B1/5K2 w - - 2 35")
         assert score < 0
 
-    def test_white_winning_white_to_move(self):
+    def test_white_winning_white_to_move(self) -> None:
         score = score_fen("8/2Q5/8/8/1k1K4/8/8/8 w - - 15 74")
         assert score > 0
 
-    def test_white_winning_black_to_move(self):
+    def test_white_winning_black_to_move(self) -> None:
         score = score_fen("8/1Q6/8/8/1k1K4/8/8/8 b - - 16 74")
         assert score < 0
 
@@ -41,7 +42,7 @@ class TestEvaluator:
         eg_score = white_eg_score - black_eg_score
         return [mg_score, eg_score]
 
-    def test_evaluation_two_kings_white_to_move(self):
+    def test_evaluation_two_kings_white_to_move(self) -> None:
         """
         Testing evaluate function for a simple board:
         black king at 43 (d6)
@@ -51,17 +52,16 @@ class TestEvaluator:
         fen_string = board_setup["white"]["two_kings"]
         score = score_fen(fen_string)
 
-        [mg_score, eg_score] = self.eval_kings_pos()
-
         phase = 0
         mg_phase = min(24, phase)
         eg_phase = 24 - mg_phase
 
+        [mg_score, eg_score] = self.eval_kings_pos()
         expected = ((mg_score * mg_phase) + (eg_score * eg_phase)) / 24
 
         assert score == expected
 
-    def test_evaluation_two_kings_black_to_move(self):
+    def test_evaluation_two_kings_black_to_move(self) -> None:
         """
         Testing evaluate function for a simple board:
         black king at 43 (d6)
@@ -71,13 +71,12 @@ class TestEvaluator:
         fen_string = board_setup["black"]["two_kings"]
         score = score_fen(fen_string)
 
-        [mg_score, eg_score] = self.eval_kings_pos()
-        mg_score, eg_score = -mg_score, -eg_score
-
         phase = 0
         mg_phase = min(24, phase)
         eg_phase = 24 - mg_phase
 
+        [mg_score, eg_score] = self.eval_kings_pos()
+        mg_score, eg_score = -mg_score, -eg_score
         expected = ((mg_score * mg_phase) + (eg_score * eg_phase)) / 24
 
         assert score == expected
