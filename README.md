@@ -41,6 +41,15 @@ You may also run a specific test class or function, e.g.:
 python3 -m pytest tests/test_searcher.py::TestMvvLvvHeuristic -sv
 ```
 
+### Code formatting
+
+Before submitting your code, please run
+
+```
+isort --profile black .
+black .
+```
+
 ## Principles
 
 * Functional library: encourage free functions whilst avoiding mutable data unless the task specifically and inherently demands it (e.g. statistics, transposition table, board state).
