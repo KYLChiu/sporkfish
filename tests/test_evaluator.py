@@ -12,8 +12,7 @@ from sporkfish import evaluator
 
 class TestScore:
     def test_black_winning_black_to_move(self) -> None:
-        score = score_fen(
-            "6r1/pNkb4/Pp2p3/2p1np1p/8/1PP4P/R5B1/5K2 b - - 1 34")
+        score = score_fen("6r1/pNkb4/Pp2p3/2p1np1p/8/1PP4P/R5B1/5K2 b - - 1 34")
         assert score > 0
 
     def test_black_winning_white_to_move(self) -> None:
@@ -30,7 +29,7 @@ class TestScore:
 
 
 class TestEvaluator:
-    def eval_kings_pos(self) -> list[float, float]:
+    def _eval_kings_pos(self) -> list[float, float]:
         ev = evaluator.Evaluator()
 
         white_mg_score = ev.MG_KING[44] + ev.MG_PIECE_VALUES[chess.KING]
@@ -56,7 +55,7 @@ class TestEvaluator:
         mg_phase = min(24, phase)
         eg_phase = 24 - mg_phase
 
-        [mg_score, eg_score] = self.eval_kings_pos()
+        [mg_score, eg_score] = self._eval_kings_pos()
         expected = ((mg_score * mg_phase) + (eg_score * eg_phase)) / 24
 
         assert score == expected
@@ -75,7 +74,7 @@ class TestEvaluator:
         mg_phase = min(24, phase)
         eg_phase = 24 - mg_phase
 
-        [mg_score, eg_score] = self.eval_kings_pos()
+        [mg_score, eg_score] = self._eval_kings_pos()
         mg_score, eg_score = -mg_score, -eg_score
         expected = ((mg_score * mg_phase) + (eg_score * eg_phase)) / 24
 

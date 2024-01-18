@@ -8,7 +8,7 @@ from sporkfish.evaluator import Evaluator
 from sporkfish.searcher import Searcher, SearcherConfig
 
 
-def searcher_with_fen(
+def _searcher_with_fen(
     fen: str, max_depth: int = 5, enable_transposition_table: bool = False
 ):
     board = chess.Board()
@@ -38,7 +38,7 @@ class TestValidMove:
         """
         Tests if no exceptions are thrown and no null moves made
         """
-        searcher_with_fen(fen_string)
+        _searcher_with_fen(fen_string)
 
 
 @pytest.mark.parametrize(
@@ -48,7 +48,7 @@ class TestValidMove:
     ],
 )
 class TestPerformance:
-    def run_perf_analytics(
+    def _run_perf_analytics(
         self, fen: str, max_depth: int, enable_transposition_table: bool
     ) -> None:
         import cProfile
@@ -56,7 +56,7 @@ class TestPerformance:
 
         profiler = cProfile.Profile()
         profiler.enable()
-        searcher_with_fen(fen, max_depth, enable_transposition_table)
+        _searcher_with_fen(fen, max_depth, enable_transposition_table)
         profiler.disable()
         stats = pstats.Stats(profiler)
 
@@ -64,7 +64,7 @@ class TestPerformance:
 
     # Performance test without transposition table
     def test_perf_tt_off(self, fen_string: str, max_depth: int) -> None:
-        self.run_perf_analytics(
+        self._run_perf_analytics(
             fen=fen_string,
             max_depth=max_depth,
             enable_transposition_table=False,
@@ -72,7 +72,7 @@ class TestPerformance:
 
     # Performance test with transposition table
     def test_perf_tt_on(self, fen_string: str, max_depth: int) -> None:
-        self.run_perf_analytics(
+        self._run_perf_analytics(
             fen=fen_string,
             max_depth=max_depth,
             enable_transposition_table=True,
@@ -93,39 +93,41 @@ class TestPerformance:
     ],
 )
 class TestQuiescence:
-    def test_quiescence_depth_0(self, init_searcher: Searcher, fen_string: str) -> None:
+    def test_quiescence_depth_0(
+        self, _init_searcher: Searcher, fen_string: str
+    ) -> None:
         """
         Test for quiescence base case (depth 0)
         """
         board = init_board(fen_string)
-        s = init_searcher
+        s = _init_searcher
 
         alpha, beta = 1.1, 2.3
         result = s._quiescence(board, 0, alpha, beta)
         assert result == score_fen(fen_string)
 
     def test_quiescence_depth_2_beta(
-        self, init_searcher: Searcher, fen_string: str
+        self, _init_searcher: Searcher, fen_string: str
     ) -> None:
         """
         Test quiescence returns beta
         if beta is sufficiently negative
         """
         board = init_board(fen_string)
-        s = init_searcher
+        s = _init_searcher
         alpha, beta = 0, -1e8
         result = s._quiescence(board, 2, alpha, beta)
         assert result == beta
 
     def test_quiescence_depth_1_alpha(
-        self, init_searcher: Searcher, fen_string: str
+        self, _init_searcher: Searcher, fen_string: str
     ) -> None:
         """
         Test quiescence behaviour with depth 1
         when both alpha and beta are sufficiently large
         """
         board = init_board(fen_string)
-        s = init_searcher
+        s = _init_searcher
         alpha, beta = 1e8, 1e9
         result = s._quiescence(board, 1, alpha, beta)
 
@@ -145,13 +147,15 @@ class TestQuiescence:
 
         assert result == alpha
 
-    def test_quiescence_depth_2(self, init_searcher: Searcher, fen_string: str) -> None:
+    def test_quiescence_depth_2(
+        self, _init_searcher: Searcher, fen_string: str
+    ) -> None:
         """
         Test quiescence behaviour with depth 2
         with both low alpha and high beta
         """
         board = init_board(fen_string)
-        s = init_searcher
+        s = _init_searcher
         alpha, beta = -1e8, 1e9
         result = s._quiescence(board, 2, alpha, beta)
 
@@ -181,7 +185,7 @@ class TestQuiescence:
 
 
 @pytest.fixture
-def init_searcher(max_depth: int = 4) -> Searcher:
+def _init_searcher(max_depth: int = 4) -> Searcher:
     """Initialise searcher"""
     e = Evaluator()
     return Searcher(e, SearcherConfig(max_depth))
@@ -210,14 +214,14 @@ def init_searcher(max_depth: int = 4) -> Searcher:
 )
 class TestNegamax:
     def test_negamax_depth_0(
-        self, init_searcher: Searcher, fen_string: str, param: list[float, float]
+        self, _init_searcher: Searcher, fen_string: str, param: list[float, float]
     ) -> None:
         """
         Testing negamax base case (depth 0)
         Checks that negamax devolve to quiescence search
         """
         board = init_board(fen_string)
-        s = init_searcher
+        s = _init_searcher
 
         alpha, beta = param[0], param[1]
         result = s._negamax(board, 0, alpha, beta)
@@ -225,13 +229,13 @@ class TestNegamax:
         assert result == s._quiescence(board, 4, alpha, beta)
 
     def test_negamax_depth_1(
-        self, init_searcher: Searcher, fen_string: str, param: list[float, float]
+        self, _init_searcher: Searcher, fen_string: str, param: list[float, float]
     ) -> None:
         """
         Testing negamax depth 1
         """
         board = init_board(fen_string)
-        s = init_searcher
+        s = _init_searcher
 
         alpha, beta = param[0], param[1]
         result = s._negamax(board, 1, alpha, beta)
@@ -260,12 +264,14 @@ class TestNegamax:
     ],
 )
 class TestMvvLvvHeuristic:
-    def test_mvv_lva_heuristic_end_game(self, init_searcher: Searcher, fen_string: str, move_scores: list[int]) -> None:
+    def test_mvv_lva_heuristic_end_game(
+        self, _init_searcher: Searcher, fen_string: str, move_scores: list[int]
+    ) -> None:
         """
         Test mvv lva heuistic on an end game board
         """
         board = init_board(fen_string)
-        s = init_searcher
+        s = _init_searcher
 
         all_moves = board.legal_moves
         num_moves = len(move_scores)
@@ -275,12 +281,14 @@ class TestMvvLvvHeuristic:
             score = s._mvv_lva_heuristic(board, move)
             assert score == move_scores[i]
 
-    def test_sorting_legal_moves(self, init_searcher: Searcher, fen_string: str, move_scores: list[int]) -> None:
+    def test_sorting_legal_moves(
+        self, _init_searcher: Searcher, fen_string: str, move_scores: list[int]
+    ) -> None:
         """
         Test sorting of legal moves by mvv_lva_heuristic
         """
         board = init_board(fen_string)
-        s = init_searcher
+        s = _init_searcher
 
         legal_moves = sorted(
             board.legal_moves,
@@ -290,4 +298,4 @@ class TestMvvLvvHeuristic:
         num_moves = len(move_scores)
         for i, move in enumerate(legal_moves):
             score = s._mvv_lva_heuristic(board, move)
-            assert score == move_scores[num_moves-i-1]
+            assert score == move_scores[num_moves - i - 1]
