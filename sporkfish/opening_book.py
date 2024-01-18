@@ -1,13 +1,12 @@
+import logging
+import os
+import sys
 from typing import Optional
+
 import chess
 import chess.polyglot
-import sys
-import os
-import logging
+
 from .configurable import Configurable
-
-
-from typing import Optional
 
 
 class OpeningBookConfig(Configurable):

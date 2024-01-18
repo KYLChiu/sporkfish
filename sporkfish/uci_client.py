@@ -1,14 +1,16 @@
-import chess
+import logging
 import sys
 from enum import Enum, auto
-import logging
+
+import chess
 
 from config import load_config
-from .evaluator import Evaluator
-from .searcher import SearcherConfig, Searcher
+
 from .engine import Engine
-from .opening_book import OpeningBookConfig, OpeningBook
-from .time_manager import TimeManagerConfig, TimeManager
+from .evaluator import Evaluator
+from .opening_book import OpeningBook, OpeningBookConfig
+from .searcher import Searcher, SearcherConfig
+from .time_manager import TimeManager, TimeManagerConfig
 
 
 class UCIClient:

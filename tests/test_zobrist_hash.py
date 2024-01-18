@@ -1,5 +1,6 @@
-from sporkfish.zobrist_hasher import ZobristHasher
 import chess
+
+from sporkfish.zobrist_hasher import ZobristHasher
 
 
 def test_seeded_and_equivalent():

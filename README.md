@@ -6,6 +6,8 @@ Sporkfish is a Python-based chess engine. Chess programming techniques, although
 
 ## Usage
 
+### Set up
+
 To quickly set up the environment, you can use docker. From a terminal in the root directory:
 
 ```
@@ -24,6 +26,20 @@ python3 main.py
 ```
 
 Once you create a game via your bot account, the bot will automatically play. We currently do not support simultaneous games.
+
+### Run Tests
+
+To run all tests:
+
+```
+python3 -m pytest -sv
+```
+
+You may also run a specific test class or function, e.g.:
+
+```
+python3 -m pytest tests/test_searcher.py::TestMvvLvvHeuristic -sv
+```
 
 ## Principles
 
@@ -49,6 +65,7 @@ Communication:
 * [UCI](https://www.chessprogramming.org/UCI)
 
 ## Resources
+
 * [Some techniques](https://stackoverflow.com/questions/16500739/chess-high-branching-factor/16642804#16642804)
 * [Engine improvement tier list](https://www.reddit.com/r/ComputerChess/comments/yln9ef/comparative_advantage_of_engine_improvements/)
 * [Black Marlin](https://github.com/jnlt3/blackmarlin?tab=readme-ov-file#efficiently-updatable-neural-networks)

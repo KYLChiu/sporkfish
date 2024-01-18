@@ -1,5 +1,6 @@
-import chess
 from typing import Callable
+
+import chess
 import numpy as np
 
 
@@ -904,6 +905,7 @@ class Evaluator:
         phase = 0
 
         for square in range(64):
+            # square ^ 56 flips the board vertically
             piece = board.piece_at(square ^ 56)
             if piece:
                 # Could initialise these at init time - task for future

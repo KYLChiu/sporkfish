@@ -1,8 +1,10 @@
-from sporkfish.lichess_bot import lichess_bot_berserk
-import pytest
-import sys
 import multiprocessing
+import sys
 import time
+
+import pytest
+
+from sporkfish.lichess_bot import lichess_bot_berserk
 
 error_queue = multiprocessing.Queue()
 
@@ -11,7 +13,7 @@ error_queue = multiprocessing.Queue()
     sys.platform != "linux",
     reason="Don't create multiple challenges to exceed rate limit of Lichess",
 )
-def test_lichess_bot_playing_ai_timed():
+def test_lichess_bot_playing_ai_timed() -> None:
     time_limit = 30
 
     def run_game():
