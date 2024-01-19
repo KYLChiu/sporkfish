@@ -1,7 +1,5 @@
 from typing import Dict, Optional
 
-import chess
-
 
 class TranspositionTable:
     def __init__(self, dct: Dict[int, Dict[str, float]]) -> None:
