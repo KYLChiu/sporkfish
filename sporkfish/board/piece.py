@@ -1,7 +1,6 @@
 from . import Color, PieceType
 
 
-# Adapted from python-chess
 class Piece:
     """
     Represents a chess piece.
@@ -23,6 +22,19 @@ class Piece:
         """
         self.piece_type = piece_type
         self.color = color
+
+    def __eq__(self, other: "Piece") -> bool:
+        """
+        Check equivalence of this piece against another.
+
+        :return: True if the piece type and color are equal, otherwise.
+        :rtype: bool
+        """
+        return (
+            self.piece_type == other.piece_type and self.color == other.color
+            if isinstance(other, Piece)
+            else False
+        )
 
     def __hash__(self) -> int:
         """

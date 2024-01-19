@@ -10,8 +10,6 @@ from .piece import Piece
 
 class BoardPyChess(Board):
     """
-    Concrete class representing a chess board using the python-chess library.
-
     This class implements the abstract methods defined in the Board ABC using python-chess.
     """
 

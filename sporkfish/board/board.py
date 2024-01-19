@@ -9,8 +9,6 @@ from .piece import Piece
 class Board(ABC):
     """
     Abstract base class representing a chess board.
-
-    All concrete implementations must provide implementations for the abstract methods defined here.
     """
 
     # --- Board mutators ---
@@ -93,6 +91,8 @@ class Board(ABC):
 
     @property
     @abstractmethod
+    # NB: this returns any because we don't have a set type for legal moves in our own board implementation.
+    # We will revisit this after it's been implemented.
     def legal_moves(self) -> Any:
         """
         Get a collection of all legal moves for the current position.
