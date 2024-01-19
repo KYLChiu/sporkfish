@@ -60,7 +60,7 @@ def test_perf():
 
 
 # Performance test without transposition table and with null-move pruning
-def test_nmp_perf():
+def test_null_move_pruning_perf():
     run_perft(
         fen="r1r3k1/1ppp1ppp/p7/8/1P1nPPn1/3B1RP1/P1PP3q/R1BQ2K1 w - - 2 18",
         max_depth=6,
@@ -70,7 +70,7 @@ def test_nmp_perf():
 
 
 # Performance test with transposition table
-def test_tt_perf():
+def test_transposition_table_perf():
     run_perft(
         fen="r1r3k1/1ppp1ppp/p7/8/1P1nPPn1/3B1RP1/P1PP3q/R1BQ2K1 w - - 2 18",
         max_depth=6,

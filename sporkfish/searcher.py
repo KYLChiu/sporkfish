@@ -221,7 +221,8 @@ class Searcher:
         if depth == 0:
             return self._quiescence(board, 4, alpha, beta)
 
-        # Null move pruning
+        # Null move pruning - reduce the search space by trying a null move,
+        # then seeing if the score of the subtree search is still high enough to cause a beta cutoff
         if self._config.enable_null_move_pruning:
             # TODO: add zugzwang check
             depth_reduction_factor = 3
