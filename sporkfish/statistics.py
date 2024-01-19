@@ -1,6 +1,3 @@
-import time
-
-
 class Statistics:
     """A class for tracking statistics related to node visits."""
 

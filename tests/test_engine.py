@@ -1,9 +1,7 @@
 import time
-from unittest.mock import MagicMock
-
-import chess
 
 from sporkfish import engine, evaluator, opening_book, searcher
+from sporkfish.board.board_factory import BoardFactory, BoardPyChess
 
 
 def create_engine(depth: int) -> engine.Engine:
@@ -15,7 +13,7 @@ def create_engine(depth: int) -> engine.Engine:
 
 
 def test_timeout() -> None:
-    board = chess.Board()
+    board = BoardFactory.create(BoardPyChess)
     eng = create_engine(100)
     start = time.time()
     _ = eng.score(board, 1e-3)

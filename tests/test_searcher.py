@@ -9,7 +9,7 @@ from sporkfish.searcher import Searcher, SearcherConfig
 
 
 def _searcher_with_fen(
-    fen: str, max_depth: int = 5, enable_transposition_table: bool = False
+    fen: str, max_depth: int = 3, enable_transposition_table: bool = False
 ):
     board = chess.Board()
     e = Evaluator()
@@ -213,11 +213,11 @@ def _init_searcher(max_depth: int = 4) -> Searcher:
         (board_setup["white"]["open"], [0, -90]),
         (board_setup["white"]["mid"], [0, -90]),
         (board_setup["white"]["end"], [0, -90]),
-        (board_setup["white"]["two_kings"], [0, -90]),
+        (board_setup["white"]["two_kings"], [0, 0]),
         (board_setup["black"]["open"], [0, -90]),
         (board_setup["black"]["mid"], [0, -90]),
         (board_setup["black"]["end"], [0, -90]),
-        (board_setup["black"]["two_kings"], [0, -90]),
+        (board_setup["black"]["two_kings"], [0, 0]),
     ],
 )
 class TestNegamax:

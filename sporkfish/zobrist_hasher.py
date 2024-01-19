@@ -2,6 +2,8 @@ import chess
 import numpy as np
 from numba import njit
 
+from .board.board import Board
+
 
 class BoardInfo:
 
@@ -15,7 +17,7 @@ class BoardInfo:
     - castling_rights (numpy.ndarray): Array indicating castling rights.
     """
 
-    def __init__(self, board: chess.Board) -> None:
+    def __init__(self, board: Board) -> None:
         self.colored_piece_types = np.array(
             [
                 # This won't have hash collisions as all the piece indices are > 0
@@ -96,12 +98,12 @@ class ZobristHasher:
         self._en_passant_hashes = np.random.randint(0, 2**64, size=8, dtype=np.uint64)
         self._castling_hashes = np.random.randint(0, 2**64, size=4, dtype=np.uint64)
 
-    def hash(self, board: chess.Board) -> int:
+    def hash(self, board: Board) -> int:
         """
         Hashes the given chess board using Zobrist hashing.
 
         Parameters:
-        - board (chess.Board): The chess board.
+        - board (Board): The chess board.
 
         Returns:
         - int: The computed Zobrist hash value for the board.
