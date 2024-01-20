@@ -41,6 +41,8 @@ class SearcherConfig(Configurable):
     :type max_depth: int
     :param mode: Search mode (default: SearchMode.SINGLE_PROCESS).
     :type mode: SearchMode
+    :param enable_null_move_pruning: Enable null-move pruning (default: True).
+    :type enable_null_move_pruning: bool
     :param enable_transposition_table: Enable transposition table (default: True).
     :type enable_transposition_table: bool
     """
@@ -49,11 +51,13 @@ class SearcherConfig(Configurable):
         self,
         max_depth: int = 5,
         mode: SearchMode = SearchMode.SINGLE_PROCESS,
+        enable_null_move_pruning: bool = True,
         enable_transposition_table: bool = False,
     ) -> None:
         self.max_depth = max_depth
         # TODO: register the constructor function in yaml loader instead.
         self.mode = mode if isinstance(mode, SearchMode) else SearchMode(mode)
+        self.enable_null_move_pruning = enable_null_move_pruning
         self.enable_transposition_table = enable_transposition_table
 
 
@@ -217,6 +221,20 @@ class Searcher:
         # This is not ideal, but otherwise the search becomes incredibly slow
         if depth == 0:
             return self._quiescence(board, 4, alpha, beta)
+
+        # Null move pruning - reduce the search space by trying a null move,
+        # then seeing if the score of the subtree search is still high enough to cause a beta cutoff
+        if self._config.enable_null_move_pruning:
+            # TODO: add zugzwang check
+            depth_reduction_factor = 3
+            in_check = board.is_check()
+            if depth >= depth_reduction_factor and not in_check:
+                null_move_depth = depth - depth_reduction_factor
+                board.push(chess.Move.null())
+                value = -self._negamax(board, null_move_depth, -beta, -alpha)
+                board.pop()
+                if value >= beta:
+                    return beta
 
         # Move ordering via MVV-LVA to encourage aggressive pruning
         legal_moves = sorted(
