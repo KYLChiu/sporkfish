@@ -4,7 +4,7 @@ from typing import Optional
 from . import PIECE_SYMBOLS, SQUARE_NAMES, PieceType, Square
 
 
-@dataclass
+@dataclass(frozen=True)
 class Move:
     """
     Represents a chess move.
