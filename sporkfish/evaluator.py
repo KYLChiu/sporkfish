@@ -2,26 +2,17 @@ from typing import Callable
 import numpy as np
 from numba import njit
 
-from .board import BISHOP, BLACK, KING, KNIGHT, PAWN, QUEEN, ROOK, WHITE, SQUARES, Color
+from .board import (
+    BLACK,
+    WHITE,
+    SQUARES,
+    Color,
+    PieceType,
+)
 from .board.board import Board
 
-MG_PIECE_VALUES = {
-    PAWN: 82,
-    KNIGHT: 337,
-    BISHOP: 365,
-    ROOK: 477,
-    QUEEN: 1025,
-    KING: 12000,
-}
-
-EG_PIECE_VALUES = {
-    PAWN: 94,
-    KNIGHT: 281,
-    BISHOP: 297,
-    ROOK: 512,
-    QUEEN: 936,
-    KING: 12000,
-}
+MG_PIECE_VALUES = np.array([82, 337, 365, 477, 1025, 12000])
+EG_PIECE_VALUES = np.array([94, 281, 297, 512, 936, 12000])
 
 MG_PAWN = np.array(
     [
@@ -851,50 +842,33 @@ EG_KING = np.array(
     ]
 )
 
-MG_PESTO = {
-    PAWN: MG_PAWN,
-    KNIGHT: MG_KNIGHT,
-    BISHOP: MG_BISHOP,
-    ROOK: MG_ROOK,
-    QUEEN: MG_QUEEN,
-    KING: MG_KING,
-}
-
-EG_PESTO = {
-    PAWN: EG_PAWN,
-    KNIGHT: EG_KNIGHT,
-    BISHOP: EG_BISHOP,
-    ROOK: EG_ROOK,
-    QUEEN: EG_QUEEN,
-    KING: EG_KING,
-}
+MG_PESTO = np.array([MG_PAWN, MG_KNIGHT, MG_BISHOP, MG_ROOK, MG_QUEEN, MG_KING])
+EG_PESTO = np.array([EG_PAWN, EG_KNIGHT, EG_BISHOP, EG_ROOK, EG_QUEEN, EG_KING])
 
 # Represents how much the existence of a piece contributes to phase
-PHASES = {
-    PAWN: 0,
-    KNIGHT: 1,
-    BISHOP: 1,
-    ROOK: 2,
-    QUEEN: 4,
-    KING: 0,
-}
+PHASES = np.array([0, 1, 1, 2, 4, 0])
 
 # square ^ 56 flips the board vertically to match alignment of PSQT
 FLIPPED_SQUARES = np.array([square ^ 56 for square in SQUARES], dtype=np.uint8)
 
 
-@njit(cache=True, parallel=True)
+@njit(cache=True)
+def _piece_type_index(piece_type: PieceType) -> int:
+    return int(piece_type) - 1
+
+
+@njit
 def _evaluate(
     squares: np.ndarray,
     flipped_squares: np.ndarray,
     piece_infos: np.ndarray,
     board_turn: bool,
-    mg_pesto: dict[int, int],
-    mg_piece_values: dict[int, int],
-    eg_pesto: dict[int, int],
-    eg_piece_values: dict[int, int],
-    phases: dict[int, int],
-):
+    mg_pesto: np.ndarray,
+    mg_piece_values: np.ndarray,
+    eg_pesto: np.ndarray,
+    eg_piece_values: np.ndarray,
+    phases: np.ndarray,
+) -> float:
     # Takes the vertically flipped square for white, take the initial square for black
     # Assumes:
     # - Chess board implements A1 as first element, H8 as last
@@ -914,21 +888,24 @@ def _evaluate(
     )
 
     for square in squares:
-        # square ^ 56 flips the board vertically to match alignment of PSQT
         flipped_square = flipped_squares[square]
         piece_info = piece_infos[square]
         if piece_info[0] > -1:
-            # Could initialise these at init time - task for future
-            mg[piece_info[1]] += (
-                mg_pesto[piece_info[0]][flip(square, flipped_square, piece_info[1])]
-                + mg_piece_values[piece_info[0]]
-            )
-            eg[piece_info[1]] += (
-                eg_pesto[piece_info[0]][flip(square, flipped_square, piece_info[1])]
-                + eg_piece_values[piece_info[0]]
-            )
+            piece_type = piece_info[0]
+            color = bool(piece_info[1])
 
-            phase += phases[piece_info[0]]
+            piece_type_idx = _piece_type_index(piece_type)
+
+            # Could initialise these at init time - task for future
+            mg[color] += (
+                mg_pesto[piece_type_idx][flip(square, flipped_square, color)]
+                + mg_piece_values[piece_type_idx]
+            )
+            eg[color] += (
+                eg_pesto[piece_type_idx][flip(square, flipped_square, color)]
+                + eg_piece_values[piece_type_idx]
+            )
+            phase += phases[piece_type_idx]
 
     mg_score = mg[board_turn] - mg[not board_turn]
     eg_score = eg[board_turn] - eg[not board_turn]

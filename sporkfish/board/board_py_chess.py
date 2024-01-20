@@ -66,7 +66,7 @@ class BoardPyChess(Board):
         :param fen: FEN string.
         :type fen: str
         """
-        return self.board.set_fen(fen)
+        self.board.set_fen(fen)
 
     def set_epd(self, epd: str) -> None:
         """
@@ -75,7 +75,7 @@ class BoardPyChess(Board):
         :param epd: EPD string.
         :type epd: str
         """
-        return self.set_epd(epd)
+        self.set_epd(epd)
 
     @property
     def ep_square(self) -> Optional[Square]:
@@ -121,6 +121,15 @@ class BoardPyChess(Board):
         return self.board.is_capture(
             chess.Move(move.from_square, move.to_square, move.promotion)
         )
+
+    def is_check(self) -> bool:
+        """
+        Check if the current side to move is in check.
+
+        :return: True if is the current side to move is in check, false otherwise.
+        :rtype: bool
+        """
+        return self.board.is_check()
 
     def fen(self) -> str:
         """

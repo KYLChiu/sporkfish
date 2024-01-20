@@ -127,6 +127,16 @@ class Board(ABC):
         pass
 
     @abstractmethod
+    def is_check(self) -> bool:
+        """
+        Check if the current side to move is in check.
+
+        :return: True if is the current side to move is in check, false otherwise.
+        :rtype: bools
+        """
+        pass
+
+    @abstractmethod
     def fen(self) -> str:
         """
         Get the Forsyth-Edwards Notation (FEN) of the current board position.

@@ -2,6 +2,8 @@ import chess
 import numpy as np
 from numba import njit
 
+from .board.board import Board
+
 
 from .board.board import Board
 from .board import SQUARES
