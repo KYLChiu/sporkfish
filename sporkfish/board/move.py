@@ -1,9 +1,10 @@
+from dataclasses import dataclass
 from typing import Optional
 
-from . import PIECE_SYMBOLS, SQUARE_NAMES, PieceType
+from . import PIECE_SYMBOLS, SQUARE_NAMES, PieceType, Square
 
 
-# Adapted from python-chess
+@dataclass(frozen=True)
 class Move:
     """
     Represents a chess move.
@@ -14,22 +15,9 @@ class Move:
     - promotion (Optional[int]): The piece type to which a pawn is promoted (if applicable).
     """
 
-    def __init__(
-        self, from_square: int, to_square: int, promotion: Optional[PieceType] = None
-    ) -> None:
-        """
-        Initialize a chess move.
-
-        :param from_square: The square from which the move originates.
-        :type from_square: int
-        :param to_square: The destination square of the move.
-        :type to_square: int
-        :param promotion: The piece type to which a pawn is promoted (if applicable).
-        :type promotion: Optional[PieceType]
-        """
-        self.from_square = from_square
-        self.to_square = to_square
-        self.promotion = promotion
+    from_square: Square
+    to_square: Square
+    promotion: Optional[PieceType] = None
 
     def uci(self) -> str:
         """
@@ -41,11 +29,11 @@ class Move:
         from_to = self.from_square and self.to_square
         if self.promotion is not None and from_to:
             return (
-                SQUARE_NAMES[self.from_square]  # type: ignore
+                SQUARE_NAMES[self.from_square]
                 + SQUARE_NAMES[self.to_square]
                 + PIECE_SYMBOLS[self.promotion]
             )
-        elif self.from_square and self.to_square:
+        elif from_to:
             return SQUARE_NAMES[self.from_square] + SQUARE_NAMES[self.to_square]
         else:
             return "0000"
@@ -87,7 +75,7 @@ class Move:
                 from_square = SQUARE_NAMES.index(uci[0:2])
                 to_square = SQUARE_NAMES.index(uci[2:4])
                 promotion = PIECE_SYMBOLS.index(uci[4]) if len(uci) == 5 else None
-            except Exception:
+            except IndexError:
                 raise ValueError("Invalid uci: " + str(uci))
             if from_square == to_square:
                 raise ValueError(

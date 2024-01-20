@@ -9,8 +9,7 @@ Square = int
 COLORS = [WHITE, BLACK] = [True, False]
 
 PIECE_TYPES = [PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING] = [1, 2, 3, 4, 5, 6]
-PIECE_SYMBOLS = [None, "p", "n", "b", "r", "q", "k"]
-PIECE_NAMES = [None, "pawn", "knight", "bishop", "rook", "queen", "king"]
+PIECE_SYMBOLS = ["p", "n", "b", "r", "q", "k"]
 
 SQUARES = [
     A1,
@@ -214,11 +213,3 @@ SQUARE_NAMES = [
     "g8",
     "h8",
 ]
-
-
-def piece_symbol(piece_type: PieceType) -> str:
-    return typing.cast(str, PIECE_SYMBOLS[piece_type])
-
-
-def piece_name(piece_type: PieceType) -> str:
-    return typing.cast(str, PIECE_NAMES[piece_type])

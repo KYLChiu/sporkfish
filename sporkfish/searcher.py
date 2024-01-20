@@ -149,6 +149,7 @@ class Searcher:
         self._statistics.increment()
 
         stand_pat = self._evaluator.evaluate(board)
+
         if depth == 0:
             return stand_pat
 
