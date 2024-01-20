@@ -23,7 +23,15 @@ class TestPiece:
         assert p != k
 
 
-class TestBoardPychess:
+class TestMove:
+    def test_move(self):
+        move = Move.from_uci("a1b1")
+        assert move.from_square == 0
+        assert move.to_square == 1
+        assert move.promotion is None
+
+
+class TestBoardPyChess:
     def test_board(self):
         board = BoardPyChess()
         board.push_uci("d2d4")
