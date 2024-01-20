@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 from . import Color, Square
 from .move import Move
@@ -57,12 +57,14 @@ class Board(ABC):
         pass
 
     @abstractmethod
-    def set_epd(self, epd: str) -> None:
+    def set_epd(self, epd: str) -> Dict[str, Any]:
         """
         Set the position based on the input EPD string.
 
         :param epd: EPD string.
         :type epd: str
+        :return: The epd info (e.g. containing best move) for the board.
+        :rtype: Dict[str, Any]
         """
         pass
 

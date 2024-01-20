@@ -1,9 +1,9 @@
 from typing import Any
 
-import chess
 import pytest
 from init_board_helper import board_setup, init_board, score_fen
 
+from sporkfish.board.board_factory import BoardFactory, BoardPyChess
 from sporkfish.evaluator import Evaluator
 from sporkfish.searcher import Searcher, SearcherConfig
 
@@ -14,7 +14,7 @@ def _searcher_with_fen(
     enable_null_move_pruning=False,
     enable_transposition_table=False,
 ):
-    board = chess.Board()
+    board = BoardFactory.create(board_type=BoardPyChess)
     e = Evaluator()
     s = Searcher(
         e,
