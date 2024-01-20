@@ -63,8 +63,8 @@ class TestPerformance:
         self,
         fen: str,
         max_depth: int,
-        enable_null_move_pruning: bool,
-        enable_transposition_table: bool,
+        enable_null_move_pruning: bool = False,
+        enable_transposition_table: bool = False,
     ) -> None:
         import cProfile
         import pstats
@@ -85,8 +85,6 @@ class TestPerformance:
         self._run_perf_analytics(
             fen=fen_string,
             max_depth=max_depth,
-            enable_null_move_pruning=False,
-            enable_transposition_table=False,
         )
 
     @pytest.mark.slow
@@ -105,7 +103,6 @@ class TestPerformance:
             fen=fen_string,
             max_depth=max_depth,
             enable_null_move_pruning=True,
-            enable_transposition_table=False,
         )
 
 
