@@ -1,9 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 
-from . import Color, Square
-from .move import Move
-from .piece import Piece
+import chess
 
 
 class Board(ABC):
@@ -13,7 +11,7 @@ class Board(ABC):
 
     # --- Board mutators ---
     @abstractmethod
-    def push(self, move: Move) -> None:
+    def push(self, move: chess.Move) -> None:
         """
         Apply the given move to the board.
 
@@ -71,23 +69,23 @@ class Board(ABC):
     # --- Board information ---
     @property
     @abstractmethod
-    def turn(self) -> Color:
+    def turn(self) -> chess.Color:
         """
         The side to move.
 
         :return: WHITE if white to move else BLACK.
-        :rtype: Color
+        :rtype: chess.Color
         """
         pass
 
     @property
     @abstractmethod
-    def ep_square(self) -> Optional[Square]:
+    def ep_square(self) -> Optional[chess.Square]:
         """
         Returns the potential en passant square if available, else None.
 
         :return: The en passant square.
-        :rtype: Optional[Square]
+        :rtype: Optional[chess.Square]
         """
         pass
 
@@ -105,7 +103,7 @@ class Board(ABC):
         pass
 
     @abstractmethod
-    def piece_at(self, square: Square) -> Optional[Piece]:
+    def piece_at(self, square: chess.Square) -> Optional[chess.Piece]:
         """
         Get the piece at the specified square.
 
@@ -117,12 +115,12 @@ class Board(ABC):
         pass
 
     @abstractmethod
-    def is_capture(self, move: Move) -> bool:
+    def is_capture(self, move: chess.Move) -> bool:
         """
         Check if a given move is a capture.
 
         :param move: The move to check.
-        :type move: Move
+        :type move: chess.Move
         :return: True if it is a capture, false otherwise.
         :rtype: bool
         """
@@ -149,24 +147,24 @@ class Board(ABC):
         pass
 
     @abstractmethod
-    def has_queenside_castling_rights(self, color: Color) -> bool:
+    def has_queenside_castling_rights(self, color: chess.Color) -> bool:
         """
         Check if the specified color has queenside castling rights.
 
         :param color: The color to check.
-        :type color: Color
+        :type color: chess.Color
         :return: True if the color has queenside castling rights, False otherwise.
         :rtype: bool
         """
         pass
 
     @abstractmethod
-    def has_kingside_castling_rights(self, color: Color) -> bool:
+    def has_kingside_castling_rights(self, color: chess.Color) -> bool:
         """
         Check if the specified color has kingside castling rights.
 
         :param color: The color to check.
-        :type color: Color
+        :type color: chess.Color
         :return: True if the color has kingside castling rights, False otherwise.
         :rtype: bool
         """

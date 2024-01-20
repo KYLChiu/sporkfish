@@ -1,11 +1,8 @@
-from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 
 import chess
 
-from .board import Board, Color, Square
-from .move import Move
-from .piece import Piece
+from .board import Board
 
 
 class BoardPyChess(Board):
@@ -19,21 +16,14 @@ class BoardPyChess(Board):
         """
         self.board = chess.Board()
 
-    def push(self, move: Move) -> None:
+    def push(self, move: chess.Move) -> None:
         """
         Apply the given move to the board.
 
         :param move: The move to be applied.
-        :type move: Move
+        :type move: chess.Move
         """
-        self.board.push(
-            chess.Move(
-                from_square=move.from_square,
-                to_square=move.to_square,
-                promotion=move.promotion,
-                drop=None,
-            )
-        )
+        self.board.push(move)
 
     def pop(self) -> None:
         """
@@ -57,12 +47,12 @@ class BoardPyChess(Board):
         self.board.push_uci(move)
 
     @property
-    def turn(self) -> Color:
+    def turn(self) -> chess.Color:
         """
         Returns which turn it is to play a move.
 
         :return: WHITE if white to move else BLACK.
-        :rtype: Color
+        :rtype: chess.Color
         """
         return self.board.turn
 
@@ -87,12 +77,12 @@ class BoardPyChess(Board):
         return self.board.set_epd(epd)
 
     @property
-    def ep_square(self) -> Optional[Square]:
+    def ep_square(self) -> Optional[chess.Square]:
         """
         Returns the potential en passant square if available, else None.
 
         :return: The en passant square.
-        :rtype: Optional[Square]
+        :rtype: Optional[chess.Square]
         """
         return self.board.ep_square
 
@@ -106,30 +96,27 @@ class BoardPyChess(Board):
         """
         return self.board.legal_moves
 
-    def piece_at(self, square: Square) -> Optional[Piece]:
+    def piece_at(self, square: chess.Square) -> Optional[chess.Piece]:
         """
         Get the piece at the specified square.
 
         :param square: The target square.
-        :type square: int
+        :type square: chess.Square
         :return: The piece at the specified square, or None if the square is empty.
-        :rtype: Optional[Piece]
+        :rtype: Optional[chess.Piece]
         """
-        piece = self.board.piece_at(square)
-        return Piece(piece.piece_type, piece.color) if piece else None
+        return self.board.piece_at(square)
 
-    def is_capture(self, move: Move) -> bool:
+    def is_capture(self, move: chess.Move) -> bool:
         """
         Check if a given move is a capture.
 
         :param move: The move to check.
-        :type move: Move
+        :type move: chess.Move
         :return: True if it is a capture, false otherwise.
         :rtype: bool
         """
-        return self.board.is_capture(
-            chess.Move(move.from_square, move.to_square, move.promotion)
-        )
+        return self.board.is_capture(move)
 
     def is_check(self) -> bool:
         """
@@ -149,23 +136,23 @@ class BoardPyChess(Board):
         """
         return self.board.fen()
 
-    def has_queenside_castling_rights(self, color: Color) -> bool:
+    def has_queenside_castling_rights(self, color: chess.Color) -> bool:
         """
         Check if the specified color has queenside castling rights.
 
         :param color: The color to check.
-        :type color: Color
+        :type color: chess.Color
         :return: True if the color has queenside castling rights, False otherwise.
         :rtype: bool
         """
         return self.board.has_queenside_castling_rights(color)
 
-    def has_kingside_castling_rights(self, color: Color) -> bool:
+    def has_kingside_castling_rights(self, color: chess.Color) -> bool:
         """
         Check if the specified color has kingside castling rights.
 
         :param color: The color to check.
-        :type color: Color
+        :type color: chess.Color
         :return: True if the color has kingside castling rights, False otherwise.
         :rtype: bool
         """

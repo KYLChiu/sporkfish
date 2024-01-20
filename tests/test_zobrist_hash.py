@@ -1,7 +1,4 @@
-import chess
-
 from sporkfish.board.board_factory import Board, BoardFactory, BoardPyChess
-from sporkfish.board.move import Move
 from sporkfish.zobrist_hasher import ZobristHasher
 
 
