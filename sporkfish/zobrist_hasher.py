@@ -2,7 +2,9 @@ import chess
 import numpy as np
 from numba import njit
 
+
 from .board.board import Board
+from .board import SQUARES
 
 
 class BoardInfo:
@@ -22,7 +24,7 @@ class BoardInfo:
             [
                 # This won't have hash collisions as all the piece indices are > 0
                 hash(piece) if (piece := board.piece_at(square)) else -1
-                for square in chess.SQUARES
+                for square in SQUARES
             ],
             dtype=np.int8,
         )

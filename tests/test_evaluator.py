@@ -30,26 +30,22 @@ class TestScore:
 
 class TestEvaluator:
     def _eval_kings_pos(self) -> list[float, float]:
-        ev = evaluator.Evaluator()
-
-        white_mg_score = ev.MG_KING[44] + ev.MG_PIECE_VALUES[KING]
-        white_eg_score = ev.EG_KING[44] + ev.EG_PIECE_VALUES[KING]
-        black_mg_score = ev.MG_KING[26 ^ 56] + ev.MG_PIECE_VALUES[KING]
-        black_eg_score = ev.EG_KING[26 ^ 56] + ev.EG_PIECE_VALUES[KING]
+        white_mg_score = evaluator.MG_KING[44] + evaluator.MG_PIECE_VALUES[KING]
+        white_eg_score = evaluator.EG_KING[44] + evaluator.EG_PIECE_VALUES[KING]
+        black_mg_score = evaluator.MG_KING[26 ^ 56] + evaluator.MG_PIECE_VALUES[KING]
+        black_eg_score = evaluator.EG_KING[26 ^ 56] + evaluator.EG_PIECE_VALUES[KING]
 
         mg_score = white_mg_score - black_mg_score
         eg_score = white_eg_score - black_eg_score
         return [mg_score, eg_score]
 
     def _eval_kings_pawn_pos(self) -> list[float, float]:
-        ev = evaluator.Evaluator()
-
-        white_mg_score = ev.MG_KING[44] + ev.MG_PIECE_VALUES[KING]
-        white_eg_score = ev.EG_KING[44] + ev.EG_PIECE_VALUES[KING]
-        black_mg_score = ev.MG_KING[34 ^ 56] + ev.MG_PIECE_VALUES[KING]
-        black_eg_score = ev.EG_KING[34 ^ 56] + ev.EG_PIECE_VALUES[KING]
-        black_mg_score += ev.MG_PAWN[26 ^ 56] + ev.MG_PIECE_VALUES[PAWN]
-        black_eg_score += ev.EG_PAWN[26 ^ 56] + ev.EG_PIECE_VALUES[PAWN]
+        white_mg_score = evaluator.MG_KING[44] + evaluator.MG_PIECE_VALUES[KING]
+        white_eg_score = evaluator.EG_KING[44] + evaluator.EG_PIECE_VALUES[KING]
+        black_mg_score = evaluator.MG_KING[34 ^ 56] + evaluator.MG_PIECE_VALUES[KING]
+        black_eg_score = evaluator.EG_KING[34 ^ 56] + evaluator.EG_PIECE_VALUES[KING]
+        black_mg_score += evaluator.MG_PAWN[26 ^ 56] + evaluator.MG_PIECE_VALUES[PAWN]
+        black_eg_score += evaluator.EG_PAWN[26 ^ 56] + evaluator.EG_PIECE_VALUES[PAWN]
 
         mg_score = white_mg_score - black_mg_score
         eg_score = white_eg_score - black_eg_score
