@@ -1,7 +1,8 @@
 from typing import Optional
 
+import chess
+
 from .board.board import Board
-from .board.move import Move
 from .opening_book import OpeningBook
 from .searcher import Searcher
 
@@ -15,7 +16,7 @@ class Engine:
     - _opening_book (OpeningBook): The opening book for initial moves.
     """
 
-    def __init__(self, searcher: Searcher, opening_book: OpeningBook):
+    def __init__(self, searcher: Searcher, opening_book: OpeningBook) -> None:
         """
         Initialize the Engine with a searcher and an opening book.
 
@@ -27,7 +28,7 @@ class Engine:
         self._searcher = searcher
         self._opening_book = opening_book
 
-    def best_move(self, board: Board, timeout: Optional[float] = None) -> Move:
+    def best_move(self, board: Board, timeout: Optional[float] = None) -> chess.Move:
         """
         Return the best move based on opening book queries and searcher.
 
@@ -36,7 +37,7 @@ class Engine:
         :param timeout: Time in seconds until the engine stops searching.
         :type timeout: Optional[float]
         :return: The selected chess move.
-        :rtype: Move
+        :rtype: chess.Move
         """
         opening_move = self._opening_book.query(board)
         return opening_move or self._searcher.search(board, timeout)[1]

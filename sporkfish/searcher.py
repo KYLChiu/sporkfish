@@ -11,7 +11,6 @@ import stopit
 from pathos.multiprocessing import ProcessPool
 
 from .board.board import Board
-from .board.move import Move
 from .configurable import Configurable
 from .evaluator import Evaluator
 from .statistics import Statistics
@@ -103,13 +102,13 @@ class Searcher:
     def evaluator(self) -> Evaluator:
         return self._evaluator
 
-    def _mvv_lva_heuristic(self, board: Board, move: Move) -> int:
+    def _mvv_lva_heuristic(self, board: Board, move: chess.Move) -> int:
         """
         Calculate the Most Valuable Victim - Least Valuable Aggressor heuristic value for a capturing move based on the value of the captured piece.
 
         Parameters:
             board (Board): The chess board.
-            move (Move): The capturing move.
+            move (chess.Move): The capturing move.
 
         Returns:
             int: The heuristic value of the capturing move based on the value of the captured piece.
@@ -230,7 +229,7 @@ class Searcher:
             in_check = board.is_check()
             if depth >= depth_reduction_factor and not in_check:
                 null_move_depth = depth - depth_reduction_factor
-                board.push(Move.null())
+                board.push(chess.Move.null())
                 value = -self._negamax(board, null_move_depth, -beta, -alpha)
                 board.pop()
                 if value >= beta:
@@ -265,7 +264,7 @@ class Searcher:
         depth: int,
         alpha: float,
         beta: float,
-    ) -> Tuple[float, Move]:
+    ) -> Tuple[float, chess.Move]:
         """
         Entry point for negamax search with fail-soft alpha-beta pruning, single process.
 
@@ -278,10 +277,10 @@ class Searcher:
         :param beta: Beta value for alpha-beta pruning.
         :type beta: float
         :return: Tuple containing the best move and its value.
-        :rtype: Tuple[float, Move]
+        :rtype: Tuple[float, chess.Move]
         """
         value = -float("inf")
-        best_move = Move.null()
+        best_move = chess.Move.null()
         self._statistics.increment()
 
         if self._config.enable_transposition_table:
@@ -318,7 +317,7 @@ class Searcher:
         depth: int,
         alpha: float,
         beta: float,
-    ) -> Tuple[float, Move]:
+    ) -> Tuple[float, chess.Move]:
         """
         Entry point for negamax search with fail-soft alpha-beta pruning with lazy symmetric multiprocessing.
 
@@ -331,7 +330,7 @@ class Searcher:
         :param beta: Beta value for alpha-beta pruning.
         :type beta: float
         :return: Tuple containing the best move and its value.
-        :rtype: Tuple[float, Move]
+        :rtype: Tuple[float, chess.Move]
         """
 
         # Let processes race down lazily and see who completes first
@@ -344,14 +343,14 @@ class Searcher:
         while True:
             for future in futures:
                 if future.ready():
-                    res: Tuple[float, Move] = future.get()
+                    res: Tuple[float, chess.Move] = future.get()
                     return res
             else:
                 continue  # Continue the loop if no result is ready yet
 
     def search(
         self, board: Board, timeout: Optional[float] = None
-    ) -> Tuple[float, Move]:
+    ) -> Tuple[float, chess.Move]:
         """
         Finds the best move (and associated score) via negamax and iterative deepening.
 
@@ -364,14 +363,16 @@ class Searcher:
         """
         logging.info(f"Begin search for FEN {board.fen()}")
 
-        @stopit.threading_timeoutable(default=(float("-inf"), Move.null(), 0.0, 1))
+        @stopit.threading_timeoutable(
+            default=(float("-inf"), chess.Move.null(), 0.0, 1)
+        )
         def do_search_with_info(
             board_to_search: Board,
             depth: int,
             start_time: float,
             alpha: float,
             beta: float,
-        ) -> Tuple[float, Move, float, int]:
+        ) -> Tuple[float, chess.Move, float, int]:
             try:
                 if self._config.mode is SearchMode.SINGLE_PROCESS:
                     score, move = self._negamax_sp(board_to_search, depth, alpha, beta)
@@ -400,14 +401,14 @@ class Searcher:
                 logging.info(f"info {info_str}")
                 return score, move, elapsed, 0
             except stopit.utils.TimeoutException:
-                return float("-inf"), Move.null(), 0.0, 1
+                return float("-inf"), chess.Move.null(), 0.0, 1
             except Exception:
                 raise
 
         time_left = timeout
 
         score = -float("inf")
-        move = Move.null()
+        move = chess.Move.null()
 
         # Iterative deepening
         for depth in range(1, self._config.max_depth + 1):

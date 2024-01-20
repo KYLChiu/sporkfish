@@ -4,13 +4,11 @@ import pytest
 from init_board_helper import board_setup, score_fen
 
 from sporkfish import evaluator
-from sporkfish.board import KING, PAWN
-
-# NB: static evaluation function must return a score relative to the side to being evaluated, e.g. the simplest score evaluation could be:
-# score = materialWeight * (numWhitePieces - numBlackPieces) * who2move
 
 
 class TestScore:
+    # NB: static evaluation function must return a score relative to the side to being evaluated, e.g. the simplest score evaluation could be:
+    # score = materialWeight * (numWhitePieces - numBlackPieces) * who2move
     def test_black_winning_black_to_move(self) -> None:
         score = score_fen("6r1/pNkb4/Pp2p3/2p1np1p/8/1PP4P/R5B1/5K2 b - - 1 34")
         assert score > 0
@@ -32,10 +30,10 @@ class TestEvaluator:
     def _eval_kings_pos(self) -> list[float, float]:
         ev = evaluator.Evaluator()
 
-        white_mg_score = ev.MG_KING[44] + ev.MG_PIECE_VALUES[KING]
-        white_eg_score = ev.EG_KING[44] + ev.EG_PIECE_VALUES[KING]
-        black_mg_score = ev.MG_KING[26 ^ 56] + ev.MG_PIECE_VALUES[KING]
-        black_eg_score = ev.EG_KING[26 ^ 56] + ev.EG_PIECE_VALUES[KING]
+        white_mg_score = ev.MG_KING[44]
+        white_eg_score = ev.EG_KING[44]
+        black_mg_score = ev.MG_KING[26 ^ 56]
+        black_eg_score = ev.EG_KING[26 ^ 56]
 
         mg_score = white_mg_score - black_mg_score
         eg_score = white_eg_score - black_eg_score
@@ -44,12 +42,12 @@ class TestEvaluator:
     def _eval_kings_pawn_pos(self) -> list[float, float]:
         ev = evaluator.Evaluator()
 
-        white_mg_score = ev.MG_KING[44] + ev.MG_PIECE_VALUES[KING]
-        white_eg_score = ev.EG_KING[44] + ev.EG_PIECE_VALUES[KING]
-        black_mg_score = ev.MG_KING[34 ^ 56] + ev.MG_PIECE_VALUES[KING]
-        black_eg_score = ev.EG_KING[34 ^ 56] + ev.EG_PIECE_VALUES[KING]
-        black_mg_score += ev.MG_PAWN[26 ^ 56] + ev.MG_PIECE_VALUES[PAWN]
-        black_eg_score += ev.EG_PAWN[26 ^ 56] + ev.EG_PIECE_VALUES[PAWN]
+        white_mg_score = ev.MG_KING[44]
+        white_eg_score = ev.EG_KING[44]
+        black_mg_score = ev.MG_KING[34 ^ 56]
+        black_eg_score = ev.EG_KING[34 ^ 56]
+        black_mg_score += ev.MG_PAWN[26 ^ 56]
+        black_eg_score += ev.EG_PAWN[26 ^ 56]
 
         mg_score = white_mg_score - black_mg_score
         eg_score = white_eg_score - black_eg_score
