@@ -230,7 +230,7 @@ class Searcher:
             in_check = board.is_check()
             if depth >= depth_reduction_factor and not in_check:
                 null_move_depth = depth - depth_reduction_factor
-                board.push(chess.Move.null())
+                board.push(Move.null())
                 value = -self._negamax(board, null_move_depth, -beta, -alpha)
                 board.pop()
                 if value >= beta:

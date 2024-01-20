@@ -116,7 +116,7 @@ class TestPerformance:
         (board_setup["black"]["open"], 3),
         (board_setup["black"]["mid"], 3),
         (board_setup["black"]["end"], 3),
-        # (board_setup["black"]["two_kings"], 3) TODO (kchiu) figure out ,
+        # (board_setup["black"]["two_kings"], 3) TODO: (kchiu) Issue #63
     ],
 )
 class TestConsistency:
