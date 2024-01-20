@@ -17,14 +17,14 @@ RUN apt-get update -y && \
     python3.10-dev \
     python3.10-venv \
     python3-pip \ 
-    pypy3 \
+    # pypy3 \
     binutils
 
 # Update pip and install any Python packages you need
 RUN python3 -m pip install --upgrade pip
-RUN pypy3 -m pip install --upgrade pip
+# RUN pypy3 -m pip install --upgrade pip
 
 RUN pip install -r requirements.txt
-RUN pypy3 -m pip install -r requirements.txt
+# RUN pypy3 -m pip install -r requirements.txt
 
 CMD ["bash"]
