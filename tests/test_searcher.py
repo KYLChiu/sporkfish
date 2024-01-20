@@ -97,7 +97,7 @@ class TestPerformance:
         )
 
     @pytest.mark.slow
-    def test_perf_null_move_pruning_on(self, fen_string: str, max_depth: int) -> None:
+    def test_perf_null_move_pruning(self, fen_string: str, max_depth: int) -> None:
         """Performance test with null move pruning"""
         self._run_perf_analytics(
             fen=fen_string,
