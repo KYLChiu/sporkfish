@@ -140,11 +140,13 @@ class TestConsistency:
         assert move == move_2
 
     def test_transposition_table_consistency(self, fen_string: str, max_depth: int):
+        "Tests base searcher and transposition table on return the same score and bestmove"
         self._run_consistency_test(
             fen=fen_string, max_depth=max_depth, enable_transposition_table=True
         )
 
     def test_null_move_pruning_consistency(self, fen_string: str, max_depth: int):
+        "Tests base searcher and null move pruning on return the same score and bestmove"
         self._run_consistency_test(
             fen=fen_string, max_depth=max_depth, enable_null_move_pruning=True
         )
