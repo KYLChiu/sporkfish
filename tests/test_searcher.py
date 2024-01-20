@@ -29,9 +29,6 @@ def _searcher_with_fen(
     return score, move
 
 
-# Performance test without transposition table and with null-move pruning
-
-
 @pytest.mark.parametrize(
     ("fen_string"),
     [
