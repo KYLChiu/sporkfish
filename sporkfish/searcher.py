@@ -8,9 +8,10 @@ from typing import Optional, Tuple
 
 import chess
 import stopit
-import yaml
 from pathos.multiprocessing import ProcessPool
 
+from .board.board import Board
+from .board.move import Move
 from .configurable import Configurable
 from .evaluator import Evaluator
 from .statistics import Statistics
@@ -102,13 +103,13 @@ class Searcher:
     def evaluator(self) -> Evaluator:
         return self._evaluator
 
-    def _mvv_lva_heuristic(self, board: chess.Board, move: chess.Move) -> int:
+    def _mvv_lva_heuristic(self, board: Board, move: Move) -> int:
         """
         Calculate the Most Valuable Victim - Least Valuable Aggressor heuristic value for a capturing move based on the value of the captured piece.
 
         Parameters:
-            board (chess.Board): The chess board.
-            move (chess.Move): The capturing move.
+            board (Board): The chess board.
+            move (Move): The capturing move.
 
         Returns:
             int: The heuristic value of the capturing move based on the value of the captured piece.
@@ -135,14 +136,12 @@ class Searcher:
         else:
             return 0
 
-    def _quiescence(
-        self, board: chess.Board, depth: int, alpha: float, beta: float
-    ) -> float:
+    def _quiescence(self, board: Board, depth: int, alpha: float, beta: float) -> float:
         """
         Quiescence search to help the horizon effect (improving checking of tactical possibilities).
 
         Parameters:
-            board (chess.Board): The chess board.
+            board (Board): The chess board.
             alpha (float): The lower bound of the search window.
             beta (float): The upper bound of the search window.
             depth (int): max recursion limit
@@ -154,6 +153,7 @@ class Searcher:
         self._statistics.increment()
 
         stand_pat = self._evaluator.evaluate(board)
+
         if depth == 0:
             return stand_pat
 
@@ -183,7 +183,7 @@ class Searcher:
 
     def _negamax(
         self,
-        board: chess.Board,
+        board: Board,
         depth: int,
         alpha: float,
         beta: float,
@@ -230,7 +230,7 @@ class Searcher:
             in_check = board.is_check()
             if depth >= depth_reduction_factor and not in_check:
                 null_move_depth = depth - depth_reduction_factor
-                board.push(chess.Move.null())
+                board.push(Move.null())
                 value = -self._negamax(board, null_move_depth, -beta, -alpha)
                 board.pop()
                 if value >= beta:
@@ -261,16 +261,16 @@ class Searcher:
 
     def _negamax_sp(
         self,
-        board: chess.Board,
+        board: Board,
         depth: int,
         alpha: float,
         beta: float,
-    ) -> Tuple[float, chess.Move]:
+    ) -> Tuple[float, Move]:
         """
         Entry point for negamax search with fail-soft alpha-beta pruning, single process.
 
         :param board: The current chess board position.
-        :type board: chess.Board
+        :type board: Board
         :param depth: The current search depth.
         :type depth: int
         :param alpha: Alpha value for alpha-beta pruning.
@@ -278,10 +278,10 @@ class Searcher:
         :param beta: Beta value for alpha-beta pruning.
         :type beta: float
         :return: Tuple containing the best move and its value.
-        :rtype: Tuple[float, chess.Move]
+        :rtype: Tuple[float, Move]
         """
         value = -float("inf")
-        best_move = chess.Move.null()
+        best_move = Move.null()
         self._statistics.increment()
 
         if self._config.enable_transposition_table:
@@ -314,16 +314,16 @@ class Searcher:
     # This doesn't really work yet. Don't use.
     def _negamax_lazy_smp(
         self,
-        board: chess.Board,
+        board: Board,
         depth: int,
         alpha: float,
         beta: float,
-    ) -> Tuple[float, chess.Move]:
+    ) -> Tuple[float, Move]:
         """
         Entry point for negamax search with fail-soft alpha-beta pruning with lazy symmetric multiprocessing.
 
         :param board: The current chess board position.
-        :type board: chess.Board
+        :type board: Board
         :param depth: The current search depth.
         :type depth: int
         :param alpha: Alpha value for alpha-beta pruning.
@@ -331,7 +331,7 @@ class Searcher:
         :param beta: Beta value for alpha-beta pruning.
         :type beta: float
         :return: Tuple containing the best move and its value.
-        :rtype: Tuple[float, chess.Move]
+        :rtype: Tuple[float, Move]
         """
 
         # Let processes race down lazily and see who completes first
@@ -344,36 +344,34 @@ class Searcher:
         while True:
             for future in futures:
                 if future.ready():
-                    res: Tuple[float, chess.Move] = future.get()
+                    res: Tuple[float, Move] = future.get()
                     return res
             else:
                 continue  # Continue the loop if no result is ready yet
 
     def search(
-        self, board: chess.Board, timeout: Optional[float] = None
-    ) -> Tuple[float, chess.Move]:
+        self, board: Board, timeout: Optional[float] = None
+    ) -> Tuple[float, Move]:
         """
         Finds the best move (and associated score) via negamax and iterative deepening.
 
         :param board: The current chess board position.
-        :type board: chess.Board
+        :type board: Board
         :return: The best score and move based on the search.
         :param timeout: Time in seconds until we stop the search, returning the best depth if we timeout.
         :type timeout: Optional[float]
-        :rtype: Tuple[float, chess.Move]
+        :rtype: Tuple[float, Move]
         """
         logging.info(f"Begin search for FEN {board.fen()}")
 
-        @stopit.threading_timeoutable(
-            default=(float("-inf"), chess.Move.null(), 0.0, 1)
-        )
+        @stopit.threading_timeoutable(default=(float("-inf"), Move.null(), 0.0, 1))
         def do_search_with_info(
-            board_to_search: chess.Board,
+            board_to_search: Board,
             depth: int,
             start_time: float,
             alpha: float,
             beta: float,
-        ) -> Tuple[float, chess.Move, float, int]:
+        ) -> Tuple[float, Move, float, int]:
             try:
                 if self._config.mode is SearchMode.SINGLE_PROCESS:
                     score, move = self._negamax_sp(board_to_search, depth, alpha, beta)
@@ -402,14 +400,14 @@ class Searcher:
                 logging.info(f"info {info_str}")
                 return score, move, elapsed, 0
             except stopit.utils.TimeoutException:
-                return float("-inf"), chess.Move.null(), 0.0, 1
+                return float("-inf"), Move.null(), 0.0, 1
             except Exception:
                 raise
 
         time_left = timeout
 
         score = -float("inf")
-        move = chess.Move.null()
+        move = Move.null()
 
         # Iterative deepening
         for depth in range(1, self._config.max_depth + 1):

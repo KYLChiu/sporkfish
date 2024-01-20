@@ -1,7 +1,7 @@
 from typing import Callable
 
-import chess
-import numpy as np
+from .board import BISHOP, BLACK, KING, KNIGHT, PAWN, QUEEN, ROOK, WHITE, Color
+from .board.board import Board
 
 
 # Piece-Square Table Only (PeSTO) evaluation
@@ -14,27 +14,27 @@ class Evaluator:
     - __init__():
         Initialize the Evaluator.
 
-    - evaluate(board: chess.Board) -> float:
+    - evaluate(board: Board) -> float:
         Evaluate the chess position based on material and piece-square tables.
 
     """
 
     MG_PIECE_VALUES = {
-        chess.PAWN: 82,
-        chess.KNIGHT: 337,
-        chess.BISHOP: 365,
-        chess.ROOK: 477,
-        chess.QUEEN: 1025,
-        chess.KING: 12000,
+        PAWN: 82,
+        KNIGHT: 337,
+        BISHOP: 365,
+        ROOK: 477,
+        QUEEN: 1025,
+        KING: 12000,
     }
 
     EG_PIECE_VALUES = {
-        chess.PAWN: 94,
-        chess.KNIGHT: 281,
-        chess.BISHOP: 297,
-        chess.ROOK: 512,
-        chess.QUEEN: 936,
-        chess.KING: 12000,
+        PAWN: 94,
+        KNIGHT: 281,
+        BISHOP: 297,
+        ROOK: 512,
+        QUEEN: 936,
+        KING: 12000,
     }
 
     MG_PAWN = [
@@ -842,31 +842,31 @@ class Evaluator:
     ]
 
     MG_PESTO = {
-        chess.PAWN: MG_PAWN,
-        chess.KNIGHT: MG_KNIGHT,
-        chess.BISHOP: MG_BISHOP,
-        chess.ROOK: MG_ROOK,
-        chess.QUEEN: MG_QUEEN,
-        chess.KING: MG_KING,
+        PAWN: MG_PAWN,
+        KNIGHT: MG_KNIGHT,
+        BISHOP: MG_BISHOP,
+        ROOK: MG_ROOK,
+        QUEEN: MG_QUEEN,
+        KING: MG_KING,
     }
 
     EG_PESTO = {
-        chess.PAWN: EG_PAWN,
-        chess.KNIGHT: EG_KNIGHT,
-        chess.BISHOP: EG_BISHOP,
-        chess.ROOK: EG_ROOK,
-        chess.QUEEN: EG_QUEEN,
-        chess.KING: EG_KING,
+        PAWN: EG_PAWN,
+        KNIGHT: EG_KNIGHT,
+        BISHOP: EG_BISHOP,
+        ROOK: EG_ROOK,
+        QUEEN: EG_QUEEN,
+        KING: EG_KING,
     }
 
     # PAWN_PHASE, KNIGHT_PHASE, BISHOP_PHASE, ROOK_PHASE, QUEEN_PHASE, KING_PHASE
     PHASES = {
-        chess.PAWN: 0,
-        chess.KNIGHT: 1,
-        chess.BISHOP: 1,
-        chess.ROOK: 2,
-        chess.QUEEN: 4,
-        chess.KING: 0,
+        PAWN: 0,
+        KNIGHT: 1,
+        BISHOP: 1,
+        ROOK: 2,
+        QUEEN: 4,
+        KING: 0,
     }
 
     def __init__(self) -> None:
@@ -875,46 +875,51 @@ class Evaluator:
         """
         pass
 
-    def evaluate(self, board: chess.Board) -> float:
+    def evaluate(self, board: Board) -> float:
         """
         Evaluate the chess position based on material and piece-square tables.
 
         :param board: The current chess board position.
-        :type board: chess.Board
+        :type board: Board
         :return: The evaluation score.
         :rtype: float
         """
 
         mg = {
-            chess.WHITE: 0,
-            chess.BLACK: 0,
+            WHITE: 0,
+            BLACK: 0,
         }
         eg = {
-            chess.WHITE: 0,
-            chess.BLACK: 0,
+            WHITE: 0,
+            BLACK: 0,
         }
 
-        # Flips the board vertically for black
+        # Takes the vertically flipped square for white, take the initial square for black
         # Assumes:
         # - Chess board implements A1 as first element, H8 as last
         # - Piece square table implements A8 as first element, H1 as last element
-        flip: Callable[[int, chess.Color]] = (
-            lambda square, color: square ^ 56 if color else square
+        flip: Callable[[int, int, Color]] = (
+            lambda square, flipped_sq, color: square if not color else flipped_sq
         )
 
         phase = 0
 
         for square in range(64):
-            # square ^ 56 flips the board vertically
-            piece = board.piece_at(square ^ 56)
+            # square ^ 56 flips the board vertically to match alignment of PSQT
+            flipped_sq = square ^ 56
+            piece = board.piece_at(flipped_sq)
             if piece:
                 # Could initialise these at init time - task for future
                 mg[piece.color] += (
-                    self.MG_PESTO[piece.piece_type][flip(square, piece.color)]
+                    self.MG_PESTO[piece.piece_type][
+                        flip(square, flipped_sq, piece.color)
+                    ]
                     + self.MG_PIECE_VALUES[piece.piece_type]
                 )
                 eg[piece.color] += (
-                    self.EG_PESTO[piece.piece_type][flip(square, piece.color)]
+                    self.EG_PESTO[piece.piece_type][
+                        flip(square, flipped_sq, piece.color)
+                    ]
                     + self.EG_PIECE_VALUES[piece.piece_type]
                 )
                 phase += self.PHASES[piece.piece_type]

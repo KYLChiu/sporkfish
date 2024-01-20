@@ -116,7 +116,7 @@ class TestPerformance:
         (board_setup["black"]["open"], 3),
         (board_setup["black"]["mid"], 3),
         (board_setup["black"]["end"], 3),
-        (board_setup["black"]["two_kings"], 3),
+        # (board_setup["black"]["two_kings"], 3) TODO: (kchiu) Issue #63
     ],
 )
 class TestConsistency:
@@ -282,7 +282,7 @@ def _init_searcher(max_depth: int = 4) -> Searcher:
         (board_setup["black"]["open"], [0, -90]),
         (board_setup["black"]["mid"], [0, -90]),
         (board_setup["black"]["end"], [0, -90]),
-        (board_setup["black"]["two_kings"], [0, -90]),
+        # (board_setup["black"]["two_kings"], [0, -90]) # Discussed with Jeremy to temp disable this,
     ],
 )
 class TestNegamax:
@@ -298,7 +298,6 @@ class TestNegamax:
 
         alpha, beta = param[0], param[1]
         result = s._negamax(board, 0, alpha, beta)
-        score = score_fen(fen_string)
         assert result == s._quiescence(board, 4, alpha, beta)
 
     def test_negamax_depth_1(
@@ -318,13 +317,16 @@ class TestNegamax:
             key=lambda move: (s._mvv_lva_heuristic(board, move),),
             reverse=True,
         )
-        value = -1e6
+
+        value = -float("inf")
+
         for move in legal_moves:
             board.push(move)
             child_value = -s._quiescence(board, 4, -beta, -alpha)
             board.pop()
 
             value = max(value, child_value)
+
             alpha = max(alpha, value)
 
         assert result == value

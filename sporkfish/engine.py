@@ -1,7 +1,7 @@
 from typing import Optional
 
-import chess
-
+from .board.board import Board
+from .board.move import Move
 from .opening_book import OpeningBook
 from .searcher import Searcher
 
@@ -27,28 +27,26 @@ class Engine:
         self._searcher = searcher
         self._opening_book = opening_book
 
-    def best_move(
-        self, board: chess.Board, timeout: Optional[float] = None
-    ) -> chess.Move:
+    def best_move(self, board: Board, timeout: Optional[float] = None) -> Move:
         """
         Return the best move based on opening book queries and searcher.
 
         :param board: The current chess board position.
-        :type board: chess.Board
+        :type board: Board
         :param timeout: Time in seconds until the engine stops searching.
         :type timeout: Optional[float]
         :return: The selected chess move.
-        :rtype: chess.Move
+        :rtype: Move
         """
         opening_move = self._opening_book.query(board)
         return opening_move or self._searcher.search(board, timeout)[1]
 
-    def score(self, board: chess.Board, timeout: Optional[float] = None) -> float:
+    def score(self, board: Board, timeout: Optional[float] = None) -> float:
         """
         Returns the dynamic search score, useful for testing.
 
         :param board: The current chess board position.
-        :type board: chess.Board
+        :type board: Board
         :return: The score of the searcher.
         :param timeout: Time in seconds until the engine stops searching.
         :type timeout: Optional[float]
@@ -56,12 +54,12 @@ class Engine:
         """
         return self._searcher.search(board, timeout)[0]
 
-    def evaluate(self, board: chess.Board) -> float:
+    def evaluate(self, board: Board) -> float:
         """
         Returns the (static) leaf evaluation score, useful for testing.
 
         :param board: The current chess board position.
-        :type board: chess.Board
+        :type board: Board
         :return: The score of the evaluator.
         :rtype: float
         """

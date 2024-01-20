@@ -2,10 +2,10 @@ import logging
 import sys
 from enum import Enum, auto
 
-import chess
-
 from config import load_config
 
+from .board.board import Board
+from .board.board_factory import BoardFactory, BoardPyChess
 from .engine import Engine
 from .evaluator import Evaluator
 from .opening_book import OpeningBook, OpeningBookConfig
@@ -21,7 +21,7 @@ class UCIClient:
     Attributes:
     - _uci_protocol (uci_protocol.UCIProtocol): The UCI protocol for handling communication with the chess engine.
     - _engine (engine.Engine): The chess engine used by the UCI client.
-    - _board (chess.Board): The current chess board state.
+    - _board (Board): The current chess board state.
 
     Methods:
     - send_command(command: str) -> str:
@@ -46,12 +46,12 @@ class UCIClient:
         - _response_mode (ResponseMode): The mode for handling the response.
 
         Methods:
-        - communicate(msg: str, board: chess.Board, engine: engine.Engine) -> str:
+        - communicate(msg: str, board: Board, engine: engine.Engine) -> str:
             Process a UCI command and respond accordingly.
 
         Parameters:
         - msg (str): The UCI command received.
-        - board (chess.Board): The chess board.
+        - board (Board): The chess board.
         - engine (engine.Engine): The chess engine.
 
         Returns:
@@ -67,7 +67,7 @@ class UCIClient:
 
         Examples:
         >>> uci_protocol = UCIProtocol()
-        >>> uci_protocol.communicate("uci", chess.Board(), engine.Engine())
+        >>> uci_protocol.communicate("uci", Board(), engine.Engine())
         'id name Sporkfish\nid author Sporkfish dev team\nuciok'
         """
 
@@ -81,7 +81,7 @@ class UCIClient:
         def communicate(
             self,
             msg: str,
-            board: chess.Board,
+            board: Board,
             engine: Engine,
             time_manager: TimeManager,
         ) -> str:
@@ -93,7 +93,7 @@ class UCIClient:
             :param msg: The UCI command received.
             :type msg: str
             :param board: The chess board.
-            :type board: chess.Board
+            :type board: Board
             :param engine: The engine.
             :type engine: Engine
             :param response_mode: The mode for handling the response (ResponseMode.PRINT or ResponseMode.RETURN).
@@ -176,7 +176,7 @@ class UCIClient:
                 load_config().get("TimeManagerConfig")  # type: ignore
             )
         )
-        self._board = chess.Board()
+        self._board = BoardFactory.create(BoardPyChess)
         if response_mode is UCIClient.UCIProtocol.ResponseMode.RETURN:
             response = self.send_command("uci")
             assert "uciok" in response, "UCIClient failed to initialize correctly."
@@ -206,12 +206,12 @@ class UCIClient:
         return self._engine
 
     @property
-    def board(self) -> chess.Board:
+    def board(self) -> Board:
         """
         Get the current chess board state.
 
         :return: The current chess board state.
-        :rtype: chess.Board
+        :rtype: Board
         """
         return self._board
 
