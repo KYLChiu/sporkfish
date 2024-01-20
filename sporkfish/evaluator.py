@@ -857,7 +857,7 @@ def _piece_type_index(piece_type: PieceType) -> int:
     return int(piece_type) - 1
 
 
-@njit
+@njit(cache=True, parallel=True)
 def _evaluate(
     squares: np.ndarray,
     flipped_squares: np.ndarray,
@@ -869,10 +869,6 @@ def _evaluate(
     eg_piece_values: np.ndarray,
     phases: np.ndarray,
 ) -> float:
-    # Takes the vertically flipped square for white, take the initial square for black
-    # Assumes:
-    # - Chess board implements A1 as first element, H8 as last
-    # - Piece square table implements A8 as first element, H1 as last element
     mg = {
         WHITE: 0,
         BLACK: 0,
@@ -883,6 +879,10 @@ def _evaluate(
     }
     phase = 0
 
+    # Takes the vertically flipped square for white, take the initial square for black
+    # Assumes:
+    # - Chess board implements A1 as first element, H8 as last
+    # - Piece square table implements A8 as first element, H1 as last element
     flip: Callable[[int, int, Color]] = (
         lambda square, flipped_square, color: square if not color else flipped_square
     )
@@ -890,6 +890,7 @@ def _evaluate(
     for square in squares:
         flipped_square = flipped_squares[square]
         piece_info = piece_infos[square]
+
         if piece_info[0] > -1:
             piece_type = piece_info[0]
             color = bool(piece_info[1])
