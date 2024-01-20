@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 import chess
 
@@ -26,7 +26,14 @@ class BoardPyChess(Board):
         :param move: The move to be applied.
         :type move: Move
         """
-        self.board.push(chess.Move(move.from_square, move.to_square, move.promotion))
+        self.board.push(
+            chess.Move(
+                from_square=move.from_square,
+                to_square=move.to_square,
+                promotion=move.promotion,
+                drop=None,
+            )
+        )
 
     def pop(self) -> None:
         """
@@ -68,14 +75,16 @@ class BoardPyChess(Board):
         """
         self.board.set_fen(fen)
 
-    def set_epd(self, epd: str) -> None:
+    def set_epd(self, epd: str) -> Dict[str, Any]:
         """
         Set the position based on the input EPD string.
 
         :param epd: EPD string.
         :type epd: str
+        :return: The epd info (e.g. containing best move) for the board.
+        :rtype: Dict[str, Any]
         """
-        self.set_epd(epd)
+        return self.board.set_epd(epd)
 
     @property
     def ep_square(self) -> Optional[Square]:
