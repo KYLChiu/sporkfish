@@ -23,18 +23,16 @@ class Piece:
         self.piece_type = piece_type
         self.color = color
 
-    def __eq__(self, other: "Piece") -> bool:
+    def __eq__(self, other: object) -> bool:
         """
         Check equivalence of this piece against another.
 
         :return: True if the piece type and color are equal, otherwise.
         :rtype: bool
         """
-        return (
-            self.piece_type == other.piece_type and self.color == other.color
-            if isinstance(other, Piece)
-            else False
-        )
+        if isinstance(other, Piece):
+            return self.piece_type == other.piece_type and self.color == other.color
+        raise NotImplementedError
 
     def __hash__(self) -> int:
         """
