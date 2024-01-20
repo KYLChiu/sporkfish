@@ -1,5 +1,6 @@
-import pytest
 import chess
+import pytest
+
 from sporkfish import uci_client
 
 epds = """\

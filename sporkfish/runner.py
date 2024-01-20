@@ -1,9 +1,9 @@
+import logging
+from enum import Enum
+
 from .configurable import Configurable
 from .lichess_bot.lichess_bot_berserk import LichessBotBerserk
 from .uci_client import UCIClient
-
-from enum import Enum
-import logging
 
 
 class RunMode(Enum):

@@ -1,10 +1,11 @@
+import datetime
+import logging
+from typing import Any, Optional, Tuple
+
 import berserk
 import berserk.exceptions
-import logging
-import datetime
-from typing import Optional, Any, Tuple
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
 
-from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type
 from sporkfish.lichess_bot.lichess_bot import LichessBot
 
 

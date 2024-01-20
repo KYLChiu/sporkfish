@@ -1,20 +1,21 @@
-import chess
-from typing import Tuple, Optional
-from pathos.multiprocessing import ProcessPool
-from multiprocessing import Manager
-import stopit
-import os
-import logging
-import time
 import copy
+import logging
+import os
+import time
+from enum import Enum
+from multiprocessing import Manager
+from typing import Optional, Tuple
+
+import chess
+import stopit
 import yaml
+from pathos.multiprocessing import ProcessPool
 
 from .configurable import Configurable
 from .evaluator import Evaluator
 from .statistics import Statistics
 from .transposition_table import TranspositionTable
 from .zobrist_hasher import ZobristHasher
-from enum import Enum
 
 
 class SearchMode(Enum):

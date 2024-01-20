@@ -1,6 +1,7 @@
-import yaml
 import functools
 from typing import Dict
+
+import yaml
 
 
 @functools.lru_cache(1)

@@ -1,5 +1,6 @@
-import sporkfish.uci_client as uci_client
 import pytest
+
+import sporkfish.uci_client as uci_client
 
 
 @pytest.fixture
