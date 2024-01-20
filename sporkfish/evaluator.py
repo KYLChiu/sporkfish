@@ -11,6 +11,7 @@ from .board import (
 )
 from .board.board import Board
 
+# Piece values for: PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING respectively.
 MG_PIECE_VALUES = np.array([82, 337, 365, 477, 1025, 12000])
 EG_PIECE_VALUES = np.array([94, 281, 297, 512, 936, 12000])
 
@@ -846,6 +847,7 @@ MG_PESTO = np.array([MG_PAWN, MG_KNIGHT, MG_BISHOP, MG_ROOK, MG_QUEEN, MG_KING])
 EG_PESTO = np.array([EG_PAWN, EG_KNIGHT, EG_BISHOP, EG_ROOK, EG_QUEEN, EG_KING])
 
 # Represents how much the existence of a piece contributes to phase
+# Phase values for: PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING respectively.
 PHASES = np.array([0, 1, 1, 2, 4, 0])
 
 # square ^ 56 flips the board vertically to match alignment of PSQT
@@ -917,19 +919,13 @@ def _evaluate(
     return ((mg_score * mg_phase) + (eg_score * eg_phase)) / 24
 
 
-# Piece-Square Table Only (PeSTO) evaluation
 class Evaluator:
 
     """
-    A class responsible for evaluating the chess position.
-
-    Methods:
-    - __init__():
-        Initialize the Evaluator.
-
-    - evaluate(board: Board) -> float:
-        Evaluate the chess position based on material and piece-square tables.
-
+    A class responsible for evaluating a given static chess position (board).
+    It assumes the board does not mutate throughout the evaluation.
+    Evaluation is not thread safe: if the board changes halfway through evaluation, this will lead to undefined behaviour.
+    We currently use the Piece-Square Table Only (PeSTO) evaluation function.
     """
 
     def evaluate(self, board: Board) -> float:
@@ -942,6 +938,7 @@ class Evaluator:
         :rtype: float
         """
 
+        # Extract board info to send into numba jitted evaluation function.
         piece_infos = np.array(
             [
                 [piece.piece_type, piece.color]
