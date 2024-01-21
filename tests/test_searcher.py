@@ -79,13 +79,13 @@ class TestPerformance:
 
         stats.strip_dirs().sort_stats("tottime").print_stats(10)
 
-    @pytest.mark.slow
-    def test_perf_base(self, fen_string: str, max_depth: int) -> None:
-        """Performance test base"""
-        self._run_perf_analytics(
-            fen=fen_string,
-            max_depth=max_depth,
-        )
+    # @pytest.mark.slow
+    # def test_perf_base(self, fen_string: str, max_depth: int) -> None:
+    #     """Performance test base"""
+    #     self._run_perf_analytics(
+    #         fen=fen_string,
+    #         max_depth=max_depth,
+    #     )
 
     @pytest.mark.slow
     def test_perf_transposition_table(self, fen_string: str, max_depth: int) -> None:

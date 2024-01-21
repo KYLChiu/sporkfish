@@ -103,6 +103,10 @@ class Board(ABC):
         pass
 
     @abstractmethod
+    def peek(self) -> chess.Move:
+        pass
+
+    @abstractmethod
     def piece_at(self, square: chess.Square) -> Optional[chess.Piece]:
         """
         Get the piece at the specified square.

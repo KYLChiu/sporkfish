@@ -96,6 +96,9 @@ class BoardPyChess(Board):
         """
         return self.board.legal_moves
 
+    def peek(self) -> chess.Move:
+        return self.board.peek()
+
     def piece_at(self, square: chess.Square) -> Optional[chess.Piece]:
         """
         Get the piece at the specified square.

@@ -3,8 +3,9 @@ from sporkfish.zobrist_hasher import ZobristHasher
 
 
 def test_seeded_and_equivalent():
-    zh1 = ZobristHasher()
     board = BoardFactory.create(BoardPyChess)
+    zh1 = ZobristHasher()
+
     hash1 = zh1.hash(board)
 
     zh2 = ZobristHasher()
@@ -15,6 +16,7 @@ def test_seeded_and_equivalent():
 
 
 def test_no_hash_collision():
+    board = BoardFactory.create(BoardPyChess)
     zh = ZobristHasher()
 
     def check(board: Board):
@@ -28,4 +30,25 @@ def test_no_hash_collision():
 
             board.pop()
 
-    check(BoardFactory.create(BoardPyChess))
+    check(board)
+
+
+def test_incremental_hash():
+    board = BoardFactory.create(BoardPyChess)
+    zh = ZobristHasher()
+
+    def check(board: Board):
+        initial_hash = zh.hash(board)
+        i = 0
+        for move in board.legal_moves:
+            print(move)
+            board.push(move)
+
+            full_hash = zh.hash(board)
+            rolling_hash = zh.incremental_hash(initial_hash, board)
+            assert full_hash == rolling_hash
+
+            board.pop()
+            i += 1
+
+    check(board)

@@ -86,9 +86,9 @@ class Searcher:
         self._config = config
 
         self._statistics = Statistics(_stats)
+        self._zobrist_hasher = ZobristHasher()
 
         if self._config.enable_transposition_table:
-            self._zobrist_hash = ZobristHasher()
             self._transposition_table = TranspositionTable(_dict)
             logging.info("Enabled transposition table in search.")
         else:
@@ -186,6 +186,7 @@ class Searcher:
         depth: int,
         alpha: float,
         beta: float,
+        zobrist_hash: float = None,
     ) -> float:
         """
         Negamax implementation alpha-beta pruning. For non-root nodes.
@@ -205,11 +206,14 @@ class Searcher:
 
         """
         value = -float("inf")
+        new_zobrist_hash = None
 
         # Probe the transposition table for an existing entry
         if self._config.enable_transposition_table:
-            hash_value = self._zobrist_hash.hash(board)
-            tt_entry = self._transposition_table.probe(hash_value, depth)
+            new_zobrist_hash = self._zobrist_hasher.incremental_hash(
+                zobrist_hash, board
+            )
+            tt_entry = self._transposition_table.probe(new_zobrist_hash, depth)
             if tt_entry:
                 return tt_entry["score"]  # type: ignore
 
@@ -230,7 +234,9 @@ class Searcher:
             if depth >= depth_reduction_factor and not in_check:
                 null_move_depth = depth - depth_reduction_factor
                 board.push(chess.Move.null())
-                value = -self._negamax(board, null_move_depth, -beta, -alpha)
+                value = -self._negamax(
+                    board, null_move_depth, -beta, -alpha, new_zobrist_hash
+                )
                 board.pop()
                 if value >= beta:
                     return beta
@@ -244,7 +250,9 @@ class Searcher:
 
         for move in legal_moves:
             board.push(move)
-            child_value = -self._negamax(board, depth - 1, -beta, -alpha)
+            child_value = -self._negamax(
+                board, depth - 1, -beta, -alpha, new_zobrist_hash
+            )
             board.pop()
 
             value = max(value, child_value)
@@ -254,7 +262,7 @@ class Searcher:
                 break
 
         if self._config.enable_transposition_table:
-            self._transposition_table.store(hash_value, depth, value)
+            self._transposition_table.store(new_zobrist_hash, depth, value)
 
         return value
 
@@ -264,6 +272,7 @@ class Searcher:
         depth: int,
         alpha: float,
         beta: float,
+        zobrist_hash: float = None,
     ) -> Tuple[float, chess.Move]:
         """
         Entry point for negamax search with fail-soft alpha-beta pruning, single process.
@@ -281,10 +290,13 @@ class Searcher:
         """
         value = -float("inf")
         best_move = chess.Move.null()
+        new_zobrist_hash = None
         self._statistics.increment()
 
         if self._config.enable_transposition_table:
-            hash_value = self._zobrist_hash.hash(board)
+            new_zobrist_hash = self._zobrist_hasher.incremental_hash(
+                zobrist_hash, board
+            )
 
         legal_moves = sorted(
             board.legal_moves,
@@ -294,7 +306,9 @@ class Searcher:
 
         for move in legal_moves:
             board.push(move)
-            child_value = -self._negamax(board, depth - 1, -beta, -alpha)
+            child_value = -self._negamax(
+                board, depth - 1, -beta, -alpha, new_zobrist_hash
+            )
             board.pop()
 
             if value < child_value:
@@ -306,7 +320,7 @@ class Searcher:
                 break
 
         if self._config.enable_transposition_table:
-            self._transposition_table.store(hash_value, depth, value)
+            self._transposition_table.store(new_zobrist_hash, depth, value)
 
         return value, best_move
 
@@ -317,6 +331,7 @@ class Searcher:
         depth: int,
         alpha: float,
         beta: float,
+        zobrist_hash: float,
     ) -> Tuple[float, chess.Move]:
         """
         Entry point for negamax search with fail-soft alpha-beta pruning with lazy symmetric multiprocessing.
@@ -335,7 +350,7 @@ class Searcher:
 
         # Let processes race down lazily and see who completes first
         # We need to add more asymmetry but a task for later
-        task = lambda _: self._negamax_sp(board, depth, alpha, beta)
+        task = lambda _: self._negamax_sp(board, depth, alpha, beta, zobrist_hash)
         futures = []
         for i in range(self._num_processes):  # type: ignore
             futures.append(self._pool.apipe(task, i))
@@ -372,13 +387,16 @@ class Searcher:
             start_time: float,
             alpha: float,
             beta: float,
+            zobrist_hash: float,
         ) -> Tuple[float, chess.Move, float, int]:
             try:
                 if self._config.mode is SearchMode.SINGLE_PROCESS:
-                    score, move = self._negamax_sp(board_to_search, depth, alpha, beta)
+                    score, move = self._negamax_sp(
+                        board_to_search, depth, alpha, beta, zobrist_hash
+                    )
                 elif self._config.mode is SearchMode.LAZY_SMP:
                     score, move = self._negamax_lazy_smp(
-                        board_to_search, depth, alpha, beta
+                        board_to_search, depth, alpha, beta, zobrist_hash
                     )
                 else:
                     raise TypeError("Invalid enum type given for SearchMode.")
@@ -409,6 +427,11 @@ class Searcher:
 
         score = -float("inf")
         move = chess.Move.null()
+        zobrist_hash = (
+            self._zobrist_hasher.hash(board)
+            if self._config.enable_transposition_table
+            else None
+        )
 
         # Iterative deepening
         for depth in range(1, self._config.max_depth + 1):
@@ -427,6 +450,7 @@ class Searcher:
                 start_time=start_time,
                 alpha=alpha,
                 beta=beta,
+                zobrist_hash=zobrist_hash,
             )
 
             # Timed out, return best move from previous depth.
