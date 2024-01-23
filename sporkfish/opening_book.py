@@ -6,6 +6,7 @@ from typing import Optional
 import chess
 import chess.polyglot
 
+from .board.board import Board
 from .configurable import Configurable
 
 
@@ -83,12 +84,12 @@ class OpeningBook:
             logging.warning(f"No opening book found at {opening_book_path}, skipping.")
             return None
 
-    def query(self, board: chess.Board) -> Optional[chess.Move]:
+    def query(self, board: Board) -> Optional[chess.Move]:
         """
         Query the opening database for a given chess board position.
 
         :param board: The current chess board position.
-        :type board: chess.Board
+        :type board: Board
         :return: The recommended move from the opening database.
                 Returns None if no matching entry is found.
         :rtype: Optional[chess.Move]
@@ -96,7 +97,11 @@ class OpeningBook:
 
         try:
             if self._db:
-                entry = self._db.find(board)
+                # We need to use a chess.Board() to be compatible with the opening book
+                # This is a small performace hit but is miniscule compared to searching
+                cboard = chess.Board()
+                cboard.set_fen(board.fen())
+                entry = self._db.find(cboard)
                 return entry.move if entry else None
             else:
                 return None

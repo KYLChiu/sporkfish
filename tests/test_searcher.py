@@ -1,9 +1,9 @@
 from typing import Any
 
-import chess
 import pytest
 from init_board_helper import board_setup, init_board, score_fen
 
+from sporkfish.board.board_factory import BoardFactory, BoardPyChess
 from sporkfish.evaluator import Evaluator
 from sporkfish.searcher import Searcher, SearcherConfig
 
@@ -11,10 +11,14 @@ from sporkfish.searcher import Searcher, SearcherConfig
 def _searcher_with_fen(
     fen: str,
     max_depth: int = 3,
+<<<<<<< HEAD
     enable_null_move_pruning=True,
+=======
+    enable_null_move_pruning=False,
+>>>>>>> fc27446fbeaaba25cef5a425e7e9e425c38bc199
     enable_transposition_table=False,
 ):
-    board = chess.Board()
+    board = BoardFactory.create(board_type=BoardPyChess)
     e = Evaluator()
     s = Searcher(
         e,
@@ -114,35 +118,95 @@ class TestPerformance:
     """
 
     def _run_perf_analytics(
-        self, fen: str, max_depth: int, enable_transposition_table: bool
+        self,
+        fen: str,
+        max_depth: int,
+        enable_null_move_pruning: bool = False,
+        enable_transposition_table: bool = False,
     ) -> None:
         import cProfile
         import pstats
 
         profiler = cProfile.Profile()
         profiler.enable()
-        _searcher_with_fen(fen, max_depth, enable_transposition_table)
+        _searcher_with_fen(
+            fen, max_depth, enable_null_move_pruning, enable_transposition_table
+        )
         profiler.disable()
         stats = pstats.Stats(profiler)
 
         stats.strip_dirs().sort_stats("tottime").print_stats(10)
 
     @pytest.mark.slow
-    def test_perf_tt_off(self, fen_string: str, max_depth: int) -> None:
-        """Performance test without transposition table"""
+    def test_perf_base(self, fen_string: str, max_depth: int) -> None:
+        """Performance test base"""
         self._run_perf_analytics(
             fen=fen_string,
             max_depth=max_depth,
-            enable_transposition_table=False,
         )
 
     @pytest.mark.slow
-    def test_perf_tt_on(self, fen_string: str, max_depth: int) -> None:
+    def test_perf_transposition_table(self, fen_string: str, max_depth: int) -> None:
         """Performance test with transposition table"""
         self._run_perf_analytics(
             fen=fen_string,
             max_depth=max_depth,
             enable_transposition_table=True,
+        )
+
+    @pytest.mark.slow
+    def test_perf_null_move_pruning(self, fen_string: str, max_depth: int) -> None:
+        """Performance test with null move pruning"""
+        self._run_perf_analytics(
+            fen=fen_string,
+            max_depth=max_depth,
+            enable_null_move_pruning=True,
+        )
+
+
+@pytest.mark.parametrize(
+    ("fen_string", "max_depth"),
+    [
+        (board_setup["white"]["open"], 3),
+        (board_setup["white"]["mid"], 3),
+        (board_setup["white"]["end"], 3),
+        (board_setup["white"]["two_kings"], 3),
+        (board_setup["black"]["open"], 3),
+        (board_setup["black"]["mid"], 3),
+        (board_setup["black"]["end"], 3),
+        # (board_setup["black"]["two_kings"], 3) TODO: (kchiu) Issue #63
+    ],
+)
+class TestConsistency:
+    """Tests consistency across configs"""
+
+    def _run_consistency_test(
+        self,
+        fen: str,
+        max_depth: int,
+        enable_null_move_pruning: bool = False,
+        enable_transposition_table: bool = False,
+    ):
+        score, move = _searcher_with_fen(fen, max_depth)
+        score_2, move_2 = _searcher_with_fen(
+            fen,
+            max_depth,
+            enable_null_move_pruning=enable_null_move_pruning,
+            enable_transposition_table=enable_transposition_table,
+        )
+        assert score == score_2
+        assert move == move_2
+
+    def test_transposition_table_consistency(self, fen_string: str, max_depth: int):
+        "Tests base searcher and transposition table on return the same score and bestmove"
+        self._run_consistency_test(
+            fen=fen_string, max_depth=max_depth, enable_transposition_table=True
+        )
+
+    def test_null_move_pruning_consistency(self, fen_string: str, max_depth: int):
+        "Tests base searcher and null move pruning on return the same score and bestmove"
+        self._run_consistency_test(
+            fen=fen_string, max_depth=max_depth, enable_null_move_pruning=True
         )
 
 
@@ -276,7 +340,7 @@ def _init_searcher(max_depth: int = 4) -> Searcher:
         (board_setup["black"]["open"], [0, -90]),
         (board_setup["black"]["mid"], [0, -90]),
         (board_setup["black"]["end"], [0, -90]),
-        (board_setup["black"]["two_kings"], [0, -90]),
+        # (board_setup["black"]["two_kings"], [0, -90]) # Discussed with Jeremy to temp disable this,
     ],
 )
 class TestNegamax:
@@ -292,7 +356,6 @@ class TestNegamax:
 
         alpha, beta = param[0], param[1]
         result = s._negamax(board, 0, alpha, beta)
-        score = score_fen(fen_string)
         assert result == s._quiescence(board, 4, alpha, beta)
 
     def test_negamax_depth_1(
@@ -312,13 +375,16 @@ class TestNegamax:
             key=lambda move: (s._mvv_lva_heuristic(board, move),),
             reverse=True,
         )
-        value = -1e6
+
+        value = -float("inf")
+
         for move in legal_moves:
             board.push(move)
             child_value = -s._quiescence(board, 4, -beta, -alpha)
             board.pop()
 
             value = max(value, child_value)
+
             alpha = max(alpha, value)
 
         assert result == value

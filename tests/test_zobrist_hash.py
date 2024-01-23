@@ -1,12 +1,10 @@
-import chess
-
+from sporkfish.board.board_factory import Board, BoardFactory, BoardPyChess
 from sporkfish.zobrist_hasher import ZobristHasher
 
 
 def test_seeded_and_equivalent():
     zh1 = ZobristHasher()
-    board = chess.Board()
-    board.push(chess.Move.from_uci("d2d4"))
+    board = BoardFactory.create(BoardPyChess)
     hash1 = zh1.hash(board)
 
     zh2 = ZobristHasher()
@@ -19,7 +17,7 @@ def test_seeded_and_equivalent():
 def test_no_hash_collision():
     zh = ZobristHasher()
 
-    def check(board: chess.Board):
+    def check(board: Board):
         s = set()
         for move in board.legal_moves:
             board.push(move)
@@ -30,5 +28,4 @@ def test_no_hash_collision():
 
             board.pop()
 
-    board1 = chess.Board()
-    check(chess.Board())
+    check(BoardFactory.create(BoardPyChess))
