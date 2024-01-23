@@ -1,4 +1,5 @@
 from typing import Any
+import logging
 
 import pytest
 from init_board_helper import board_setup, init_board, score_fen
@@ -6,6 +7,7 @@ from init_board_helper import board_setup, init_board, score_fen
 from sporkfish.board.board_factory import BoardFactory, BoardPyChess
 from sporkfish.evaluator import Evaluator
 from sporkfish.searcher import Searcher, SearcherConfig
+from sporkfish.zobrist_hasher import ZobristHasher
 
 
 def _searcher_with_fen(
@@ -49,7 +51,10 @@ class TestValidMove:
 @pytest.mark.parametrize(
     ("fen_string", "max_depth"),
     [
+        ("r1r3k1/1ppp1ppp/p7/8/1P1nPPn1/3B1RP1/P1PP3q/R1BQ2K1 w - - 2 18", 4),
+        ("r1r3k1/1ppp1ppp/p7/8/1P1nPPn1/3B1RP1/P1PP3q/R1BQ2K1 w - - 2 18", 5),
         ("r1r3k1/1ppp1ppp/p7/8/1P1nPPn1/3B1RP1/P1PP3q/R1BQ2K1 w - - 2 18", 6),
+        ("r1r3k1/1ppp1ppp/p7/8/1P1nPPn1/3B1RP1/P1PP3q/R1BQ2K1 w - - 2 18", 7),
     ],
 )
 class TestPerformance:
@@ -87,14 +92,14 @@ class TestPerformance:
     #         max_depth=max_depth,
     #     )
 
-    @pytest.mark.slow
-    def test_perf_transposition_table(self, fen_string: str, max_depth: int) -> None:
-        """Performance test with transposition table"""
-        self._run_perf_analytics(
-            fen=fen_string,
-            max_depth=max_depth,
-            enable_transposition_table=True,
-        )
+    # @pytest.mark.slow
+    # def test_perf_transposition_table(self, fen_string: str, max_depth: int) -> None:
+    #     """Performance test with transposition table"""
+    #     self._run_perf_analytics(
+    #         fen=fen_string,
+    #         max_depth=max_depth,
+    #         enable_transposition_table=True,
+    #     )
 
     @pytest.mark.slow
     def test_perf_null_move_pruning(self, fen_string: str, max_depth: int) -> None:
@@ -103,6 +108,16 @@ class TestPerformance:
             fen=fen_string,
             max_depth=max_depth,
             enable_null_move_pruning=True,
+        )
+
+    @pytest.mark.slow
+    def test_perf_all(self, fen_string: str, max_depth: int) -> None:
+        """Performance test with null move pruning and transposition table"""
+        self._run_perf_analytics(
+            fen=fen_string,
+            max_depth=max_depth,
+            enable_null_move_pruning=True,
+            enable_transposition_table=True,
         )
 
 
@@ -173,6 +188,8 @@ class TestQuiescence:
         Test for quiescence base case (depth 0)
         """
         board = init_board(fen_string)
+        zh = ZobristHasher()
+        hash = zh.hash(board)
         s = _init_searcher
 
         alpha, beta = 1.1, 2.3
@@ -189,7 +206,7 @@ class TestQuiescence:
         board = init_board(fen_string)
         s = _init_searcher
         alpha, beta = 0, -1e8
-        result = s._quiescence(board, 2, alpha, beta)
+        result = s._quiescence(board, -2, alpha, beta)
         assert result == beta
 
     def test_quiescence_depth_1_alpha(
@@ -202,7 +219,7 @@ class TestQuiescence:
         board = init_board(fen_string)
         s = _init_searcher
         alpha, beta = 1e8, 1e9
-        result = s._quiescence(board, 1, alpha, beta)
+        result = s._quiescence(board, -1, alpha, beta)
 
         legal_moves = sorted(
             (move for move in board.legal_moves if board.is_capture(move)),

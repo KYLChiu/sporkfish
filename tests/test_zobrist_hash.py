@@ -33,15 +33,13 @@ def test_no_hash_collision():
     check(board)
 
 
-def test_incremental_hash():
+def test_incremental_hash_basic():
     board = BoardFactory.create(BoardPyChess)
     zh = ZobristHasher()
 
     def check(board: Board):
         initial_hash = zh.hash(board)
-        i = 0
         for move in board.legal_moves:
-            print(move)
             board.push(move)
 
             full_hash = zh.hash(board)
@@ -49,6 +47,5 @@ def test_incremental_hash():
             assert full_hash == rolling_hash
 
             board.pop()
-            i += 1
 
     check(board)

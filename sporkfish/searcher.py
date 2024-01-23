@@ -2,6 +2,7 @@ import copy
 import logging
 import os
 import time
+import numpy as np
 from enum import Enum
 from multiprocessing import Manager
 from typing import Optional, Tuple
@@ -135,7 +136,14 @@ class Searcher:
         else:
             return 0
 
-    def _quiescence(self, board: Board, depth: int, alpha: float, beta: float) -> float:
+    # TODO: add transposition table probing here
+    def _quiescence(
+        self,
+        board: Board,
+        depth: int,
+        alpha: float,
+        beta: float,
+    ) -> float:
         """
         Quiescence search to help the horizon effect (improving checking of tactical possibilities).
 
@@ -186,7 +194,7 @@ class Searcher:
         depth: int,
         alpha: float,
         beta: float,
-        zobrist_hash: float = None,
+        zobrist_hash: np.uint64 = None,
     ) -> float:
         """
         Negamax implementation alpha-beta pruning. For non-root nodes.
@@ -223,7 +231,10 @@ class Searcher:
         # We currently only expect max 4 captures to reach a quiet position
         # This is not ideal, but otherwise the search becomes incredibly slow
         if depth == 0:
-            return self._quiescence(board, 4, alpha, beta)
+            qscore = self._quiescence(board, 4, alpha, beta)
+            # if self._config.enable_transposition_table:
+            #     self._transposition_table.store(new_zobrist_hash, depth, qscore)
+            return qscore
 
         # Null move pruning - reduce the search space by trying a null move,
         # then seeing if the score of the subtree search is still high enough to cause a beta cutoff
@@ -272,7 +283,7 @@ class Searcher:
         depth: int,
         alpha: float,
         beta: float,
-        zobrist_hash: float = None,
+        zobrist_hash: np.uint64 = None,
     ) -> Tuple[float, chess.Move]:
         """
         Entry point for negamax search with fail-soft alpha-beta pruning, single process.
@@ -331,7 +342,7 @@ class Searcher:
         depth: int,
         alpha: float,
         beta: float,
-        zobrist_hash: float,
+        zobrist_hash: np.uint64 = None,
     ) -> Tuple[float, chess.Move]:
         """
         Entry point for negamax search with fail-soft alpha-beta pruning with lazy symmetric multiprocessing.
@@ -387,7 +398,7 @@ class Searcher:
             start_time: float,
             alpha: float,
             beta: float,
-            zobrist_hash: float,
+            zobrist_hash: np.uint64 = None,
         ) -> Tuple[float, chess.Move, float, int]:
             try:
                 if self._config.mode is SearchMode.SINGLE_PROCESS:
