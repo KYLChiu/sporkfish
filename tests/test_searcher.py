@@ -11,11 +11,7 @@ from sporkfish.searcher import Searcher, SearcherConfig
 def _searcher_with_fen(
     fen: str,
     max_depth: int = 3,
-<<<<<<< HEAD
-    enable_null_move_pruning=True,
-=======
     enable_null_move_pruning=False,
->>>>>>> fc27446fbeaaba25cef5a425e7e9e425c38bc199
     enable_transposition_table=False,
 ):
     board = BoardFactory.create(board_type=BoardPyChess)

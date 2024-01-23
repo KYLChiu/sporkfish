@@ -9,8 +9,12 @@ Welcome to Sporkfish's documentation!
 
 Sporkfish is a Python-based chess engine. Chess programming techniques, although numerous, are not always well-documented. This project aims to bridge that gap by offering clear, working, and accessible code, providing a resource for developers interested in understanding and implementing chess engine algorithms.
 
+.. automodule:: sphinx-apidoc -o docs 
+    :members:
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
    set_up
+
