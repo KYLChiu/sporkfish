@@ -66,10 +66,15 @@ black .
 Search:
 
 * [Negamax with fail-soft alpha-beta pruning](https://www.cs.cornell.edu/courses/cs312/2002sp/lectures/rec21.htm)
-* [MVV-LVA move ordering](https://www.chessprogramming.org/Move_Ordering)
 * [PolyGlot opening book querying](https://python-chess.readthedocs.io/en/latest/polyglot.html)
 * [Quiescence search](https://www.chessprogramming.org/Quiescence_Search)
+* [Iterative deepening](https://www.chessprogramming.org/Iterative_Deepening)
+* [Null move pruning](https://www.chessprogramming.org/Null_Move_Pruning)
+* [Aspiration windows](https://www.chessprogramming.org/Aspiration_Windows)
 * [Transposition tables with Zobrist hashing](https://mediocrechess.blogspot.com/2007/01/guide-transposition-tables.html)
+
+Move ordering:
+* [MVV-LVA move ordering](https://www.chessprogramming.org/Move_Ordering)
 
 Evaluation:
 
@@ -89,6 +94,8 @@ References:
 * [Engine improvement tier list](https://www.reddit.com/r/ComputerChess/comments/yln9ef/comparative_advantage_of_engine_improvements/)
 * [Black Marlin](https://github.com/jnlt3/blackmarlin?tab=readme-ov-file#efficiently-updatable-neural-networks)
 * [Explaining beta-cutoff](https://stackoverflow.com/questions/2533219/alpha-beta-cutoff)
+* [Theodora](https://github.com/yigitkucuk/Theodora/blob/main/main.py)
+* [black_numba](https://github.com/Avo-k/black_numba)
 
 Video (Youtube) Resources - beginner friendly:
 
