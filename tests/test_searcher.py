@@ -97,14 +97,14 @@ class TestPerformance:
             max_depth=max_depth,
         )
 
-    # @pytest.mark.slow
-    # def test_perf_transposition_table(self, fen_string: str, max_depth: int) -> None:
-    #     """Performance test with transposition table"""
-    #     self._run_perf_analytics(
-    #         fen=fen_string,
-    #         max_depth=max_depth,
-    #         enable_transposition_table=True,
-    #     )
+    @pytest.mark.slow
+    def test_perf_transposition_table(self, fen_string: str, max_depth: int) -> None:
+        """Performance test with transposition table"""
+        self._run_perf_analytics(
+            fen=fen_string,
+            max_depth=max_depth,
+            enable_transposition_table=True,
+        )
 
     @pytest.mark.slow
     def test_perf_null_move_pruning(self, fen_string: str, max_depth: int) -> None:
