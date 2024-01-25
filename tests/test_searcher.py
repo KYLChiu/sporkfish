@@ -125,8 +125,8 @@ class TestPerformance:
         )
 
     @pytest.mark.slow
-    def test_perf_best(self, fen_string: str, max_depth: int) -> None:
-        """Performance test with best general performance config on"""
+    def test_perf_combined(self, fen_string: str, max_depth: int) -> None:
+        """Performance test with combined general performance config on"""
         self._run_perf_analytics(
             fen=fen_string,
             max_depth=max_depth,
