@@ -377,7 +377,7 @@ class Searcher:
         :type board_to_search: Board
         :param depth: The search depth.
         :type depth: int
-        :param prev_score: The previous score of the aspiration window.
+        :param prev_score: The score of the previous depth in a interative deepening search.
         :type prev_score: float
 
         :return: A tuple containing the score and the best move found during the search.
