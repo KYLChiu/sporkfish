@@ -232,12 +232,15 @@ class Searcher:
         # This is not ideal, but otherwise the search becomes incredibly slow
         if depth == 0:
             qscore = self._quiescence(board, 4, alpha, beta)
-            # if self._config.enable_transposition_table:
-            #     self._transposition_table.store(new_zobrist_hash, depth, qscore)
+            if self._config.enable_transposition_table:
+                self._transposition_table.store(new_zobrist_hash, depth, qscore)
             return qscore
 
-        # Null move pruning - reduce the search space by trying a null move,
+        # Null move pruning - reduce the search space by passing your turn (making a null move),
         # then seeing if the score of the subtree search is still high enough to cause a beta cutoff
+        # The intuition is that:
+        # If the score after passing your turn is still higher than your opponents best choice of move so far,
+        # then your opponent will force you down a different part of the search tree anyway, thus rendering this path useless.
         if self._config.enable_null_move_pruning:
             # TODO: add zugzwang check
             depth_reduction_factor = 3

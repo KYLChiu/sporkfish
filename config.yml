@@ -5,7 +5,7 @@ SearcherConfig:
   max_depth: 6 # maximum depth for negamax search
   mode: SINGLE_PROCESS # mode of search, choice of: SINGLE_PROCESS, LAZY_SMP
   enable_null_move_pruning: True # flag to enable null move pruning (checking for a beta-cutoff by passing our turn)
-  enable_transposition_table: True # flag to enable position cache, so positions are not evaluated twice
+  enable_transposition_table: False # flag to enable position cache, so positions are not evaluated twice
 
 # Current time management strategy is alloted_move_time = time_weight * current_time + increment_weight * increment
 TimeManagerConfig:
