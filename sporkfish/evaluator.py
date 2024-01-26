@@ -216,18 +216,16 @@ class Evaluator:
 
         phase = 0
 
-        for square in self.SQUARES:
+        for square, piece in board.piece_map().items():
             # square ^ 56 flips the board vertically to match alignment of PSQT
             flipped_sq = self.VERTICALLY_FLIPPED_SQUARES[square]
-            piece = board.piece_at(flipped_sq)
-            if piece:
-                mg[piece.color] += self.MG_PESTO[piece.piece_type][
-                    flip(square, flipped_sq, piece.color)
-                ]
-                eg[piece.color] += self.EG_PESTO[piece.piece_type][
-                    flip(square, flipped_sq, piece.color)
-                ]
-                phase += self.PHASES[piece.piece_type]
+            mg[piece.color] += self.MG_PESTO[piece.piece_type][
+                flip(square, flipped_sq, piece.color)
+            ]
+            eg[piece.color] += self.EG_PESTO[piece.piece_type][
+                flip(square, flipped_sq, piece.color)
+            ]
+            phase += self.PHASES[piece.piece_type]
 
         mg_score = mg[board.turn] - mg[not board.turn]
         eg_score = eg[board.turn] - eg[not board.turn]

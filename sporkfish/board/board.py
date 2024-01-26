@@ -115,6 +115,10 @@ class Board(ABC):
         pass
 
     @abstractmethod
+    def piece_map(self) -> Dict[chess.Square, chess.Piece]:
+        pass
+
+    @abstractmethod
     def is_capture(self, move: chess.Move) -> bool:
         """
         Check if a given move is a capture.

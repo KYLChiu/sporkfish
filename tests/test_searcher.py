@@ -49,7 +49,7 @@ class TestValidMove:
 @pytest.mark.parametrize(
     ("fen_string", "max_depth"),
     [
-        ("r1r3k1/1ppp1ppp/p7/8/1P1nPPn1/3B1RP1/P1PP3q/R1BQ2K1 w - - 2 18", 6),
+        ("rnbqkb1r/pppp1ppp/4pn2/8/3P1B2/8/PPP1PPPP/RN1QKBNR w KQkq - 0 3", 5),
     ],
 )
 class TestPerformance:

@@ -107,6 +107,9 @@ class BoardPyChess(Board):
         """
         return self.board.piece_at(square)
 
+    def piece_map(self):
+        return self.board.piece_map()
+
     def is_capture(self, move: chess.Move) -> bool:
         """
         Check if a given move is a capture.
