@@ -501,7 +501,6 @@ class Searcher:
             # Else move onto next depth, unless we have no more time already.
             else:
                 score, move = new_score, new_move
-                alpha, beta = score, score
                 if time_left is not None:
                     time_left -= elapsed
                     if time_left <= 0:  # type: ignore
