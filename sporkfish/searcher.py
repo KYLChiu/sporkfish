@@ -4,7 +4,7 @@ import os
 import time
 from enum import Enum
 from multiprocessing import Manager
-from typing import Optional, Tuple
+from typing import Callable, Optional, Tuple
 
 import chess
 import stopit
@@ -53,12 +53,14 @@ class SearcherConfig(Configurable):
         mode: SearchMode = SearchMode.SINGLE_PROCESS,
         enable_null_move_pruning: bool = True,
         enable_transposition_table: bool = False,
+        enable_aspiration_windows: bool = True,
     ) -> None:
         self.max_depth = max_depth
         # TODO: register the constructor function in yaml loader instead.
         self.mode = mode if isinstance(mode, SearchMode) else SearchMode(mode)
         self.enable_null_move_pruning = enable_null_move_pruning
         self.enable_transposition_table = enable_transposition_table
+        self.enable_aspiration_windows = enable_aspiration_windows
 
 
 class Searcher:
@@ -348,6 +350,59 @@ class Searcher:
             else:
                 continue  # Continue the loop if no result is ready yet
 
+    # Aspiriation windows
+    # Assumption (*): we expect the search score from depth n should be somewhat similar depth n + 1.
+    # Method: set alpha = prev_depth_score - constant, beta = prev_depth_score + constant.
+    # Do a search with narrower window [alpha, beta] as opposed to [-inf, inf].
+    # This should cause cutoffs (if they do happen) to happen faster.
+    # If the score falls within the alpha/beta bounds, our assumption (*) holds - so take that score.
+    # If the score falls outside the alpha/beta windows, the score changed too much
+    # i.e. our assumption (*) is false - so we do a full search to be safe.
+    def _aspiration_windows_search(
+        self,
+        search_func: Callable[[Board, int, float, float], Tuple[float, chess.Move]],
+        board_to_search: Board,
+        depth: int,
+        prev_score: float,
+    ) -> Tuple[float, chess.Move]:
+        """
+        Perform an aspiration windows search.
+
+        Aspiration windows are used to optimize the search process by narrowing the search window based on
+        previous search results.
+
+        :param search_func: A callable function representing the search algorithm.
+        :type search_func: Callable[[Board, int, float, float], Tuple[float, chess.Move]]
+        :param board_to_search: The chess board to search.
+        :type board_to_search: Board
+        :param depth: The search depth.
+        :type depth: int
+        :param prev_score: The score of the previous depth in a iterative deepening search.
+        :type prev_score: float
+
+        :return: A tuple containing the score and the best move found during the search.
+        :rtype: Tuple[float, chess.Move]
+        """
+        if self._config.enable_aspiration_windows and depth > 1:
+            # Aspiration window size: 50 centipawn is worth about 1/2 of a pawn in our eval function
+            # We leave configuration for this to another PR
+            window_size = 50
+            alpha = prev_score - window_size
+            beta = prev_score + window_size
+            score, move = search_func(board_to_search, depth, alpha, beta)
+            if score <= alpha or score >= beta:
+                logging.info(
+                    "Search score outside aspiration window bounds, doing a full search."
+                )
+                score, move = search_func(
+                    board_to_search, depth, -float("inf"), float("inf")
+                )
+        else:
+            score, move = search_func(
+                board_to_search, depth, -float("inf"), float("inf")
+            )
+        return score, move
+
     def search(
         self, board: Board, timeout: Optional[float] = None
     ) -> Tuple[float, chess.Move]:
@@ -370,15 +425,19 @@ class Searcher:
             board_to_search: Board,
             depth: int,
             start_time: float,
-            alpha: float,
-            beta: float,
+            prev_score: float,
         ) -> Tuple[float, chess.Move, float, int]:
             try:
                 if self._config.mode is SearchMode.SINGLE_PROCESS:
-                    score, move = self._negamax_sp(board_to_search, depth, alpha, beta)
+                    score, move = self._aspiration_windows_search(
+                        self._negamax_sp, board_to_search, depth, prev_score
+                    )
                 elif self._config.mode is SearchMode.LAZY_SMP:
-                    score, move = self._negamax_lazy_smp(
-                        board_to_search, depth, alpha, beta
+                    score, move = self._aspiration_windows_search(
+                        self._negamax_lazy_smp,
+                        board_to_search,
+                        depth,
+                        prev_score,
                     )
                 else:
                     raise TypeError("Invalid enum type given for SearchMode.")
@@ -399,6 +458,10 @@ class Searcher:
                 }
                 info_str = " ".join(f"{k} {v}" for k, v in fields.items())
                 logging.info(f"info {info_str}")
+                if move == chess.Move.null():
+                    raise RuntimeError(
+                        f"Null move returned in search for position {board.fen()}."
+                    )
                 return score, move, elapsed, 0
             except stopit.utils.TimeoutException:
                 return float("-inf"), chess.Move.null(), 0.0, 1
@@ -411,11 +474,12 @@ class Searcher:
         move = chess.Move.null()
 
         # Iterative deepening
+        # This conducts a fixed-depth search for depths ranging from 1 to max_depth.
+        # 1) It enables the transposition table (cache) to be easily utilized.
+        # 2) If time constraints prevent a complete search, the function can return the best move found up to the previous depth.
+        # 3) It facilitates the use of aspiration windows, as implemented in the _aspiration_windows_search function.
         for depth in range(1, self._config.max_depth + 1):
             new_board = copy.deepcopy(board)
-
-            alpha = -float("inf")
-            beta = float("inf")
 
             self._statistics.reset()
             start_time = time.time()
@@ -425,8 +489,7 @@ class Searcher:
                 board_to_search=new_board,
                 depth=depth,
                 start_time=start_time,
-                alpha=alpha,
-                beta=beta,
+                prev_score=score,
             )
 
             # Timed out, return best move from previous depth.
