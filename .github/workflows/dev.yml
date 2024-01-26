@@ -30,11 +30,11 @@ jobs:
       # -- Code checking (don't know how to separate these atm) --
       - name: Code checks
         run: |
-            docker run -it sporkfish-dev
+            docker run sporkfish-dev
             pytest -sv
             mypy --install-types --non-interactive
             black --check .
-            docker run -it sporkfish-dev isort --check --profile black .
+            isort --check --profile black .
         
      
       
