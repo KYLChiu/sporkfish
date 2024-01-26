@@ -474,10 +474,10 @@ class Searcher:
         move = chess.Move.null()
 
         # Iterative deepening
-        # Do a fixed-depth search for depth in [1, max_depth]. This has multiple benefits:
-        # 1) Iteratively incrementing the depth allows for caching via transposition table.
-        # 2) If we run out of time for a move, we can return the move from the previous depth.
-        # 3) Allows for aspiration windows, see _aspiration_windows_search.
+        # This conducts a fixed-depth search for depths ranging from 1 to max_depth.
+        # 1) It enables the transposition table (cache) to be easily utilized.
+        # 2) If time constraints prevent a complete search, the function can return the best move found up to the previous depth.
+        # 3) It facilitates the use of aspiration windows, as implemented in the _aspiration_windows_search function.
         for depth in range(1, self._config.max_depth + 1):
             new_board = copy.deepcopy(board)
 
