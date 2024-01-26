@@ -24,20 +24,20 @@ jobs:
         shell: bash
         env:
           API_TOKEN: ${{ secrets.API_TOKEN }}
-      # -- Docker build --
+      # -- Docker build and run --
       - name: Build Docker image
-        run: docker build -t sporkfish-dev .
-      # -- Code checking --
+        run: docker build -t sporkfish-image .
       - name: Run docker container
-        run: docker run -d -it sporkfish-dev
-      - name: Static type checks (mypy)
-        run: docker exec mypy --install-types --non-interactive
-      - name: Run tests (pytest)
-        run: docker exec pytest -sv
+        run: docker run --name sporkfish-container -d -it sporkfish-image
+      # -- Inspect code/tests --
+      - name: Check typing (mypy)
+        run: docker exec sporkfish-container mypy --install-types --non-interactive
+      - name: Check tests (pytest)
+        run: docker exec sporkfish-container pytest -sv
       - name: Check code format (black)
-        run: docker exec black --check .
+        run: docker exec sporkfish-container black --check .
       - name: Check imports format (isort)
-        run: docker exec isort --check --profile black .
+        run: docker exec sporkfish-container isort --check --profile black .
         
      
       
