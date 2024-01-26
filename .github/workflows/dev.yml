@@ -26,18 +26,18 @@ jobs:
           API_TOKEN: ${{ secrets.API_TOKEN }}
       # -- Docker build --
       - name: Build Docker image
-        run: docker build -t sporkfish-dev .
+        run: docker build -t sporkfish-img .
       # -- Code checking --
       - name: Run docker container
         run: docker run -d -it sporkfish-dev
       - name: Static type checks (mypy)
-        run: docker exec sporkfish-dev mypy --install-types --non-interactive
+        run: docker exec mypy --install-types --non-interactive
       - name: Run tests (pytest)
-        run: docker exec sporkfish-dev pytest -sv
+        run: docker exec pytest -sv
       - name: Check code format (black)
-        run: docker exec sporkfish-dev black --check .
+        run: docker exec black --check .
       - name: Check imports format (isort)
-        run: docker exec sporkfish-dev isort --check --profile black .
+        run: docker exec isort --check --profile black .
         
      
       
