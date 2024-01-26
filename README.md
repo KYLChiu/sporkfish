@@ -1,6 +1,6 @@
 # Sporkfish
 
-[![Actions Status](https://github.com/KYLChiu/sporkfish/workflows/Python/badge.svg)](https://github.com/KYLChiu/sporkfish/actions)
+[![Actions Status](https://github.com/KYLChiu/sporkfish/workflows/Prod/badge.svg)](https://github.com/KYLChiu/sporkfish/actions)
 
 Sporkfish is a Python-based chess engine. Chess programming techniques, although numerous, are not always well-documented. This project aims to bridge that gap by offering clear, working, and accessible code, providing a resource for developers interested in understanding and implementing chess engine algorithms.
 
@@ -13,8 +13,9 @@ Sporkfish is a Python-based chess engine. Chess programming techniques, although
 To quickly set up the environment, you can use docker. From a terminal in the root directory:
 
 ```
-docker build -t sporkfish-devenv .
-docker run -it sporkfish-devenv
+docker pull kylchiu/sporkfish-dev:latest
+docker build -t kylchiu/sporkfish-dev:latest .
+docker run -it kylchiu/sporkfish-dev:latest
 ```
 
 This generates an interactive bash shell for you to run the program in.
@@ -41,6 +42,11 @@ You may also run a specific test class or function, e.g.:
 
 ```
 python3 -m pytest tests/test_searcher.py::TestMvvLvvHeuristic -sv
+```
+
+Slow tests are not run on CI. Developers should run these before raising PRs by doing:
+```
+python3 -m pytest -sv --runslow
 ```
 
 ### Code formatting
@@ -88,16 +94,19 @@ Communication:
 
 ## Resources
 
-References:
+### Engines
 
-* [Some techniques](https://stackoverflow.com/questions/16500739/chess-high-branching-factor/16642804#16642804)
-* [Engine improvement tier list](https://www.reddit.com/r/ComputerChess/comments/yln9ef/comparative_advantage_of_engine_improvements/)
 * [Black Marlin](https://github.com/jnlt3/blackmarlin?tab=readme-ov-file#efficiently-updatable-neural-networks)
-* [Explaining beta-cutoff](https://stackoverflow.com/questions/2533219/alpha-beta-cutoff)
 * [Theodora](https://github.com/yigitkucuk/Theodora/blob/main/main.py)
 * [black_numba](https://github.com/Avo-k/black_numba)
 
-Video (Youtube) Resources - beginner friendly:
+### References
+
+* [Some techniques](https://stackoverflow.com/questions/16500739/chess-high-branching-factor/16642804#16642804)
+* [Engine improvement tier list](https://www.reddit.com/r/ComputerChess/comments/yln9ef/comparative_advantage_of_engine_improvements/)
+* [Explaining beta-cutoff](https://stackoverflow.com/questions/2533219/alpha-beta-cutoff)
+
+### Video (Youtube) Resources - beginner friendly:
 
 * Gentle introduction to how to set up a chess bot by [Sebastian Lague](https://www.youtube.com/watch?v=U4ogK0MIzqk)
 * How to improve a chess bot by [Sebastian Lague](https://www.youtube.com/watch?v=_vqlIPDR2TU)

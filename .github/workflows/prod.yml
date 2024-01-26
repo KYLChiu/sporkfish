@@ -1,0 +1,27 @@
+name: Prod
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+
+  deploy_container:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Build Docker image
+        run: docker build -t sporkfish-dev .
+      - name: Docker login
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+      - name: Tag Docker image
+        run: docker tag sporkfish-dev ${{ secrets.DOCKERHUB_USERNAME }}/sporkfish-dev:latest
+      - name: Push Docker image
+        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/sporkfish-dev:latest
+
+    # TODO: deployment/setup of python code
