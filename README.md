@@ -13,6 +13,7 @@ Sporkfish is a Python-based chess engine. Chess programming techniques, although
 To quickly set up the environment, you can use docker. From a terminal in the root directory:
 
 ```
+docker pull kylchiu/sporkfish-dev:latest
 docker build -t kylchiu/sporkfish-dev:latest .
 docker run -it kylchiu/sporkfish-dev:latest
 ```

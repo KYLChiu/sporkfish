@@ -27,15 +27,14 @@ jobs:
       # -- Docker build --
       - name: Build Docker image
         run: docker build -t sporkfish-dev .
-      # -- Code checking --
-      - name: Check tests (pytest)
-        run: docker run -it sporkfish-dev pytest -sv
-      - name: Check typing (mypy)
-        run: docker run -it sporkfish-dev mypy --install-types --non-interactive
-      - name: Check code format (black)
-        run: docker run -it sporkfish-dev black --check .
-      - name: Check imports format (isort)
-        run: docker run -it sporkfish-dev isort --check --profile black .
+      # -- Code checking (don't know how to separate these atm) --
+      - name: Code checks
+        run: |
+            docker run -it sporkfish-dev
+            pytest -sv
+            mypy --install-types --non-interactive
+            black --check .
+            docker run -it sporkfish-dev isort --check --profile black .
         
      
       
