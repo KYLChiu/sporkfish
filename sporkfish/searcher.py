@@ -177,7 +177,7 @@ class Searcher:
             return (
                 chess.PAWN
                 if board.is_en_passant(move)
-                else board.piece_at(move.to_square).piece_type
+                else board.piece_at(move.to_square).piece_type  # type: ignore
             )
 
         for move in legal_moves:
