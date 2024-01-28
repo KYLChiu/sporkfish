@@ -93,49 +93,49 @@ class TestPerformance:
 
         stats.strip_dirs().sort_stats("tottime").print_stats(10)
 
-    # @pytest.mark.slow
-    # def test_perf_base(self, fen_string: str, max_depth: int) -> None:
-    #     """Performance test base"""
-    #     self._run_perf_analytics(
-    #         fen=fen_string,
-    #         max_depth=max_depth,
-    #     )
+    @pytest.mark.slow
+    def test_perf_base(self, fen_string: str, max_depth: int) -> None:
+        """Performance test base"""
+        self._run_perf_analytics(
+            fen=fen_string,
+            max_depth=max_depth,
+        )
 
-    # @pytest.mark.slow
-    # def test_perf_transposition_table(self, fen_string: str, max_depth: int) -> None:
-    #     """Performance test with transposition table"""
-    #     self._run_perf_analytics(
-    #         fen=fen_string,
-    #         max_depth=max_depth,
-    #         enable_transposition_table=True,
-    #     )
+    @pytest.mark.slow
+    def test_perf_transposition_table(self, fen_string: str, max_depth: int) -> None:
+        """Performance test with transposition table"""
+        self._run_perf_analytics(
+            fen=fen_string,
+            max_depth=max_depth,
+            enable_transposition_table=True,
+        )
 
-    # @pytest.mark.slow
-    # def test_perf_null_move_pruning(self, fen_string: str, max_depth: int) -> None:
-    #     """Performance test with null move pruning"""
-    #     self._run_perf_analytics(
-    #         fen=fen_string,
-    #         max_depth=max_depth,
-    #         enable_null_move_pruning=True,
-    #     )
+    @pytest.mark.slow
+    def test_perf_null_move_pruning(self, fen_string: str, max_depth: int) -> None:
+        """Performance test with null move pruning"""
+        self._run_perf_analytics(
+            fen=fen_string,
+            max_depth=max_depth,
+            enable_null_move_pruning=True,
+        )
 
-    # @pytest.mark.slow
-    # def test_perf_aspiration_windows(self, fen_string: str, max_depth: int) -> None:
-    #     """Performance test with aspiration windows"""
-    #     self._run_perf_analytics(
-    #         fen=fen_string,
-    #         max_depth=max_depth,
-    #         enable_aspiration_windows=True,
-    #     )
+    @pytest.mark.slow
+    def test_perf_aspiration_windows(self, fen_string: str, max_depth: int) -> None:
+        """Performance test with aspiration windows"""
+        self._run_perf_analytics(
+            fen=fen_string,
+            max_depth=max_depth,
+            enable_aspiration_windows=True,
+        )
 
-    # @pytest.mark.slow
-    # def test_perf_delta_pruning(self, fen_string: str, max_depth: int) -> None:
-    #     """Performance test with aspiration windows"""
-    #     self._run_perf_analytics(
-    #         fen=fen_string,
-    #         max_depth=max_depth,
-    #         enable_delta_pruning=True,
-    #     )
+    @pytest.mark.slow
+    def test_perf_delta_pruning(self, fen_string: str, max_depth: int) -> None:
+        """Performance test with aspiration windows"""
+        self._run_perf_analytics(
+            fen=fen_string,
+            max_depth=max_depth,
+            enable_delta_pruning=True,
+        )
 
     @pytest.mark.slow
     def test_perf_combined(self, fen_string: str, max_depth: int) -> None:
