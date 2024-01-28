@@ -183,8 +183,8 @@ class Searcher:
         for move in legal_moves:
             # Delta pruning
             # Rationale: if our position is such that:
-            # evaluation + captured piece value + safety margin (delta)
-            # doesn't exceed what I can already guarantee, then don't do Quiescence search for this branch.
+            # evaluation + captured piece value + safety margin (delta) doesn't exceed what I can already guarantee,
+            # then there is no point to continue the search for this branch.
             # The safety margin leaves some room for searching for sacrifices,
             # i.e. taking a pawn down a rook usually will not help but taking a bishop down a rook may help.
             # The delta value should be tuned based on piece values of the evaluator.
