@@ -76,6 +76,7 @@ Search:
 * [Quiescence search](https://www.chessprogramming.org/Quiescence_Search)
 * [Iterative deepening](https://www.chessprogramming.org/Iterative_Deepening)
 * [Null move pruning](https://www.chessprogramming.org/Null_Move_Pruning)
+* [Delta pruning](https://www.chessprogramming.org/Delta_Pruning)
 * [Aspiration windows](https://www.chessprogramming.org/Aspiration_Windows)
 * [Transposition tables with Zobrist hashing](https://mediocrechess.blogspot.com/2007/01/guide-transposition-tables.html)
 
