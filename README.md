@@ -96,6 +96,7 @@ Communication:
 
 ### Engines
 
+* [cpw-engine](https://github.com/nescitus/cpw-engine)
 * [Black Marlin](https://github.com/jnlt3/blackmarlin?tab=readme-ov-file#efficiently-updatable-neural-networks)
 * [Theodora](https://github.com/yigitkucuk/Theodora/blob/main/main.py)
 * [black_numba](https://github.com/Avo-k/black_numba)

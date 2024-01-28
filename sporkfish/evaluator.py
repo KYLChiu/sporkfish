@@ -12,13 +12,31 @@ class Evaluator:
     A class responsible for evaluating the chess position.
 
     Methods:
-    - __init__():
-        Initialize the Evaluator.
-
     - evaluate(board: Board) -> float:
         Evaluate the chess position based on material and piece-square tables.
 
     """
+
+    MG_PIECE_VALUES = {
+        chess.PAWN: 82,
+        chess.KNIGHT: 337,
+        chess.BISHOP: 365,
+        chess.ROOK: 477,
+        chess.QUEEN: 1025,
+        chess.KING: 12000,
+    }
+
+    EG_PIECE_VALUES = {
+        chess.PAWN: 94,
+        chess.KNIGHT: 281,
+        chess.BISHOP: 297,
+        chess.ROOK: 512,
+        chess.QUEEN: 936,
+        chess.KING: 12000,
+    }
+
+    # Delta pruning margin for searcher, evaluator dependent
+    DELTA = 200
 
     # fmt: off
 
