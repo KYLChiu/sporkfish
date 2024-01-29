@@ -12,6 +12,7 @@ def _searcher_with_fen(
     fen: str,
     max_depth: int = 3,
     enable_null_move_pruning=False,
+    enable_delta_pruning=False,
     enable_transposition_table=False,
     enable_aspiration_windows=False,
 ):
@@ -22,6 +23,7 @@ def _searcher_with_fen(
         SearcherConfig(
             max_depth,
             enable_null_move_pruning=enable_null_move_pruning,
+            enable_delta_pruning=enable_delta_pruning,
             enable_transposition_table=enable_transposition_table,
             enable_aspiration_windows=enable_aspiration_windows,
         ),
@@ -69,6 +71,7 @@ class TestPerformance:
         fen: str,
         max_depth: int,
         enable_null_move_pruning: bool = False,
+        enable_delta_pruning: bool = False,
         enable_transposition_table: bool = False,
         enable_aspiration_windows: bool = False,
     ) -> None:
@@ -81,6 +84,7 @@ class TestPerformance:
             fen,
             max_depth,
             enable_null_move_pruning=enable_null_move_pruning,
+            enable_delta_pruning=enable_delta_pruning,
             enable_transposition_table=enable_transposition_table,
             enable_aspiration_windows=enable_aspiration_windows,
         )
@@ -125,12 +129,22 @@ class TestPerformance:
         )
 
     @pytest.mark.slow
+    def test_perf_delta_pruning(self, fen_string: str, max_depth: int) -> None:
+        """Performance test with aspiration windows"""
+        self._run_perf_analytics(
+            fen=fen_string,
+            max_depth=max_depth,
+            enable_delta_pruning=True,
+        )
+
+    @pytest.mark.slow
     def test_perf_combined(self, fen_string: str, max_depth: int) -> None:
         """Performance test with combined general performance config on"""
         self._run_perf_analytics(
             fen=fen_string,
             max_depth=max_depth,
             enable_null_move_pruning=True,
+            enable_delta_pruning=True,
             enable_aspiration_windows=True,
         )
 
@@ -156,6 +170,7 @@ class TestConsistency:
         fen: str,
         max_depth: int,
         enable_null_move_pruning: bool = False,
+        enable_delta_pruning: bool = False,
         enable_transposition_table: bool = False,
         enable_aspiration_windows: bool = False,
     ):
@@ -164,6 +179,7 @@ class TestConsistency:
             fen,
             max_depth,
             enable_null_move_pruning=enable_null_move_pruning,
+            enable_delta_pruning=enable_delta_pruning,
             enable_transposition_table=enable_transposition_table,
             enable_aspiration_windows=enable_aspiration_windows,
         )
@@ -180,6 +196,12 @@ class TestConsistency:
         "Tests base searcher and null move pruning on return the same score and bestmove"
         self._run_consistency_test(
             fen=fen_string, max_depth=max_depth, enable_null_move_pruning=True
+        )
+
+    def test_delta_pruning_consistency(self, fen_string: str, max_depth: int):
+        "Tests base searcher and delta pruning on return the same score and bestmove"
+        self._run_consistency_test(
+            fen=fen_string, max_depth=max_depth, enable_delta_pruning=True
         )
 
     def test_aspiration_windows_consistency(self, fen_string: str, max_depth: int):

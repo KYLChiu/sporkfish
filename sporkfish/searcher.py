@@ -52,6 +52,7 @@ class SearcherConfig(Configurable):
         max_depth: int = 5,
         mode: SearchMode = SearchMode.SINGLE_PROCESS,
         enable_null_move_pruning: bool = True,
+        enable_delta_pruning: bool = True,
         enable_transposition_table: bool = False,
         enable_aspiration_windows: bool = True,
     ) -> None:
@@ -59,6 +60,7 @@ class SearcherConfig(Configurable):
         # TODO: register the constructor function in yaml loader instead.
         self.mode = mode if isinstance(mode, SearchMode) else SearchMode(mode)
         self.enable_null_move_pruning = enable_null_move_pruning
+        self.enable_delta_pruning = enable_delta_pruning
         self.enable_transposition_table = enable_transposition_table
         self.enable_aspiration_windows = enable_aspiration_windows
 
@@ -160,6 +162,7 @@ class Searcher:
 
         if stand_pat >= beta:
             return beta
+
         if alpha < stand_pat:
             alpha = stand_pat
 
@@ -169,7 +172,34 @@ class Searcher:
             reverse=True,
         )
 
+        # Assuming the input move is a capturing move, returns the captured piece
+        def captured_piece(board: Board, move: chess.Move) -> chess.PieceType:
+            return (
+                chess.PAWN
+                if board.is_en_passant(move)
+                else board.piece_at(move.to_square).piece_type  # type: ignore
+            )
+
         for move in legal_moves:
+            # Delta pruning
+            # Rationale: if our position is such that:
+            # evaluation + captured piece value + safety margin (delta) doesn't exceed what I can already guarantee,
+            # then there is no point to continue the search for this branch.
+            # The safety margin leaves some room for searching for sacrifices,
+            # i.e. taking a pawn down a rook usually will not help but taking a bishop down a rook may help.
+            # The delta value should be tuned based on piece values of the evaluator.
+            # TODO: consider add check for late endgame - it should not be enabled there because
+            # transitions into won endgames made at the expense of some material will no longer be considered
+            # However we might remedy this directly with endgame tablebases.
+            if (
+                self._config.enable_delta_pruning
+                and stand_pat
+                + self.evaluator.MG_PIECE_VALUES[captured_piece(board, move)]
+                + self.evaluator.DELTA
+                < alpha
+            ):
+                continue
+
             board.push(move)
             score = -self._quiescence(board, depth - 1, -beta, -alpha)
             board.pop()
@@ -218,7 +248,7 @@ class Searcher:
         self._statistics.increment()
 
         # Base case: devolve to quiescence search
-        # We currently only expect max 4 captures to reach a quiet position
+        # We currently only expect at most 4 captures to reach a quiet position
         # This is not ideal, but otherwise the search becomes incredibly slow
         if depth == 0:
             return self._quiescence(board, 4, alpha, beta)
