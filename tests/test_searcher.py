@@ -5,7 +5,9 @@ from init_board_helper import board_setup, init_board, score_fen
 
 from sporkfish.board.board_factory import BoardFactory, BoardPyChess
 from sporkfish.evaluator import Evaluator
-from sporkfish.searcher import Searcher, SearcherConfig
+from sporkfish.searcher.searcher import Searcher
+from sporkfish.searcher.searcher_config import SearcherConfig, SearchMode
+from sporkfish.searcher.searcher_factory import SearcherFactory
 
 
 def _searcher_with_fen(
@@ -16,13 +18,13 @@ def _searcher_with_fen(
 ):
     board = BoardFactory.create(board_type=BoardPyChess)
     e = Evaluator()
-    s = Searcher(
-        e,
+    s = SearcherFactory.create(
         SearcherConfig(
             max_depth,
             enable_null_move_pruning=enable_null_move_pruning,
             enable_transposition_table=enable_transposition_table,
         ),
+        e,
     )
     board.set_fen(fen)
     score, move = s.search(board)
@@ -261,7 +263,7 @@ class TestQuiescence:
 def _init_searcher(max_depth: int = 4) -> Searcher:
     """Initialise searcher"""
     e = Evaluator()
-    return Searcher(e, SearcherConfig(max_depth))
+    return SearcherFactory.create(SearcherConfig(max_depth), e)
 
 
 @pytest.mark.parametrize(
@@ -314,7 +316,7 @@ class TestNegamax:
 
         legal_moves = sorted(
             board.legal_moves,
-            key=lambda move: (s._mvv_lva_heuristic(board, move),),
+            key=lambda move: (s._ordered_moves(board),),
             reverse=True,
         )
 
