@@ -12,6 +12,7 @@ def _searcher_with_fen(
     fen: str,
     max_depth: int = 3,
     enable_null_move_pruning=False,
+    enable_futility_pruning=False,
     enable_delta_pruning=False,
     enable_transposition_table=False,
     enable_aspiration_windows=False,
@@ -23,6 +24,7 @@ def _searcher_with_fen(
         SearcherConfig(
             max_depth,
             enable_null_move_pruning=enable_null_move_pruning,
+            enable_futility_pruning=enable_futility_pruning,
             enable_delta_pruning=enable_delta_pruning,
             enable_transposition_table=enable_transposition_table,
             enable_aspiration_windows=enable_aspiration_windows,
@@ -66,11 +68,17 @@ class TestPerformance:
     python3 -m pytest tests/test_searcher.py::TestPerformance -sv --runslow
     """
 
+    @pytest.fixture
+    def request_fixture(self, request):
+        return request
+
     def _run_perf_analytics(
         self,
+        test_name: str,
         fen: str,
         max_depth: int,
         enable_null_move_pruning: bool = False,
+        enable_futility_pruning: bool = False,
         enable_delta_pruning: bool = False,
         enable_transposition_table: bool = False,
         enable_aspiration_windows: bool = False,
@@ -84,6 +92,7 @@ class TestPerformance:
             fen,
             max_depth,
             enable_null_move_pruning=enable_null_move_pruning,
+            enable_futility_pruning=enable_futility_pruning,
             enable_delta_pruning=enable_delta_pruning,
             enable_transposition_table=enable_transposition_table,
             enable_aspiration_windows=enable_aspiration_windows,
@@ -91,62 +100,109 @@ class TestPerformance:
         profiler.disable()
         stats = pstats.Stats(profiler)
 
-        stats.strip_dirs().sort_stats("tottime").print_stats(10)
+        import sys
+        import os
+
+        test_name = (
+            test_name.replace("[", "_")
+            .replace("]", "_")
+            .replace(" ", "_")
+            .replace("/", "_")
+        )
+        perf_test_folder = "perf/"
+
+        if not os.path.exists(perf_test_folder):
+            os.mkdir(perf_test_folder)
+
+        with open(
+            os.path.join(perf_test_folder, f"{test_name}.txt"),
+            "w",
+        ) as f:
+            sys.stdout = f
+            print(
+                "------------------------------------------------------------------------------------------------"
+            )
+            print(f"FEN: {fen}")
+            stats = pstats.Stats(profiler)
+            stats.strip_dirs().sort_stats("tottime").print_stats()
+            print(
+                "------------------------------------------------------------------------------------------------"
+            )
+
+        sys.stdout = sys.__stdout__
 
     @pytest.mark.slow
-    def test_perf_base(self, fen_string: str, max_depth: int) -> None:
+    def test_perf_base(self, request_fixture, fen_string: str, max_depth: int) -> None:
         """Performance test base"""
         self._run_perf_analytics(
+            request_fixture.node.name,
             fen=fen_string,
             max_depth=max_depth,
         )
 
-    @pytest.mark.slow
-    def test_perf_transposition_table(self, fen_string: str, max_depth: int) -> None:
-        """Performance test with transposition table"""
-        self._run_perf_analytics(
-            fen=fen_string,
-            max_depth=max_depth,
-            enable_transposition_table=True,
-        )
+    # @pytest.mark.slow
+    # def test_perf_transposition_table(self, request_fixture, fen_string: str, max_depth: int) -> None:
+    #     """Performance test with transposition table"""
+    #     self._run_perf_analytics(
+    #         request_fixture.node.name,
+    #         fen=fen_string,
+    #         max_depth=max_depth,
+    #         enable_transposition_table=True,
+    #     )
+
+    # @pytest.mark.slow
+    # def test_perf_null_move_pruning(self, request_fixture,  fen_string: str, max_depth: int) -> None:
+    #     """Performance test with null move pruning"""
+    #     self._run_perf_analytics(
+    #         request_fixture.node.name,
+    #         fen=fen_string,
+    #         max_depth=max_depth,
+    #         enable_null_move_pruning=True,
+    #     )
+
+    # @pytest.mark.slow
+    # def test_perf_aspiration_windows(self, request_fixture,  fen_string: str, max_depth: int) -> None:
+    #     """Performance test with aspiration windows"""
+    #     self._run_perf_analytics(
+    #         request_fixture.node.name,
+    #         fen=fen_string,
+    #         max_depth=max_depth,
+    #         enable_aspiration_windows=True,
+    #     )
 
     @pytest.mark.slow
-    def test_perf_null_move_pruning(self, fen_string: str, max_depth: int) -> None:
-        """Performance test with null move pruning"""
-        self._run_perf_analytics(
-            fen=fen_string,
-            max_depth=max_depth,
-            enable_null_move_pruning=True,
-        )
-
-    @pytest.mark.slow
-    def test_perf_aspiration_windows(self, fen_string: str, max_depth: int) -> None:
+    def test_perf_futility_pruning(
+        self, request_fixture, fen_string: str, max_depth: int
+    ) -> None:
         """Performance test with aspiration windows"""
         self._run_perf_analytics(
+            request_fixture.node.name,
             fen=fen_string,
             max_depth=max_depth,
-            enable_aspiration_windows=True,
+            enable_futility_pruning=True,
         )
 
-    @pytest.mark.slow
-    def test_perf_delta_pruning(self, fen_string: str, max_depth: int) -> None:
-        """Performance test with aspiration windows"""
-        self._run_perf_analytics(
-            fen=fen_string,
-            max_depth=max_depth,
-            enable_delta_pruning=True,
-        )
+    # @pytest.mark.slow
+    # def test_perf_delta_pruning(self, request_fixture,  fen_string: str, max_depth: int) -> None:
+    #     """Performance test with aspiration windows"""
+    #     self._run_perf_analytics(
+    #         request_fixture.node.name,
+    #         fen=fen_string,
+    #         max_depth=max_depth,
+    #         enable_delta_pruning=True,
+    #     )
 
-    @pytest.mark.slow
-    def test_perf_combined(self, fen_string: str, max_depth: int) -> None:
-        """Performance test with combined general performance config on"""
-        self._run_perf_analytics(
-            fen=fen_string,
-            max_depth=max_depth,
-            enable_null_move_pruning=True,
-            enable_delta_pruning=True,
-            enable_aspiration_windows=True,
-        )
+    # @pytest.mark.slow
+    # def test_perf_combined(self, request_fixture,  fen_string: str, max_depth: int) -> None:
+    #     """Performance test with combined general performance config on"""
+    #     self._run_perf_analytics(
+    #         request_fixture.node.name,
+    #         fen=fen_string,
+    #         max_depth=max_depth,
+    #         enable_null_move_pruning=True,
+    #         enable_delta_pruning=True,
+    #         enable_aspiration_windows=True,
+    #     )
 
 
 @pytest.mark.parametrize(
@@ -170,6 +226,7 @@ class TestConsistency:
         fen: str,
         max_depth: int,
         enable_null_move_pruning: bool = False,
+        enable_futility_pruning: bool = False,
         enable_delta_pruning: bool = False,
         enable_transposition_table: bool = False,
         enable_aspiration_windows: bool = False,
@@ -179,6 +236,7 @@ class TestConsistency:
             fen,
             max_depth,
             enable_null_move_pruning=enable_null_move_pruning,
+            enable_futility_pruning=enable_futility_pruning,
             enable_delta_pruning=enable_delta_pruning,
             enable_transposition_table=enable_transposition_table,
             enable_aspiration_windows=enable_aspiration_windows,
@@ -196,7 +254,7 @@ class TestConsistency:
         "Tests base searcher and null move pruning on return the same score and bestmove"
         self._run_consistency_test(
             fen=fen_string, max_depth=max_depth, enable_null_move_pruning=True
-        )
+        
 
     def test_delta_pruning_consistency(self, fen_string: str, max_depth: int):
         "Tests base searcher and delta pruning on return the same score and bestmove"

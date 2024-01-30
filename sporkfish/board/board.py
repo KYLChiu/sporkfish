@@ -67,6 +67,16 @@ class Board(ABC):
         pass
 
     # --- Board information ---
+    @abstractmethod
+    def peek(self) -> Optional[chess.Move]:
+        """
+        Return the last move if available, else None.
+
+        :return: Last move if not fresh board, else None.
+        :rtype: Optional[chess.Move]
+        """
+        pass
+
     @property
     @abstractmethod
     def turn(self) -> chess.Color:

@@ -4,7 +4,8 @@ import os
 import time
 from enum import Enum
 from multiprocessing import Manager
-from typing import Callable, Optional, Tuple
+from typing import Callable, Optional, Tuple, List
+from dataclasses import dataclass
 
 import chess
 import stopit
@@ -52,6 +53,7 @@ class SearcherConfig(Configurable):
         max_depth: int = 5,
         mode: SearchMode = SearchMode.SINGLE_PROCESS,
         enable_null_move_pruning: bool = True,
+        enable_futility_pruning: bool = False,
         enable_delta_pruning: bool = True,
         enable_transposition_table: bool = False,
         enable_aspiration_windows: bool = True,
@@ -60,6 +62,7 @@ class SearcherConfig(Configurable):
         # TODO: register the constructor function in yaml loader instead.
         self.mode = mode if isinstance(mode, SearchMode) else SearchMode(mode)
         self.enable_null_move_pruning = enable_null_move_pruning
+        self.enable_futility_pruning = enable_futility_pruning
         self.enable_delta_pruning = enable_delta_pruning
         self.enable_transposition_table = enable_transposition_table
         self.enable_aspiration_windows = enable_aspiration_windows
@@ -268,14 +271,38 @@ class Searcher:
                     return beta
 
         # Move ordering via MVV-LVA to encourage aggressive pruning
-        legal_moves = sorted(
+        legal_moves: List[chess.Move] = sorted(
             board.legal_moves,
             key=lambda move: (self._mvv_lva_heuristic(board, move),),
             reverse=True,
         )
 
         for move in legal_moves:
+            if self._config.enable_futility_pruning:
+                capture = board.is_capture(move)
+
             board.push(move)
+
+            # Futility Pruning:
+            # The concept behind futility pruning is to introduce a safety margin.
+            # Essentially, if the evaluation of the current position, when extended by a margin, falls below the minimum score
+            # we can guarantee, then it's not worthwhile to continue the search.
+            # However, it's important to note that we still need to consider tactical possibilities due to captures, promotions, and checks.
+            # TODO: need to check PV?
+            if (
+                self._config.enable_futility_pruning
+                and depth <= 3
+                and not capture
+                and not move.promotion
+                and not board.is_check()
+            ):
+                # TODO: consider using different futility margins
+                # 50 cp is very aggressive for pruning, but means that even at depth 2
+                # we only allow approximately a pawn margin
+                if self._evaluator.evaluate(board) + depth * 50 <= alpha:
+                    board.pop()
+                    continue
+
             child_value = -self._negamax(board, depth - 1, -beta, -alpha)
             board.pop()
 

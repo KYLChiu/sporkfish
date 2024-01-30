@@ -48,6 +48,18 @@ class BoardPyChess(Board):
         self.board.push_uci(move)
 
     # --- Board information ---
+    def peek(self) -> Optional[chess.Move]:
+        """
+        Return the last move if available, else None.
+
+        :return: Last move if not fresh board, else None.
+        :rtype: Optional[chess.Move]
+        """
+        try:
+            return self.board.peek()
+        except IndexError:
+            return None
+
     @property
     def turn(self) -> chess.Color:
         """
