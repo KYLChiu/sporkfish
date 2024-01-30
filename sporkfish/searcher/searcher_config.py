@@ -9,6 +9,7 @@ class SearchMode(Enum):
 
 
 class MoveOrdering(Enum):
+    # can make a separate config for move ordering
     MVV_LVA = "MVV_LVA"
 
 
@@ -31,11 +32,15 @@ class SearcherConfig(Configurable):
         mode: SearchMode = SearchMode.SINGLE_PROCESS,
         order: MoveOrdering = MoveOrdering.MVV_LVA,
         enable_null_move_pruning: bool = True,
+        enable_delta_pruning: bool = True,
         enable_transposition_table: bool = False,
+        enable_aspiration_windows: bool = True,
     ) -> None:
         self.max_depth = max_depth
         # TODO: register the constructor function in yaml loader instead.
         self.mode = mode if isinstance(mode, SearchMode) else SearchMode(mode)
         self.order = order
         self.enable_null_move_pruning = enable_null_move_pruning
+        self.enable_delta_pruning = enable_delta_pruning
         self.enable_transposition_table = enable_transposition_table
+        self.enable_aspiration_windows = enable_aspiration_windows

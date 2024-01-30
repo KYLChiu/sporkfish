@@ -4,8 +4,10 @@ RunConfig:
 SearcherConfig:
   max_depth: 6 # maximum depth for negamax search
   mode: SINGLE_PROCESS # mode of search, choice of: SINGLE_PROCESS, LAZY_SMP
-  enable_null_move_pruning: True # flag to enable null move pruning (checking for a beta-cutoff by passing our turn)
+  enable_null_move_pruning: True # flag to enable null move pruning, i.e. checking for a beta-cutoff by passing our turn
+  enable_delta_pruning: True # flag to enable delta pruning, i.e. prune capturing moves that do not raise alpha in quiescence search.
   enable_transposition_table: False # flag to enable position cache, so positions are not evaluated twice
+  enable_aspiration_windows: True # flag to enable aspiration windows, i.e. doing a smaller window search around the score from previous iteration of iterative deepening.
 
 # Current time management strategy is alloted_move_time = time_weight * current_time + increment_weight * increment
 TimeManagerConfig:

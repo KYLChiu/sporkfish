@@ -3,7 +3,7 @@ import logging
 import os
 import time
 from abc import ABC, abstractmethod
-from typing import Optional, Tuple
+from typing import Callable, Optional, Tuple
 
 import chess
 import stopit
@@ -58,6 +58,51 @@ class MiniMaxVariants(Searcher):
             reverse=True,
         )
 
+    def _aspiration_windows_search(
+        self,
+        search_func: Callable[[Board, int, float, float], Tuple[float, chess.Move]],
+        board_to_search: Board,
+        depth: int,
+        prev_score: float,
+    ) -> Tuple[float, chess.Move]:
+        """
+        Perform an aspiration windows search.
+
+        Aspiration windows are used to optimize the search process by narrowing the search window based on
+        previous search results.
+
+        :param search_func: A callable function representing the search algorithm.
+        :type search_func: Callable[[Board, int, float, float], Tuple[float, chess.Move]]
+        :param board_to_search: The chess board to search.
+        :type board_to_search: Board
+        :param depth: The search depth.
+        :type depth: int
+        :param prev_score: The score of the previous depth in a iterative deepening search.
+        :type prev_score: float
+
+        :return: A tuple containing the score and the best move found during the search.
+        :rtype: Tuple[float, chess.Move]
+        """
+        if self._config.enable_aspiration_windows and depth > 1:
+            # Aspiration window size: 50 centipawn is worth about 1/2 of a pawn in our eval function
+            # We leave configuration for this to another PR
+            window_size = 50
+            alpha = prev_score - window_size
+            beta = prev_score + window_size
+            score, move = search_func(board_to_search, depth, alpha, beta)
+            if score <= alpha or score >= beta:
+                logging.info(
+                    "Search score outside aspiration window bounds, doing a full search."
+                )
+                score, move = search_func(
+                    board_to_search, depth, -float("inf"), float("inf")
+                )
+        else:
+            score, move = search_func(
+                board_to_search, depth, -float("inf"), float("inf")
+            )
+        return score, move
+
     def _quiescence(self, board: Board, depth: int, alpha: float, beta: float) -> float:
         """
         Quiescence search to help the horizon effect (improving checking of tactical possibilities).
@@ -87,7 +132,35 @@ class MiniMaxVariants(Searcher):
 
         legal_moves = (move for move in board.legal_moves if board.is_capture(move))
         legal_moves = self._ordered_moves(board, legal_moves)
+
+        # Assuming the input move is a capturing move, returns the captured piece
+        def captured_piece(board: Board, move: chess.Move) -> chess.PieceType:
+            return (
+                chess.PAWN
+                if board.is_en_passant(move)
+                else board.piece_at(move.to_square).piece_type  # type: ignore
+            )
+
         for move in legal_moves:
+            # Delta pruning
+            # Rationale: if our position is such that:
+            # evaluation + captured piece value + safety margin (delta) doesn't exceed what I can already guarantee,
+            # then there is no point to continue the search for this branch.
+            # The safety margin leaves some room for searching for sacrifices,
+            # i.e. taking a pawn down a rook usually will not help but taking a bishop down a rook may help.
+            # The delta value should be tuned based on piece values of the evaluator.
+            # TODO: consider add check for late endgame - it should not be enabled there because
+            # transitions into won endgames made at the expense of some material will no longer be considered
+            # However we might remedy this directly with endgame tablebases.
+            if (
+                self._config.enable_delta_pruning
+                and stand_pat
+                + self.evaluator.MG_PIECE_VALUES[captured_piece(board, move)]
+                + self.evaluator.DELTA
+                < alpha
+            ):
+                continue
+
             board.push(move)
             score = -self._quiescence(board, depth - 1, -beta, -alpha)
             board.pop()
@@ -106,11 +179,12 @@ class MiniMaxVariants(Searcher):
         board_to_search: Board,
         depth: int,
         start_time: float,
-        alpha: float,
-        beta: float,
+        prev_score: float,
     ) -> Tuple[float, chess.Move, float, int]:
         try:
-            score, move = self._searcher(board_to_search, depth, alpha, beta)
+            score, move = self._aspiration_windows_search(
+                self._searcher, board_to_search, depth, prev_score
+            )
 
             elapsed = time.time() - start_time
             self._logging(elapsed, score, move, depth)
@@ -166,8 +240,7 @@ class MiniMaxVariants(Searcher):
                 board_to_search=new_board,
                 depth=depth,
                 start_time=start_time,
-                alpha=alpha,
-                beta=beta,
+                prev_score=score,
             )
 
             # Timed out, return best move from previous depth.
