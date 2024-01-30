@@ -6,18 +6,12 @@ from ..board.board import Board
 
 
 class MoveOrder(ABC):
-    def __init__(self):
-        print("Building Move Order")
-
     @abstractmethod
     def evaluate(self, board: Board, move: chess.Move):
         pass
 
 
 class MvvLvaHeuristic(MoveOrder):
-    def __init__(self):
-        super().__init__()
-
     def evaluate(self, board: Board, move: chess.Move):
         """
         Calculate the Most Valuable Victim - Least Valuable Aggressor heuristic value

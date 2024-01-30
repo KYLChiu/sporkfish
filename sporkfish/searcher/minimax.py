@@ -46,15 +46,15 @@ class MiniMaxVariants(Searcher):
             logging.info("Disabled transposition table in search.")
 
         if self._config.order == MoveOrdering.MVV_LVA:
-            self.move_order = MvvLvaHeuristic()
+            self._move_order = MvvLvaHeuristic()
         else:
             raise Exception("Only support MVV_LVA move ordering at the moment")
 
-    def _ordered_moves(self, board: Board):
+    def _ordered_moves(self, board: Board, legal_moves):
         # order moves from best to worse
         return sorted(
-            board.legal_moves,
-            key=lambda move: (self.move_order.evaluate(board, move),),
+            legal_moves,
+            key=lambda move: (self._move_order.evaluate(board, move),),
             reverse=True,
         )
 
@@ -85,7 +85,8 @@ class MiniMaxVariants(Searcher):
         if alpha < stand_pat:
             alpha = stand_pat
 
-        legal_moves = self._ordered_moves(board)
+        legal_moves = (move for move in board.legal_moves if board.is_capture(move))
+        legal_moves = self._ordered_moves(board, legal_moves)
         for move in legal_moves:
             board.push(move)
             score = -self._quiescence(board, depth - 1, -beta, -alpha)
@@ -114,14 +115,15 @@ class MiniMaxVariants(Searcher):
             elapsed = time.time() - start_time
             self._logging(elapsed, score, move, depth)
 
-            print(score, move, elapsed, 0)
             return score, move, elapsed, 0
         except stopit.utils.TimeoutException:
             return float("-inf"), chess.Move.null(), 0.0, 1
         except Exception:
             raise
 
-    def _null_move_pruning(self, depth: int, board: Board, alpha: float, beta: float) -> bool:
+    def _null_move_pruning(
+        self, depth: int, board: Board, alpha: float, beta: float
+    ) -> bool:
         """
         Null move pruning - reduce the search space by trying a null move,
         then seeing if the score of the subtree search is still high enough to cause a beta cutoff
@@ -150,7 +152,6 @@ class MiniMaxVariants(Searcher):
         move = chess.Move.null()
 
         for depth in range(1, self._config.max_depth + 1):
-            print(depth)
             new_board = copy.deepcopy(board)
 
             alpha = -float("inf")

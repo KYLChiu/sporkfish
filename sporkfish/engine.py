@@ -4,7 +4,7 @@ import chess
 
 from .board.board import Board
 from .opening_book import OpeningBook
-from .searcher import Searcher
+from .searcher.searcher import Searcher
 
 
 class Engine:

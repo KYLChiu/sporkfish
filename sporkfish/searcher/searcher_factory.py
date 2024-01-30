@@ -13,6 +13,7 @@ class SearcherFactory:
     Factory class for creating instances of different searcher types.
     """
 
+    # ideally would build evaluator as well
     @staticmethod
     def create(searcher_cfg: SearcherConfig, evaluator: Evaluator) -> Searcher:
         """

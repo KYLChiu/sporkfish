@@ -9,7 +9,9 @@ from .board.board_factory import BoardFactory, BoardPyChess
 from .engine import Engine
 from .evaluator import Evaluator
 from .opening_book import OpeningBook, OpeningBookConfig
-from .searcher import Searcher, SearcherConfig
+from .searcher.searcher import Searcher
+from .searcher.searcher_config import SearcherConfig
+from .searcher.searcher_factory import SearcherFactory
 from .time_manager import TimeManager, TimeManagerConfig
 
 
@@ -229,7 +231,11 @@ class UCIClient:
 
         ev = Evaluator()
 
-        search = Searcher(ev, SearcherConfig.from_dict(config.get("SearcherConfig")))  # type: ignore
-        ob = OpeningBook(OpeningBookConfig.from_dict(config.get("OpeningBookConfig")))  # type: ignore
+        search = SearcherFactory.create(
+            SearcherConfig.from_dict(config.get("SearcherConfig")), ev
+        )  # type: ignore
+        ob = OpeningBook(
+            OpeningBookConfig.from_dict(config.get("OpeningBookConfig"))
+        )  # type: ignore
         eng = Engine(search, ob)
         return eng

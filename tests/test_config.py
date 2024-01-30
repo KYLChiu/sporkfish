@@ -1,5 +1,5 @@
 from config import load_config
-from sporkfish.searcher import SearcherConfig
+from sporkfish.searcher.searcher_config import SearcherConfig
 
 
 def test_load_config():

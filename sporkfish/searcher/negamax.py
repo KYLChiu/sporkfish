@@ -24,11 +24,10 @@ class NegamaxSp(MiniMaxVariants):
     def __init__(
         self,
         evaluator: Evaluator,
-        order: MoveOrder,
+        move_order: MoveOrder,
         config: SearcherConfig = SearcherConfig(),
     ) -> None:
-        super().__init__(evaluator, config)
-        self.order = order
+        super().__init__(evaluator, move_order, config)
 
     def _negamax(
         self,
@@ -78,7 +77,7 @@ class NegamaxSp(MiniMaxVariants):
                 return beta
 
         # Move ordering
-        legal_moves = self._ordered_moves(board)
+        legal_moves = self._ordered_moves(board, board.legal_moves)
 
         # recursive search with alpha-beta pruning
         for move in legal_moves:
@@ -125,7 +124,7 @@ class NegamaxSp(MiniMaxVariants):
         if self._config.enable_transposition_table:
             hash_value = self._zobrist_hash.hash(board)
 
-        legal_moves = self._ordered_moves(board)
+        legal_moves = self._ordered_moves(board, board.legal_moves)
         for move in legal_moves:
             board.push(move)
             child_value = -self._negamax(board, depth - 1, -beta, -alpha)
