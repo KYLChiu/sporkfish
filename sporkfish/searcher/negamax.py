@@ -96,6 +96,26 @@ class NegamaxSp(MiniMaxVariants):
 
         return value
 
+    def _null_move_pruning(
+        self, depth: int, board: Board, alpha: float, beta: float
+    ) -> bool:
+        """
+        Null move pruning - reduce the search space by trying a null move,
+        then seeing if the score of the subtree search is still high enough to cause a beta cutoff
+        """
+        # TODO: add zugzwang check
+        # Will make depth_reduction_factor configurable later
+        depth_reduction_factor = 3
+        in_check = board.is_check()
+        if depth >= depth_reduction_factor and not in_check:
+            null_move_depth = depth - depth_reduction_factor
+            board.push(chess.Move.null())
+            value = -self._negamax(board, null_move_depth, -beta, -alpha)
+            board.pop()
+            if value >= beta:
+                return True
+        return False
+
     def _searcher(
         self,
         board: Board,
@@ -199,7 +219,7 @@ class NegaMaxLazySmp(NegamaxSp):
 
         # Let processes race down lazily and see who completes first
         # We need to add more asymmetry but a task for later
-        def task(_):
+        def task() -> Tuple[float, chess.Move]:
             return self._searcher(board, depth, alpha, beta)
 
         futures = []

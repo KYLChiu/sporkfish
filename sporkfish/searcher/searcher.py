@@ -1,25 +1,14 @@
-import copy
 import logging
-import os
-import time
 from abc import ABC, abstractmethod
-from enum import Enum
-from multiprocessing import Manager
 from typing import Optional, Tuple
 
 import chess
-import stopit
-from pathos.multiprocessing import ProcessPool
-
-from ..board.board import Board
-from ..configurable import Configurable
-from ..evaluator import Evaluator
-from ..statistics import Statistics
-from ..transposition_table import TranspositionTable
-from ..zobrist_hasher import ZobristHasher
 
 # should be absolute paths - amend in next PR
-from .searcher_config import MoveOrdering, SearcherConfig, SearchMode
+from ..board.board import Board
+from ..evaluator import Evaluator
+from ..statistics import Statistics
+from .searcher_config import SearcherConfig, SearchMode
 
 # _manager = Manager()
 # We explicitly do not lock these and let race conditions happen
@@ -58,7 +47,9 @@ class Searcher(ABC):
 
         self._statistics = Statistics(_stats)
 
-    def _logging(self, elapsed, score, move, depth):
+    def _logging(
+        self, elapsed: float, score: float, move: chess.Move, depth: int
+    ) -> None:
         """
         Some logging description!"""
         fields = {
@@ -80,5 +71,7 @@ class Searcher(ABC):
         return self._evaluator
 
     @abstractmethod
-    def search(self):
+    def search(
+        self, board: Board, timeout: Optional[float] = None
+    ) -> Tuple[float, chess.Move]:
         pass

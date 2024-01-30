@@ -22,6 +22,9 @@ class SearcherFactory:
 
         if searcher_cfg.order is MoveOrdering.MVV_LVA:
             order = MvvLvaHeuristic()
+        else:
+            raise Exception("Only MVV LVA move ordering is supported at the moment.")
+
         if searcher_cfg.mode is SearchMode.SINGLE_PROCESS:
             return NegamaxSp(evaluator, order, searcher_cfg)
         elif searcher_cfg.mode is SearchMode.LAZY_SMP:

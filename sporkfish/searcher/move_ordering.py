@@ -7,12 +7,12 @@ from ..board.board import Board
 
 class MoveOrder(ABC):
     @abstractmethod
-    def evaluate(self, board: Board, move: chess.Move):
+    def evaluate(self, board: Board, move: chess.Move) -> float:
         pass
 
 
 class MvvLvaHeuristic(MoveOrder):
-    def evaluate(self, board: Board, move: chess.Move):
+    def evaluate(self, board: Board, move: chess.Move) -> float:
         """
         Calculate the Most Valuable Victim - Least Valuable Aggressor heuristic value
         for a capturing move based on the value of the captured piece.

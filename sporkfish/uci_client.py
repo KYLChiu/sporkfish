@@ -232,10 +232,10 @@ class UCIClient:
         ev = Evaluator()
 
         search = SearcherFactory.create(
-            SearcherConfig.from_dict(config.get("SearcherConfig")), ev
-        )  # type: ignore
+            SearcherConfig.from_dict(config.get("SearcherConfig")), ev  # type: ignore
+        )
         ob = OpeningBook(
-            OpeningBookConfig.from_dict(config.get("OpeningBookConfig"))
-        )  # type: ignore
+            OpeningBookConfig.from_dict(config.get("OpeningBookConfig"))  # type: ignore
+        )
         eng = Engine(search, ob)
         return eng

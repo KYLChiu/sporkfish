@@ -3,7 +3,7 @@ import logging
 import os
 import time
 from abc import ABC, abstractmethod
-from typing import Callable, Optional, Tuple
+from typing import Any, Callable, List, Optional, Tuple
 
 import chess
 import stopit
@@ -27,7 +27,9 @@ class MiniMaxVariants(Searcher):
     """
 
     @abstractmethod
-    def _searcher(self, board_to_search, depth, alpha, beta):
+    def _searcher(
+        self, board_to_search: Board, depth: int, alpha: float, beta: float
+    ) -> Tuple[float, chess.Move]:
         pass
 
     def __init__(
@@ -45,12 +47,9 @@ class MiniMaxVariants(Searcher):
         else:
             logging.info("Disabled transposition table in search.")
 
-        if self._config.order == MoveOrdering.MVV_LVA:
-            self._move_order = MvvLvaHeuristic()
-        else:
-            raise Exception("Only support MVV_LVA move ordering at the moment")
+        self._move_order = move_order
 
-    def _ordered_moves(self, board: Board, legal_moves):
+    def _ordered_moves(self, board: Board, legal_moves: Any) -> Any:
         # order moves from best to worse
         return sorted(
             legal_moves,
@@ -195,26 +194,9 @@ class MiniMaxVariants(Searcher):
         except Exception:
             raise
 
-    def _null_move_pruning(
-        self, depth: int, board: Board, alpha: float, beta: float
-    ) -> bool:
-        """
-        Null move pruning - reduce the search space by trying a null move,
-        then seeing if the score of the subtree search is still high enough to cause a beta cutoff
-        """
-        # TODO: add zugzwang check
-        depth_reduction_factor = 3
-        in_check = board.is_check()
-        if depth >= depth_reduction_factor and not in_check:
-            null_move_depth = depth - depth_reduction_factor
-            board.push(chess.Move.null())
-            value = -self._negamax(board, null_move_depth, -beta, -alpha)
-            board.pop()
-            if value >= beta:
-                return True
-        return False
-
-    def _iterative_deepening(self, board, timeout):
+    def _iterative_deepening(
+        self, board: Board, timeout: Optional[float]
+    ) -> Tuple[float, chess.Move]:
         """
         Iterative deepening
         This conducts a fixed-depth search for depths ranging from 1 to max_depth.
@@ -265,5 +247,7 @@ class MiniMaxVariants(Searcher):
         return score, move
 
     @abstractmethod
-    def search():
+    def search(
+        self, board: Board, timeout: Optional[float] = None
+    ) -> Tuple[float, chess.Move]:
         pass
