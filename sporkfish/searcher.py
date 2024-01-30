@@ -2,10 +2,10 @@ import copy
 import logging
 import os
 import time
+from dataclasses import dataclass
 from enum import Enum
 from multiprocessing import Manager
-from typing import Callable, Optional, Tuple, List
-from dataclasses import dataclass
+from typing import Callable, List, Optional, Tuple
 
 import chess
 import stopit

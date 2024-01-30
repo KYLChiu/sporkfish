@@ -100,8 +100,8 @@ class TestPerformance:
         profiler.disable()
         stats = pstats.Stats(profiler)
 
-        import sys
         import os
+        import sys
 
         test_name = (
             test_name.replace("[", "_")
@@ -254,7 +254,7 @@ class TestConsistency:
         "Tests base searcher and null move pruning on return the same score and bestmove"
         self._run_consistency_test(
             fen=fen_string, max_depth=max_depth, enable_null_move_pruning=True
-        
+        )
 
     def test_delta_pruning_consistency(self, fen_string: str, max_depth: int):
         "Tests base searcher and delta pruning on return the same score and bestmove"
