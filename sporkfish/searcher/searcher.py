@@ -10,13 +10,6 @@ from ..evaluator import Evaluator
 from ..statistics import Statistics
 from .searcher_config import SearcherConfig
 
-# _manager = Manager()
-# We explicitly do not lock these and let race conditions happen
-# Locks are too slow, need to consider atomic maps / values later
-# This might cause underestimation of statistics.
-# _dict = _manager.dict()
-# _stats = _manager.Value("i", 0)
-
 
 class Searcher(ABC):
     """
