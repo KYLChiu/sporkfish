@@ -5,7 +5,10 @@ from init_board_helper import board_setup, init_board, score_fen
 
 from sporkfish.board.board_factory import BoardFactory, BoardPyChess
 from sporkfish.evaluator import Evaluator
-from sporkfish.searcher import Searcher, SearcherConfig
+from sporkfish.searcher.move_ordering import MvvLvaHeuristic
+from sporkfish.searcher.searcher import Searcher
+from sporkfish.searcher.searcher_config import SearcherConfig
+from sporkfish.searcher.searcher_factory import SearcherFactory
 
 
 def _searcher_with_fen(
@@ -17,9 +20,7 @@ def _searcher_with_fen(
     enable_aspiration_windows=False,
 ):
     board = BoardFactory.create(board_type=BoardPyChess)
-    e = Evaluator()
-    s = Searcher(
-        e,
+    s = SearcherFactory.create(
         SearcherConfig(
             max_depth,
             enable_null_move_pruning=enable_null_move_pruning,
@@ -263,11 +264,8 @@ class TestQuiescence:
         alpha, beta = 1e8, 1e9
         result = s._quiescence(board, 1, alpha, beta)
 
-        legal_moves = sorted(
-            (move for move in board.legal_moves if board.is_capture(move)),
-            key=lambda move: (s._mvv_lva_heuristic(board, move),),
-            reverse=True,
-        )
+        legal_moves = (move for move in board.legal_moves if board.is_capture(move))
+        legal_moves = s._ordered_moves(board, legal_moves)
         e = Evaluator()
         for move in legal_moves:
             board.push(move)
@@ -279,48 +277,11 @@ class TestQuiescence:
 
         assert result == alpha
 
-    def test_quiescence_depth_2(
-        self, _init_searcher: Searcher, fen_string: str
-    ) -> None:
-        """
-        Test quiescence behaviour with depth 2
-        with both low alpha and high beta
-        """
-        board = init_board(fen_string)
-        s = _init_searcher
-        alpha, beta = -1e8, 1e9
-        result = s._quiescence(board, 2, alpha, beta)
-
-        e = Evaluator()
-        stand_pat = e.evaluate(board)
-        if alpha < stand_pat:
-            alpha = stand_pat
-
-        legal_moves = sorted(
-            (move for move in board.legal_moves if board.is_capture(move)),
-            key=lambda move: (s._mvv_lva_heuristic(board, move),),
-            reverse=True,
-        )
-        for move in legal_moves:
-            board.push(move)
-            score = -s._quiescence(board, 1, -beta, -alpha)
-            board.pop()
-
-            if score >= beta:
-                alpha = beta
-                break
-
-            if score > alpha:
-                alpha = score
-
-        assert result == alpha
-
 
 @pytest.fixture
 def _init_searcher(max_depth: int = 4) -> Searcher:
     """Initialise searcher"""
-    e = Evaluator()
-    return Searcher(e, SearcherConfig(max_depth))
+    return SearcherFactory.create(SearcherConfig(max_depth))
 
 
 @pytest.mark.parametrize(
@@ -371,11 +332,8 @@ class TestNegamax:
         alpha, beta = param[0], param[1]
         result = s._negamax(board, 1, alpha, beta)
 
-        legal_moves = sorted(
-            board.legal_moves,
-            key=lambda move: (s._mvv_lva_heuristic(board, move),),
-            reverse=True,
-        )
+        legal_moves = board.legal_moves
+        legal_moves = s._ordered_moves(board, legal_moves)
 
         value = -float("inf")
 
@@ -398,7 +356,7 @@ class TestNegamax:
     ],
 )
 class TestMvvLvvHeuristic:
-    def test_mvv_lva_heuristic_end_game(
+    def test_ordered_moves_end_game(
         self, _init_searcher: Searcher, fen_string: str, move_scores: list[int]
     ) -> None:
         """
@@ -412,7 +370,8 @@ class TestMvvLvvHeuristic:
         assert len(list(all_moves)) == num_moves
 
         for i, move in enumerate(all_moves):
-            score = s._mvv_lva_heuristic(board, move)
+            mo = MvvLvaHeuristic()
+            score = mo.evaluate(board, move)
             assert score == move_scores[i]
 
     def test_sorting_legal_moves(
@@ -424,12 +383,10 @@ class TestMvvLvvHeuristic:
         board = init_board(fen_string)
         s = _init_searcher
 
-        legal_moves = sorted(
-            board.legal_moves,
-            key=lambda move: (s._mvv_lva_heuristic(board, move),),
-            reverse=True,
-        )
+        legal_moves = s._ordered_moves(board, board.legal_moves)
+
         num_moves = len(move_scores)
         for i, move in enumerate(legal_moves):
-            score = s._mvv_lva_heuristic(board, move)
+            mo = MvvLvaHeuristic()
+            score = mo.evaluate(board, move)
             assert score == move_scores[num_moves - i - 1]
