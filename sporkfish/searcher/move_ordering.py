@@ -1,9 +1,15 @@
 from abc import ABC, abstractmethod
+from enum import Enum
 from typing import List
 
 import chess
 
 from ..board.board import Board
+
+
+class MoveOrderMode(Enum):
+    # can make a separate config for move ordering
+    MVV_LVA = "MVV_LVA"
 
 
 class MoveOrder(ABC):

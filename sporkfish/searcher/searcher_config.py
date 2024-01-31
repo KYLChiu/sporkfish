@@ -1,16 +1,13 @@
 from enum import Enum
 
+from sporkfish.searcher.move_ordering import MoveOrderMode
+
 from ..configurable import Configurable
 
 
 class SearchMode(Enum):
     SINGLE_PROCESS = "SINGLE_PROCESS"
     LAZY_SMP = "LAZY_SMP"
-
-
-class MoveOrderMode(Enum):
-    # can make a separate config for move ordering
-    MVV_LVA = "MVV_LVA"
 
 
 class SearcherConfig(Configurable):
@@ -29,8 +26,8 @@ class SearcherConfig(Configurable):
     def __init__(
         self,
         max_depth: int = 5,
-        mode: SearchMode = SearchMode.SINGLE_PROCESS,
-        order: MoveOrderMode = MoveOrderMode.MVV_LVA,
+        search_mode: SearchMode = SearchMode.SINGLE_PROCESS,
+        move_order_mode: MoveOrderMode = MoveOrderMode.MVV_LVA,
         enable_null_move_pruning: bool = True,
         enable_delta_pruning: bool = True,
         enable_transposition_table: bool = False,
@@ -38,8 +35,16 @@ class SearcherConfig(Configurable):
     ) -> None:
         self.max_depth = max_depth
         # TODO: register the constructor function in yaml loader instead.
-        self.mode = mode if isinstance(mode, SearchMode) else SearchMode(mode)
-        self.order = order
+        self.search_mode = (
+            search_mode
+            if isinstance(search_mode, SearchMode)
+            else SearchMode(search_mode)
+        )
+        self.move_order_mode = (
+            move_order_mode
+            if isinstance(move_order_mode, MoveOrderMode)
+            else MoveOrderMode(move_order_mode)
+        )
         self.enable_null_move_pruning = enable_null_move_pruning
         self.enable_delta_pruning = enable_delta_pruning
         self.enable_transposition_table = enable_transposition_table

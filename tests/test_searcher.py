@@ -5,9 +5,9 @@ from init_board_helper import board_setup, init_board, score_fen
 
 from sporkfish.board.board_factory import BoardFactory, BoardPyChess
 from sporkfish.evaluator import Evaluator
-from sporkfish.searcher.move_ordering import MoveOrder, MvvLvaHeuristic
+from sporkfish.searcher.move_ordering import MvvLvaHeuristic
 from sporkfish.searcher.searcher import Searcher
-from sporkfish.searcher.searcher_config import SearcherConfig, SearchMode
+from sporkfish.searcher.searcher_config import SearcherConfig
 from sporkfish.searcher.searcher_factory import SearcherFactory
 
 

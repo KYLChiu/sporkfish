@@ -38,22 +38,21 @@ class SearcherFactory:
                             {type(evaluator_type).__name__}."
             )
 
-    # ideally would build evaluator as well
     @staticmethod
     def create(searcher_cfg: SearcherConfig) -> Searcher:
         """
         Create an instance of the specified searcher type.
         """
-        order = SearcherFactory._build_moveorder(searcher_cfg.order)
+        order = SearcherFactory._build_moveorder(searcher_cfg.move_order_mode)
 
-        if searcher_cfg.mode is SearchMode.SINGLE_PROCESS:
+        if searcher_cfg.search_mode is SearchMode.SINGLE_PROCESS:
             evaluator = SearcherFactory._build_evaluator()
             return NegamaxSp(evaluator, order, searcher_cfg)
-        elif searcher_cfg.mode is SearchMode.LAZY_SMP:
+        elif searcher_cfg.search_mode is SearchMode.LAZY_SMP:
             evaluator = SearcherFactory._build_evaluator()
             return NegaMaxLazySmp(evaluator, order, searcher_cfg)
         else:
             raise TypeError(
                 f"SearcherFactory does not support the creation of Searcher type: \
-                            {type(searcher_cfg.mode).__name__}."
+                            {type(searcher_cfg.search_mode).__name__}."
             )
