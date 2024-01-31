@@ -20,7 +20,6 @@ def _searcher_with_fen(
     enable_aspiration_windows=False,
 ):
     board = BoardFactory.create(board_type=BoardPyChess)
-    e = Evaluator()
     s = SearcherFactory.create(
         SearcherConfig(
             max_depth,
@@ -29,7 +28,6 @@ def _searcher_with_fen(
             enable_transposition_table=enable_transposition_table,
             enable_aspiration_windows=enable_aspiration_windows,
         ),
-        e,
     )
     board.set_fen(fen)
     score, move = s.search(board)
@@ -46,7 +44,6 @@ def _searcher_with_fen(
 )
 class TestValidMove:
     # This is a fairly slow test
-    # unclear why it is currently running up to depth 5 - needs investigation
     def test_valid_moves(self, fen_string: str):
         """
         Tests if no exceptions are thrown and no null moves made
@@ -267,7 +264,8 @@ class TestQuiescence:
         alpha, beta = 1e8, 1e9
         result = s._quiescence(board, 1, alpha, beta)
 
-        legal_moves = (move for move in board.legal_moves if board.is_capture(move))
+        legal_moves = (
+            move for move in board.legal_moves if board.is_capture(move))
         legal_moves = s._ordered_moves(board, legal_moves)
         e = Evaluator()
         for move in legal_moves:
@@ -284,8 +282,7 @@ class TestQuiescence:
 @pytest.fixture
 def _init_searcher(max_depth: int = 4) -> Searcher:
     """Initialise searcher"""
-    e = Evaluator()
-    return SearcherFactory.create(SearcherConfig(max_depth), e)
+    return SearcherFactory.create(SearcherConfig(max_depth))
 
 
 @pytest.mark.parametrize(

@@ -1,22 +1,11 @@
-import copy
-import logging
-import os
-import time
-from abc import ABC, abstractmethod
 from typing import Optional, Tuple
 
 import chess
-import stopit
-from pathos.multiprocessing import ProcessPool
 
 from ..board.board import Board
 from ..evaluator import Evaluator
-from ..statistics import Statistics
-from ..transposition_table import TranspositionTable
-from ..zobrist_hasher import ZobristHasher
 from .minimax import MiniMaxVariants
-from .move_ordering import MoveOrder, MvvLvaHeuristic
-from .searcher import Searcher, SearchMode
+from .move_ordering import MoveOrder
 from .searcher_config import SearcherConfig
 
 
@@ -47,11 +36,6 @@ class NegamaxSp(MiniMaxVariants):
 
         Returns:
             The evaluation score of the current board position.
-
-        Note:
-            This method uses alpha-beta pruning for efficiency and includes
-            move ordering using MVV-LVA.
-
         """
         value = -float("inf")
 
@@ -73,7 +57,7 @@ class NegamaxSp(MiniMaxVariants):
         # Null move pruning - reduce the search space by trying a null move,
         # then seeing if the score of the subtree search is still high enough to cause a beta cutoff
         if self._config.enable_null_move_pruning:
-            if self._null_move_pruning(depth, board, alpha, beta):
+            if self._null_move_pruning(board, depth, alpha, beta):
                 return beta
 
         # Move ordering
@@ -97,7 +81,7 @@ class NegamaxSp(MiniMaxVariants):
         return value
 
     def _null_move_pruning(
-        self, depth: int, board: Board, alpha: float, beta: float
+        self, board: Board, depth: int, alpha: float, beta: float
     ) -> bool:
         """
         Null move pruning - reduce the search space by trying a null move,
@@ -116,7 +100,7 @@ class NegamaxSp(MiniMaxVariants):
                 return True
         return False
 
-    def _searcher(
+    def _start_search_from_root(
         self,
         board: Board,
         depth: int,
@@ -141,9 +125,6 @@ class NegamaxSp(MiniMaxVariants):
         best_move = chess.Move.null()
         self._statistics.increment()
 
-        if self._config.enable_transposition_table:
-            hash_value = self._zobrist_hash.hash(board)
-
         legal_moves = self._ordered_moves(board, board.legal_moves)
         for move in legal_moves:
             board.push(move)
@@ -159,6 +140,7 @@ class NegamaxSp(MiniMaxVariants):
                 break
 
         if self._config.enable_transposition_table:
+            hash_value = self._zobrist_hash.hash(board)
             self._transposition_table.store(hash_value, depth, value)
 
         return value, best_move
@@ -177,75 +159,5 @@ class NegamaxSp(MiniMaxVariants):
         :rtype: Tuple[float, Move]
         """
 
-        score, move = self._iterative_deepening(board, timeout)
-        return score, move
-
-
-# This doesn't really work yet. Don't use.
-class NegaMaxLazySmp(NegamaxSp):
-    def __init__(
-        self,
-        evaluator: Evaluator,
-        order: MoveOrder,
-        config: SearcherConfig = SearcherConfig(),
-    ) -> None:
-        super().__init__(evaluator, order, config)
-
-        self._num_processes = os.cpu_count()
-        self._pool = ProcessPool(nodes=self._num_processes)
-
-    # This doesn't really work yet. Don't use.
-    def _searcher(
-        self,
-        board: Board,
-        depth: int,
-        alpha: float,
-        beta: float,
-    ) -> Tuple[float, chess.Move]:
-        """
-        Entry point for negamax search with fail-soft alpha-beta pruning with lazy symmetric multiprocessing.
-
-        :param board: The current chess board position.
-        :type board: Board
-        :param depth: The current search depth.
-        :type depth: int
-        :param alpha: Alpha value for alpha-beta pruning.
-        :type alpha: float
-        :param beta: Beta value for alpha-beta pruning.
-        :type beta: float
-        :return: Tuple containing the best move and its value.
-        :rtype: Tuple[float, chess.Move]
-        """
-
-        # Let processes race down lazily and see who completes first
-        # We need to add more asymmetry but a task for later
-        def task() -> Tuple[float, chess.Move]:
-            return self._searcher(board, depth, alpha, beta)
-
-        futures = []
-        for i in range(self._num_processes):  # type: ignore
-            futures.append(self._pool.apipe(task, i))
-
-        while True:
-            for future in futures:
-                if future.ready():
-                    res: Tuple[float, chess.Move] = future.get()
-                    return res
-            else:
-                continue  # Continue the loop if no result is ready yet
-
-    def search(
-        self, board: Board, timeout: Optional[float] = None
-    ) -> Tuple[float, chess.Move]:
-        """
-        Finds the best move (and associated score) via negamax and iterative deepening.
-
-        :param board: The current chess board position.
-        :type board: Board
-        :return: The best score and move based on the search.
-        :param timeout: Time in seconds until we stop the search, returning the best depth if we timeout.
-        :type timeout: Optional[float]
-        :rtype: Tuple[float, Move]
-        """
         score, move = self._iterative_deepening(board, timeout)
         return score, move

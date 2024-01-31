@@ -32,7 +32,7 @@ Once you create a game via your bot account, the bot will automatically play. We
 
 ### Run Tests
 
-To run all tests:
+To run all tests (excluding slow tests):
 
 ```
 python3 -m pytest -v
@@ -44,7 +44,8 @@ You may also run a specific test class or function, e.g.:
 python3 -m pytest tests/test_searcher.py::TestMvvLvvHeuristic -sv
 ```
 
-Slow tests are not run on CI. Developers should run these before raising PRs by doing:
+Slow tests are not run on CI. Developers should run these before raising PRs by doing (this can be very slow, so please be patient):
+
 ```
 python3 -m pytest -sv --runslow
 ```
@@ -81,6 +82,7 @@ Search:
 * [Transposition tables with Zobrist hashing](https://mediocrechess.blogspot.com/2007/01/guide-transposition-tables.html)
 
 Move ordering:
+
 * [MVV-LVA move ordering](https://www.chessprogramming.org/Move_Ordering)
 
 Evaluation:
@@ -108,13 +110,13 @@ Communication:
 * [Engine improvement tier list](https://www.reddit.com/r/ComputerChess/comments/yln9ef/comparative_advantage_of_engine_improvements/)
 * [Explaining beta-cutoff](https://stackoverflow.com/questions/2533219/alpha-beta-cutoff)
 
-### Video (Youtube) Resources - beginner friendly:
+### Video (Youtube) Resources - beginner friendly
 
 * Gentle introduction to how to set up a chess bot by [Sebastian Lague](https://www.youtube.com/watch?v=U4ogK0MIzqk)
 * How to improve a chess bot by [Sebastian Lague](https://www.youtube.com/watch?v=_vqlIPDR2TU)
 * Introduction to Minimax and Alpha-Beta Pruning:
-    - by [Sebastian Lague](https://www.youtube.com/watch?v=l-hh51ncgDI)
-    - by [MIT OpenCourseWare](https://www.youtube.com/watch?v=STjW3eH0Cik)
+  * by [Sebastian Lague](https://www.youtube.com/watch?v=l-hh51ncgDI)
+  * by [MIT OpenCourseWare](https://www.youtube.com/watch?v=STjW3eH0Cik)
 * Iterative Deepening Search:
-    - by [John Levine](https://www.youtube.com/watch?v=Y85ECk_H3h4) - in context of DFS
-    - by [Chess Programming](https://www.youtube.com/watch?v=awZxXMJ-h0Y) - in the context of chess programming
+  * by [John Levine](https://www.youtube.com/watch?v=Y85ECk_H3h4) - in context of DFS
+  * by [Chess Programming](https://www.youtube.com/watch?v=awZxXMJ-h0Y) - in the context of chess programming

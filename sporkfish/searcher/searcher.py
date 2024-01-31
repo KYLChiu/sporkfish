@@ -8,7 +8,7 @@ import chess
 from ..board.board import Board
 from ..evaluator import Evaluator
 from ..statistics import Statistics
-from .searcher_config import SearcherConfig, SearchMode
+from .searcher_config import SearcherConfig
 
 # _manager = Manager()
 # We explicitly do not lock these and let race conditions happen
@@ -26,28 +26,23 @@ class Searcher(ABC):
     Dynamic best move searching class.
     """
 
-    def __init__(
-        self, evaluator: Evaluator, config: SearcherConfig = SearcherConfig()
-    ) -> None:
+    def __init__(self, config: SearcherConfig = SearcherConfig()) -> None:
         """
         Initialize the Searcher instance with mutable statistics.
 
         :param evaluator: The chess board evaluator.
         :type evaluator: evaluator.Evaluator
-        :param max_depth: The maximum search depth for the minimax algorithm.
-                         Def.ault is 5.
+        :param max_depth: The maximum search depth for the minimax algorithm. Default is 5.
         :type max_depth: int
         :param config: Config to use for searching.
         :type mode: SearcherConfig
         :return: None
         """
 
-        self._evaluator = evaluator
         self._config = config
-
         self._statistics = Statistics(_stats)
 
-    def _logging(
+    def _log_info(
         self, elapsed: float, score: float, move: chess.Move, depth: int
     ) -> None:
         """

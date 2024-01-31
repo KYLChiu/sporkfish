@@ -7,8 +7,7 @@ from sporkfish.searcher.searcher_factory import SearcherFactory
 
 
 def create_engine(depth: int) -> engine.Engine:
-    ev = evaluator.Evaluator()
-    search = SearcherFactory.create(SearcherConfig(depth), ev)
+    search = SearcherFactory.create(SearcherConfig(depth))
     ob = opening_book.OpeningBook()
     eng = engine.Engine(search, ob)
     return eng

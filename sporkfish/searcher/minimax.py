@@ -1,33 +1,28 @@
 import copy
 import logging
-import os
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Callable, List, Optional, Tuple
+from typing import Any, Callable, Optional, Tuple
 
 import chess
 import stopit
-from pathos.multiprocessing import ProcessPool
 
 from ..board.board import Board
 from ..evaluator import Evaluator
-from ..statistics import Statistics
 from ..transposition_table import TranspositionTable
 from ..zobrist_hasher import ZobristHasher
-from .move_ordering import MoveOrder, MvvLvaHeuristic
+from .move_ordering import MoveOrder
 from .searcher import Searcher
-from .searcher_config import MoveOrdering, SearcherConfig, SearchMode
-
-_dict: dict = dict()
+from .searcher_config import SearcherConfig
 
 
-class MiniMaxVariants(Searcher):
+class MiniMaxVariants(Searcher, ABC):
     """
     Abstract base class for minimax like searchers
     """
 
     @abstractmethod
-    def _searcher(
+    def _start_search_from_root(
         self, board_to_search: Board, depth: int, alpha: float, beta: float
     ) -> Tuple[float, chess.Move]:
         pass
@@ -38,15 +33,17 @@ class MiniMaxVariants(Searcher):
         move_order: MoveOrder,
         config: SearcherConfig = SearcherConfig(),
     ) -> None:
-        super().__init__(evaluator, config)
+        super().__init__(config)
+        self._dict: dict = dict()
 
         if self._config.enable_transposition_table:
             self._zobrist_hash = ZobristHasher()
-            self._transposition_table = TranspositionTable(_dict)
+            self._transposition_table = TranspositionTable(self._dict)
             logging.info("Enabled transposition table in search.")
         else:
             logging.info("Disabled transposition table in search.")
 
+        self._evaluator = evaluator
         self._move_order = move_order
 
     def _ordered_moves(self, board: Board, legal_moves: Any) -> Any:
@@ -59,7 +56,6 @@ class MiniMaxVariants(Searcher):
 
     def _aspiration_windows_search(
         self,
-        search_func: Callable[[Board, int, float, float], Tuple[float, chess.Move]],
         board_to_search: Board,
         depth: int,
         prev_score: float,
@@ -70,8 +66,6 @@ class MiniMaxVariants(Searcher):
         Aspiration windows are used to optimize the search process by narrowing the search window based on
         previous search results.
 
-        :param search_func: A callable function representing the search algorithm.
-        :type search_func: Callable[[Board, int, float, float], Tuple[float, chess.Move]]
         :param board_to_search: The chess board to search.
         :type board_to_search: Board
         :param depth: The search depth.
@@ -88,16 +82,18 @@ class MiniMaxVariants(Searcher):
             window_size = 50
             alpha = prev_score - window_size
             beta = prev_score + window_size
-            score, move = search_func(board_to_search, depth, alpha, beta)
+            score, move = self._start_search_from_root(
+                board_to_search, depth, alpha, beta
+            )
             if score <= alpha or score >= beta:
                 logging.info(
                     "Search score outside aspiration window bounds, doing a full search."
                 )
-                score, move = search_func(
+                score, move = self._start_search_from_root(
                     board_to_search, depth, -float("inf"), float("inf")
                 )
         else:
-            score, move = search_func(
+            score, move = self._start_search_from_root(
                 board_to_search, depth, -float("inf"), float("inf")
             )
         return score, move
@@ -129,7 +125,8 @@ class MiniMaxVariants(Searcher):
         if alpha < stand_pat:
             alpha = stand_pat
 
-        legal_moves = (move for move in board.legal_moves if board.is_capture(move))
+        legal_moves = (
+            move for move in board.legal_moves if board.is_capture(move))
         legal_moves = self._ordered_moves(board, legal_moves)
 
         # Assuming the input move is a capturing move, returns the captured piece
@@ -180,13 +177,32 @@ class MiniMaxVariants(Searcher):
         start_time: float,
         prev_score: float,
     ) -> Tuple[float, chess.Move, float, int]:
+        """
+        Perform an aspiration windows search on the given chess board up to the specified depth.
+
+        Parameters:
+        - board_to_search (Board): The chess board to search.
+        - depth (int): The depth of the search.
+        - start_time (float): The start time of the search.
+        - prev_score (float): The previous score from a shallower search.
+
+        Returns:
+        Tuple[float, chess.Move, float, int]: A tuple containing the following:
+        - float: The score of the best move found during the search.
+        - chess.Move: The best move found.
+        - float: The elapsed time of the search.
+        - int: A flag indicating whether the search was terminated due to a timeout (1 for timeout, 0 otherwise).
+
+        Raises:
+        - Exception: If an unexpected error occurs during the search.
+        """
         try:
             score, move = self._aspiration_windows_search(
-                self._searcher, board_to_search, depth, prev_score
+                board_to_search, depth, prev_score
             )
 
             elapsed = time.time() - start_time
-            self._logging(elapsed, score, move, depth)
+            self._log_info(elapsed, score, move, depth)
 
             return score, move, elapsed, 0
         except stopit.utils.TimeoutException:
