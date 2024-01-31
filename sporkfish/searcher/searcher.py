@@ -27,12 +27,8 @@ class Searcher(ABC):
         """
         Initialize the Searcher instance with mutable statistics.
 
-        :param evaluator: The chess board evaluator.
-        :type evaluator: evaluator.Evaluator
-        :param max_depth: The maximum search depth for the minimax algorithm. Default is 5.
-        :type max_depth: int
         :param config: Config to use for searching.
-        :type mode: SearcherConfig
+        :type config: SearcherConfig
         :return: None
         """
 
@@ -44,8 +40,6 @@ class Searcher(ABC):
     def _log_info(
         self, elapsed: float, score: float, move: chess.Move, depth: int
     ) -> None:
-        """
-        Some logging description!"""
         fields = {
             "depth": depth,
             # time in ms
