@@ -264,8 +264,7 @@ class TestQuiescence:
         alpha, beta = 1e8, 1e9
         result = s._quiescence(board, 1, alpha, beta)
 
-        legal_moves = (
-            move for move in board.legal_moves if board.is_capture(move))
+        legal_moves = (move for move in board.legal_moves if board.is_capture(move))
         legal_moves = s._ordered_moves(board, legal_moves)
         e = Evaluator()
         for move in legal_moves:

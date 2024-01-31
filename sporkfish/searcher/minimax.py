@@ -34,7 +34,6 @@ class MiniMaxVariants(Searcher, ABC):
         config: SearcherConfig = SearcherConfig(),
     ) -> None:
         super().__init__(config)
-        self._dict: dict = dict()
 
         if self._config.enable_transposition_table:
             self._zobrist_hash = ZobristHasher()
@@ -45,6 +44,10 @@ class MiniMaxVariants(Searcher, ABC):
 
         self._evaluator = evaluator
         self._move_order = move_order
+
+    @property
+    def evaluator(self) -> Evaluator:
+        return self._evaluator
 
     def _ordered_moves(self, board: Board, legal_moves: Any) -> Any:
         # order moves from best to worse
@@ -125,8 +128,7 @@ class MiniMaxVariants(Searcher, ABC):
         if alpha < stand_pat:
             alpha = stand_pat
 
-        legal_moves = (
-            move for move in board.legal_moves if board.is_capture(move))
+        legal_moves = (move for move in board.legal_moves if board.is_capture(move))
         legal_moves = self._ordered_moves(board, legal_moves)
 
         # Assuming the input move is a capturing move, returns the captured piece

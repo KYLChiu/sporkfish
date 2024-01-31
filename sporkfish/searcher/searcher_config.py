@@ -8,7 +8,7 @@ class SearchMode(Enum):
     LAZY_SMP = "LAZY_SMP"
 
 
-class MoveOrdering(Enum):
+class MoveOrderMode(Enum):
     # can make a separate config for move ordering
     MVV_LVA = "MVV_LVA"
 
@@ -30,7 +30,7 @@ class SearcherConfig(Configurable):
         self,
         max_depth: int = 5,
         mode: SearchMode = SearchMode.SINGLE_PROCESS,
-        order: MoveOrdering = MoveOrdering.MVV_LVA,
+        order: MoveOrderMode = MoveOrderMode.MVV_LVA,
         enable_null_move_pruning: bool = True,
         enable_delta_pruning: bool = True,
         enable_transposition_table: bool = False,

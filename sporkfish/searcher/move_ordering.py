@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import List
 
 import chess
 
@@ -12,7 +13,7 @@ class MoveOrder(ABC):
 
 
 class MvvLvaHeuristic(MoveOrder):
-    def __init__(self):
+    def __init__(self) -> None:
         # Columns: attacker P, N, B, R, Q, K
         self._MVV_LVA = [
             [15, 14, 13, 12, 11, 10],  # victim P
@@ -24,7 +25,7 @@ class MvvLvaHeuristic(MoveOrder):
         ]
 
     @property
-    def mvv_lva_matrix(self):
+    def mvv_lva_matrix(self) -> List[List[int]]:
         return self._MVV_LVA
 
     def evaluate(self, board: Board, move: chess.Move) -> float:

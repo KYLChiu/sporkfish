@@ -17,9 +17,6 @@ from .searcher_config import SearcherConfig
 # _dict = _manager.dict()
 # _stats = _manager.Value("i", 0)
 
-_dict: dict = dict()
-_stats = 0
-
 
 class Searcher(ABC):
     """
@@ -40,7 +37,9 @@ class Searcher(ABC):
         """
 
         self._config = config
-        self._statistics = Statistics(_stats)
+        self._stats = 0
+        self._statistics = Statistics(self._stats)
+        self._dict: dict = dict()
 
     def _log_info(
         self, elapsed: float, score: float, move: chess.Move, depth: int
@@ -60,10 +59,6 @@ class Searcher(ABC):
         }
         info_str = " ".join(f"{k} {v}" for k, v in fields.items())
         logging.info(f"info {info_str}")
-
-    @property
-    def evaluator(self) -> Evaluator:
-        return self._evaluator
 
     @abstractmethod
     def search(
