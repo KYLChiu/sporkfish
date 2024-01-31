@@ -7,14 +7,14 @@ on:
   workflow_dispatch:
 
 jobs:
-
   setup_and_run_tests:
+    name: setup_and_run_tests
     defaults:
       run:
         working-directory: ./
-
+    strategy:
+      fail-fast: false
     runs-on: ubuntu-latest
-
     steps:
       # -- Setup --
       - name: Checkout code
