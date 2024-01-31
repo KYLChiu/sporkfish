@@ -17,9 +17,9 @@ class NegaMaxLazySmp(NegamaxSp):
         self,
         evaluator: Evaluator,
         order: MoveOrder,
-        config: SearcherConfig = SearcherConfig(),
+        searcher_config: SearcherConfig = SearcherConfig(),
     ) -> None:
-        super().__init__(evaluator, order, config)
+        super().__init__(evaluator, order, searcher_config)
 
         self._num_processes = os.cpu_count()
         self._pool = ProcessPool(nodes=self._num_processes)

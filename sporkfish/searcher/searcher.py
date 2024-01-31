@@ -16,16 +16,16 @@ class Searcher(ABC):
     Dynamic best move searching class.
     """
 
-    def __init__(self, config: SearcherConfig = SearcherConfig()) -> None:
+    def __init__(self, searcher_config: SearcherConfig = SearcherConfig()) -> None:
         """
         Initialize the Searcher instance with mutable statistics.
 
-        :param config: Config to use for searching.
-        :type config: SearcherConfig
+        :param searcher_config: Config to use for searching.
+        :type searcher_config: SearcherConfig
         :return: None
         """
 
-        self._config = config
+        self._searcher_config = searcher_config
         self._stats = 0
         self._statistics = Statistics(self._stats)
         self._dict: dict = dict()

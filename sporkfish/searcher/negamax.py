@@ -14,9 +14,9 @@ class NegamaxSp(MiniMaxVariants):
         self,
         evaluator: Evaluator,
         move_order: MoveOrder,
-        config: SearcherConfig = SearcherConfig(),
+        searcher_config: SearcherConfig = SearcherConfig(),
     ) -> None:
-        super().__init__(evaluator, move_order, config)
+        super().__init__(evaluator, move_order, searcher_config)
 
     def _negamax(
         self,
@@ -40,7 +40,7 @@ class NegamaxSp(MiniMaxVariants):
         value = -float("inf")
 
         # Probe the transposition table for an existing entry
-        if self._config.enable_transposition_table:
+        if self._searcher_config.enable_transposition_table:
             hash_value = self._zobrist_hash.hash(board)
             tt_entry = self._transposition_table.probe(hash_value, depth)
             if tt_entry:
@@ -56,7 +56,7 @@ class NegamaxSp(MiniMaxVariants):
 
         # Null move pruning - reduce the search space by trying a null move,
         # then seeing if the score of the subtree search is still high enough to cause a beta cutoff
-        if self._config.enable_null_move_pruning:
+        if self._searcher_config.enable_null_move_pruning:
             if self._null_move_pruning(board, depth, alpha, beta):
                 return beta
 
@@ -75,7 +75,7 @@ class NegamaxSp(MiniMaxVariants):
             if alpha >= beta:
                 break
 
-        if self._config.enable_transposition_table:
+        if self._searcher_config.enable_transposition_table:
             self._transposition_table.store(hash_value, depth, value)
 
         return value
@@ -139,7 +139,7 @@ class NegamaxSp(MiniMaxVariants):
             if alpha >= beta:
                 break
 
-        if self._config.enable_transposition_table:
+        if self._searcher_config.enable_transposition_table:
             hash_value = self._zobrist_hash.hash(board)
             self._transposition_table.store(hash_value, depth, value)
 

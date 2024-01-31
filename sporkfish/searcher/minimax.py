@@ -35,7 +35,7 @@ class MiniMaxVariants(Searcher, ABC):
     ) -> None:
         super().__init__(config)
 
-        if self._config.enable_transposition_table:
+        if self._searcher_config.enable_transposition_table:
             self._zobrist_hash = ZobristHasher()
             self._transposition_table = TranspositionTable(self._dict)
             logging.info("Enabled transposition table in search.")
@@ -79,7 +79,7 @@ class MiniMaxVariants(Searcher, ABC):
         :return: A tuple containing the score and the best move found during the search.
         :rtype: Tuple[float, chess.Move]
         """
-        if self._config.enable_aspiration_windows and depth > 1:
+        if self._searcher_config.enable_aspiration_windows and depth > 1:
             # Aspiration window size: 50 centipawn is worth about 1/2 of a pawn in our eval function
             # We leave configuration for this to another PR
             window_size = 50
@@ -151,7 +151,7 @@ class MiniMaxVariants(Searcher, ABC):
             # transitions into won endgames made at the expense of some material will no longer be considered
             # However we might remedy this directly with endgame tablebases.
             if (
-                self._config.enable_delta_pruning
+                self._searcher_config.enable_delta_pruning
                 and stand_pat
                 + self.evaluator.MG_PIECE_VALUES[captured_piece(board, move)]
                 + self.evaluator.DELTA
@@ -225,7 +225,7 @@ class MiniMaxVariants(Searcher, ABC):
         score = -float("inf")
         move = chess.Move.null()
 
-        for depth in range(1, self._config.max_depth + 1):
+        for depth in range(1, self._searcher_config.max_depth + 1):
             new_board = copy.deepcopy(board)
 
             alpha = -float("inf")
