@@ -41,8 +41,6 @@ class MvvLvaHeuristic(MoveOrder):
             int: The heuristic value of the capturing move based on the value of the captured piece.
         """
 
-        # make this configurable in future (less error prone)
-
         captured_piece = board.piece_at(move.to_square)
         moving_piece = board.piece_at(move.from_square)
 
