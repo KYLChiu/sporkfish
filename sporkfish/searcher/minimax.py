@@ -31,9 +31,9 @@ class MiniMaxVariants(Searcher, ABC):
         self,
         evaluator: Evaluator,
         move_order: MoveOrder,
-        config: SearcherConfig = SearcherConfig(),
+        searcher_config: SearcherConfig = SearcherConfig(),
     ) -> None:
-        super().__init__(config)
+        super().__init__(searcher_config)
 
         if self._searcher_config.enable_transposition_table:
             self._zobrist_hash = ZobristHasher()
