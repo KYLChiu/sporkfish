@@ -12,8 +12,6 @@ jobs:
     defaults:
       run:
         working-directory: ./
-    strategy:
-      fail-fast: false
     runs-on: ubuntu-latest
     steps:
       # -- Setup --
@@ -30,10 +28,10 @@ jobs:
       - name: Run docker container
         run: docker run --name sporkfish-container -d -it sporkfish-image
       # -- Inspect code/tests --
-      - name: Check typing (mypy)
-        run: docker exec sporkfish-container mypy --install-types --non-interactive
       - name: Check tests (pytest)
         run: docker exec sporkfish-container pytest -sv
+      - name: Check typing (mypy)
+        run: docker exec sporkfish-container mypy --install-types --non-interactive
       - name: Check code format (black)
         run: docker exec sporkfish-container black --check .
       - name: Check imports format (isort)
