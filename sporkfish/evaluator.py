@@ -235,21 +235,22 @@ class Evaluator:
         # - Chess board implements A1 as first element, H8 as last
         # - Piece square table implements A8 as first element, H1 as last element
         flip: Callable[[int, int, chess.Color]] = (
-            lambda square, flipped_sq, color: square if not color else flipped_sq
+            lambda square, flipped_square, color: square if not color else flipped_square
         )
 
         phase = 0
 
         for square in self.SQUARES:
             # square ^ 56 flips the board vertically to match alignment of PSQT
-            flipped_sq = self.VERTICALLY_FLIPPED_SQUARES[square]
-            piece = board.piece_at(flipped_sq)
+            flipped_square = self.VERTICALLY_FLIPPED_SQUARES[square]
+            piece = board.piece_at(flipped_square)
             if piece:
+                aligned_square = flip(square, flipped_square, piece.color)
                 mg[piece.color] += self.MG_PESTO[piece.piece_type][
-                    flip(square, flipped_sq, piece.color)
+                    aligned_square
                 ]
                 eg[piece.color] += self.EG_PESTO[piece.piece_type][
-                    flip(square, flipped_sq, piece.color)
+                    aligned_square
                 ]
                 phase += self.PHASES[piece.piece_type]
 
