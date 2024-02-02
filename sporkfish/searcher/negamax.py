@@ -68,7 +68,7 @@ class NegamaxSp(MiniMaxVariants):
             capture = (
                 board.is_capture(move)
                 if self._searcher_config.enable_futility_pruning
-                else None
+                else False
             )
 
             board.push(move)

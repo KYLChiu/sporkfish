@@ -1,5 +1,7 @@
 from typing import Type
+
 from sporkfish.evaluator import EvaluateMode, Evaluator
+
 from .move_ordering import MoveOrder, MvvLvaHeuristic
 from .negamax import NegamaxSp
 from .negamax_lazy_smp import NegaMaxLazySmp
