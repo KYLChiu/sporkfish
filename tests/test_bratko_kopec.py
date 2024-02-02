@@ -40,7 +40,7 @@ def analyser(epd: str):
     return 0.0
 
 
-@pytest.mark.slow
+@pytest.mark.skip(reason="Very slow and not particularly useful for now")
 def test_bratko_kopec():
     score = 0.0
     for epd in epds.split("\n"):

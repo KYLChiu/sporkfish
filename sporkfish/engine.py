@@ -4,7 +4,7 @@ import chess
 
 from .board.board import Board
 from .opening_book import OpeningBook
-from .searcher import Searcher
+from .searcher.searcher import Searcher
 
 
 class Engine:
@@ -54,14 +54,3 @@ class Engine:
         :rtype: float
         """
         return self._searcher.search(board, timeout)[0]
-
-    def evaluate(self, board: Board) -> float:
-        """
-        Returns the (static) leaf evaluation score, useful for testing.
-
-        :param board: The current chess board position.
-        :type board: Board
-        :return: The score of the evaluator.
-        :rtype: float
-        """
-        return self._searcher.evaluator.evaluate(board)

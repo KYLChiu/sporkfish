@@ -23,5 +23,6 @@ class BoardFactory:
         if board_type is BoardPyChess:
             return BoardPyChess()
         raise TypeError(
-            f"BoardFactory does not support the creation of board type {type(board_type).__name__}."
+            f"BoardFactory does not support the creation of board type \
+                        {type(board_type).__name__}."
         )
