@@ -6,7 +6,6 @@ import chess
 
 # should be absolute paths - amend in next PR
 from ..board.board import Board
-from ..evaluator import Evaluator
 from ..statistics import Statistics
 from .searcher_config import SearcherConfig
 
