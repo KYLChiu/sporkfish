@@ -46,6 +46,8 @@ class SearcherFactory:
         :rtype: Evaluator
         :raises TypeError: If the specified evaluator type is not supported.
         """
+        # this method needs changing when refactoring Evaluator design, see:
+        # https://github.com/KYLChiu/sporkfish/issues/88
         if evaluator_type is EvaluateMode.PESTO:
             return Evaluator()
         else:
