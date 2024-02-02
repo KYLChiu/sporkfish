@@ -128,41 +128,6 @@ class NegamaxSp(MiniMaxVariants):
                 return True
         return False
 
-    def _futility_pruning(
-        self, board: Board, depth: int, capture: bool, move: chess.Move, alpha: float
-    ) -> bool:
-        """
-        Implements futility pruning.
-
-        If the evaluation of the current position, when extended by a margin, falls below the minimum score
-        we can guarantee, then it's not worthwhile to continue the search.
-        However, it's important to note that we still need to consider tactical possibilities due to captures,
-        promotions, and checks.
-
-        :param board: The current board state.
-        :type board: chess.Board
-        :param depth: The current depth in the search tree.
-        :type depth: int
-        :param capture: Indicates if the previous move was a capture.
-        :type capture: bool
-        :param move: The move that was made.
-        :type move: chess.Move
-        :param alpha: The current best score for the maximizing player.
-        :type alpha: float
-        :return: True if the position can be pruned due to futility margin checks, False otherwise.
-        :rtype: bool
-        """
-        if depth <= 3 and not capture and not move.promotion and not board.is_check():
-            # TODO: consider using different futility margins
-            # Half a pawn margin is very aggressive
-            if (
-                self._evaluator.evaluate(board)
-                + depth * self.evaluator.MG_PIECE_VALUES[chess.PAWN] // 2
-                <= alpha
-            ):
-                return True
-        return False
-
     def _start_search_from_root(
         self,
         board: Board,

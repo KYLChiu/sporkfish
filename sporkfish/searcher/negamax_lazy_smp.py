@@ -46,12 +46,10 @@ class NegaMaxLazySmp(NegamaxSp):
         :return: Tuple containing the best move and its value.
         :rtype: Tuple[float, chess.Move]
         """
+        task = lambda: super()._start_search_from_root(board, depth, alpha, beta)
 
         # Let processes race down lazily and see who completes first
         # We need to add more asymmetry but a task for later
-        def task() -> Tuple[float, chess.Move]:
-            return self._start_search_from_root(board, depth, alpha, beta)
-
         futures = []
         for i in range(self._num_processes):  # type: ignore
             futures.append(self._pool.apipe(task, i))
