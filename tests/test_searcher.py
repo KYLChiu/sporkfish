@@ -134,7 +134,6 @@ class TestPerformance:
 
     @pytest.mark.slow
     def test_perf_base(self, request_fixture, fen_string: str, max_depth: int) -> None:
-        """Performance test base"""
         self._run_perf_analytics(
             request_fixture.node.name,
             fen=fen_string,
@@ -145,7 +144,6 @@ class TestPerformance:
     def test_perf_transposition_table(
         self, request_fixture, fen_string: str, max_depth: int
     ) -> None:
-        """Performance test with transposition table"""
         self._run_perf_analytics(
             request_fixture.node.name,
             fen=fen_string,
@@ -157,7 +155,6 @@ class TestPerformance:
     def test_perf_null_move_pruning(
         self, request_fixture, fen_string: str, max_depth: int
     ) -> None:
-        """Performance test with null move pruning"""
         self._run_perf_analytics(
             request_fixture.node.name,
             fen=fen_string,
@@ -169,7 +166,6 @@ class TestPerformance:
     def test_perf_aspiration_windows(
         self, request_fixture, fen_string: str, max_depth: int
     ) -> None:
-        """Performance test with aspiration windows"""
         self._run_perf_analytics(
             request_fixture.node.name,
             fen=fen_string,
@@ -181,7 +177,6 @@ class TestPerformance:
     def test_perf_futility_pruning(
         self, request_fixture, fen_string: str, max_depth: int
     ) -> None:
-        """Performance test with aspiration windows"""
         self._run_perf_analytics(
             request_fixture.node.name,
             fen=fen_string,
@@ -193,7 +188,6 @@ class TestPerformance:
     def test_perf_delta_pruning(
         self, request_fixture, fen_string: str, max_depth: int
     ) -> None:
-        """Performance test with aspiration windows"""
         self._run_perf_analytics(
             request_fixture.node.name,
             fen=fen_string,
