@@ -187,5 +187,5 @@ class NegamaxSp(MiniMaxVariants):
         :rtype: Tuple[float, Move]
         """
 
-        score, move = self._iterative_deepening(board, timeout)
+        score, move = self._iterative_deepening_search(board, timeout)
         return score, move

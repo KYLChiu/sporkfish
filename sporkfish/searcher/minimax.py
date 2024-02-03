@@ -86,7 +86,7 @@ class MiniMaxVariants(Searcher, ABC):
             reverse=True,
         )
 
-    def _aspiration_windows(
+    def _aspiration_windows_search(
         self,
         board_to_search: Board,
         depth: int,
@@ -292,7 +292,9 @@ class MiniMaxVariants(Searcher, ABC):
         """
         try:
             start_time = time.time()
-            score, move = self._aspiration_windows(board_to_search, depth, prev_score)
+            score, move = self._aspiration_windows_search(
+                board_to_search, depth, prev_score
+            )
             elapsed = time.time() - start_time
             self._log_info(elapsed, score, move, depth)
             return score, move, elapsed, 0
@@ -301,7 +303,7 @@ class MiniMaxVariants(Searcher, ABC):
         except Exception:
             raise
 
-    def _iterative_deepening(
+    def _iterative_deepening_search(
         self, board: Board, timeout: Optional[float]
     ) -> Tuple[float, chess.Move]:
         """

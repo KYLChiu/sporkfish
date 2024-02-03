@@ -60,4 +60,6 @@ class NegaMaxLazySmp(NegamaxSp):
                     res: Tuple[float, chess.Move] = future.get()
                     return res
             else:
-                continue  # Continue the loop if no result is ready yet
+                 # Continue the loop if no result is ready yet
+                # Busy
+                continue 
