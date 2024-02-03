@@ -12,6 +12,7 @@ from .opening_book import OpeningBook, OpeningBookConfig
 from .searcher.searcher_config import SearcherConfig
 from .searcher.searcher_factory import SearcherFactory
 from .time_manager import TimeManager, TimeManagerConfig
+from .endgame_tablebase import EndgameTablebase, EndgameTablebaseConfig
 
 
 class UCIClient:
@@ -231,5 +232,8 @@ class UCIClient:
         ob = OpeningBook(
             OpeningBookConfig.from_dict(config.get("OpeningBookConfig"))  # type: ignore
         )
-        eng = Engine(search, ob)
+        et = EndgameTablebase(
+            EndgameTablebaseConfig.from_dict(config.get("EndgameTablebaseConfig"))
+        )
+        eng = Engine(search, ob, et)
         return eng

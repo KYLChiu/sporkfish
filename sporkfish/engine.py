@@ -42,8 +42,20 @@ class Engine:
         :rtype: chess.Move
         """
         opening_move = self._opening_book.query(board)
-        end_move = self._endgame_tablebase.query(board)
-        return opening_move or end_move or self._searcher.search(board, timeout)[1]
+        if opening_move:
+            return opening_move
+
+        counter = 0
+        end_move = None
+        for square in range(0, 64):
+            if board.piece_at(square):
+                counter += 1
+            if counter > 6:
+                break
+        if counter <= 6:
+            end_move = self._endgame_tablebase.query(board)
+            return end_move
+        return self._searcher.search(board, timeout)[1]
 
     def score(self, board: Board, timeout: Optional[float] = None) -> float:
         """

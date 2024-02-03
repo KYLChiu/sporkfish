@@ -102,10 +102,14 @@ class EndgameTablebase:
                 cboard = chess.Board()
                 cboard.set_fen(board.fen())
 
-                for move in cboard.legal_moves():
-                    cboard.push_move(move)
+                for move in cboard.legal_moves:
+                    cboard.push(move)
                     wdl_score = self._db.probe_wdl(cboard)
-                    if wdl_score > 0:
+                    print(wdl_score)
+                    if wdl_score < 0: 
+                        # It is reversed because we push the move before we evaluate the score, 
+                        # so we are checking from the perspective of the opponent, if they are losing, 
+                        # then we are winning.
                         return move
                     cboard.pop()
                 return None

@@ -4,12 +4,14 @@ from sporkfish import engine, evaluator, opening_book
 from sporkfish.board.board_factory import BoardFactory, BoardPyChess
 from sporkfish.searcher.searcher_config import SearcherConfig
 from sporkfish.searcher.searcher_factory import SearcherFactory
+from sporkfish.endgame_tablebases import EndgameTablebase, EndgameTablebaseConfig
 
 
 def create_engine(depth: int) -> engine.Engine:
     search = SearcherFactory.create(SearcherConfig(depth))
     ob = opening_book.OpeningBook()
-    eng = engine.Engine(search, ob)
+    et = EndgameTablebase(EndgameTablebaseConfig('data/endgame_tablebases'))
+    eng = engine.Engine(search, ob, et)
     return eng
 
 

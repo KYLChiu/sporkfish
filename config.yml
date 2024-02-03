@@ -16,7 +16,10 @@ TimeManagerConfig:
   increment_weight: 0.01
 
 OpeningBookConfig:
-  opening_book_path: data/opening.bin # path to opening_book binary 
+  opening_book_path: data/opening.bin # path to opening_book binary
+
+EndgameTablebaseConfig:
+  endgame_tablebase_path: data/endgame_tablebases
 
 LoggingConfig:
   version: 1
