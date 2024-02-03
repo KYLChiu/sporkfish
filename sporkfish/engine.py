@@ -46,13 +46,23 @@ class Engine:
         :return: The selected chess move.
         :rtype: chess.Move
         """
-        opening_move = self._opening_book.query(board)
-        if opening_move:
+        if opening_move := self._opening_book.query(board):
             return opening_move
 
+        end_move = use_endgame_tablebase()
+        return end_move or self._searcher.search(board, timeout)[1]
+
+    def use_endgame_tablebase(self, board: Board) -> Optional[chess.Move]:
+        """
+        Return endgame tablebase move if applicable.
+
+        :param board: The current chess board position.
+        :type board: Board
+        :return: The selected chess move.
+        :rtype: Optional[chess.Move]
+        """
         counter = 0
-        end_move = None
-        for square in range(0, 64):
+        for square in chess.SQUARES:
             # Search board and count number of pieces present- if less than threshold trigger endgame tablebase.
             if board.piece_at(square):
                 counter += 1
@@ -61,7 +71,7 @@ class Engine:
         if counter <= 6:
             if end_move := self._endgame_tablebase.query(board):
                 return end_move
-        return self._searcher.search(board, timeout)[1]
+        return None
 
     def score(self, board: Board, timeout: Optional[float] = None) -> float:
         """
