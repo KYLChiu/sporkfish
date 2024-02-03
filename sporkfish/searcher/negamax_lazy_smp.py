@@ -52,7 +52,7 @@ class NegaMaxLazySmp(NegamaxSp):
         # We need to add more asymmetry but a task for later
         futures = []
         for i in range(self._num_processes):  # type: ignore
-            futures.append(self._pool.apipe(task, i))
+            futures.append(self._pool.apipe(task))
 
         while True:
             for future in futures:
@@ -60,6 +60,6 @@ class NegaMaxLazySmp(NegamaxSp):
                     res: Tuple[float, chess.Move] = future.get()
                     return res
             else:
-                 # Continue the loop if no result is ready yet
-                # Busy
-                continue 
+                # Continue the loop if no result is ready yet
+                # Busy waiting is fine here because in principle, nothing else needs to be done
+                continue

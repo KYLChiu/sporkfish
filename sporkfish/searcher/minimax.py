@@ -211,7 +211,7 @@ class MiniMaxVariants(Searcher, ABC):
         :return: True if the position can be pruned due to futility margin checks, False otherwise.
         :rtype: bool
         """
-        if depth <= 3 and not capture and not move.promotion and not board.is_check():
+        if depth <= 3 and not capture and not board.is_check() and not move.promotion:
             # TODO: consider using different futility margins
             # Half a pawn margin is very aggressive
             if (
