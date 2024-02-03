@@ -49,7 +49,7 @@ class Engine:
         if opening_move := self._opening_book.query(board):
             return opening_move
 
-        end_move = use_endgame_tablebase()
+        end_move = self.use_endgame_tablebase(board)
         return end_move or self._searcher.search(board, timeout)[1]
 
     def use_endgame_tablebase(self, board: Board) -> Optional[chess.Move]:
