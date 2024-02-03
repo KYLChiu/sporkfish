@@ -1,11 +1,13 @@
 import time
 
+import chess
+
 from sporkfish import engine, evaluator, opening_book
 from sporkfish.board.board_factory import BoardFactory, BoardPyChess
 from sporkfish.endgame_tablebase import EndgameTablebase, EndgameTablebaseConfig
 from sporkfish.searcher.searcher_config import SearcherConfig
 from sporkfish.searcher.searcher_factory import SearcherFactory
-import chess
+
 
 def create_engine(depth: int) -> engine.Engine:
     search = SearcherFactory.create(SearcherConfig(depth))
@@ -30,7 +32,8 @@ def use_endgame_tablebase(fen: str, expected_move: bool):
     board.set_fen(fen)
     assert bool(engine._use_endgame_tablebase(board)) is expected_move
 
+
 class TestEngine:
     def test_use_endgame_tablebase(self):
         use_endgame_tablebase("8/4k3/8/8/8/8/3BB3/3K4 w - - 0 1", True)
-        use_endgame_tablebase('8/4k3/4ppp1/8/8/Q7/3BB3/3K4 b - - 0 1', False)
+        use_endgame_tablebase("8/4k3/4ppp1/8/8/Q7/3BB3/3K4 b - - 0 1", False)
