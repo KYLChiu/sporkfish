@@ -5,6 +5,7 @@ import chess
 from .board.board import Board
 from .opening_book import OpeningBook
 from .searcher import Searcher
+from .endgame_tablebase import EndgameTablebase
 
 
 class Engine:
@@ -16,7 +17,7 @@ class Engine:
     - _opening_book (OpeningBook): The opening book for initial moves.
     """
 
-    def __init__(self, searcher: Searcher, opening_book: OpeningBook) -> None:
+    def __init__(self, searcher: Searcher, opening_book: OpeningBook, endgame_tablebase: EndgameTablebase) -> None:
         """
         Initialize the Engine with a searcher and an opening book.
 
@@ -27,6 +28,7 @@ class Engine:
         """
         self._searcher = searcher
         self._opening_book = opening_book
+        self._endgame_tablebase = endgame_tablebase
 
     def best_move(self, board: Board, timeout: Optional[float] = None) -> chess.Move:
         """
@@ -40,7 +42,8 @@ class Engine:
         :rtype: chess.Move
         """
         opening_move = self._opening_book.query(board)
-        return opening_move or self._searcher.search(board, timeout)[1]
+        end_move = self._endgame_tablebase.query(board)
+        return opening_move or end_move or self._searcher.search(board, timeout)[1]
 
     def score(self, board: Board, timeout: Optional[float] = None) -> float:
         """
