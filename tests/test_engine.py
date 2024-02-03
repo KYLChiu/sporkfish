@@ -1,12 +1,13 @@
 import time
 
-from sporkfish import engine, evaluator, opening_book, searcher
+from sporkfish import engine, evaluator, opening_book
 from sporkfish.board.board_factory import BoardFactory, BoardPyChess
+from sporkfish.searcher.searcher_config import SearcherConfig
+from sporkfish.searcher.searcher_factory import SearcherFactory
 
 
 def create_engine(depth: int) -> engine.Engine:
-    ev = evaluator.Evaluator()
-    search = searcher.Searcher(ev, searcher.SearcherConfig(depth))
+    search = SearcherFactory.create(SearcherConfig(depth))
     ob = opening_book.OpeningBook()
     eng = engine.Engine(search, ob)
     return eng

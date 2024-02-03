@@ -1,24 +1,48 @@
+from enum import Enum
 from typing import Callable
 
 import chess
 
 from .board.board import Board
+from .configurable import Configurable
 
 
-# Piece-Square Table Only (PeSTO) evaluation
+class EvaluateMode(Enum):
+    # Piece-Square Table Only (PeSTO) evaluation
+    PESTO = "PESTO"
+
+
 class Evaluator:
-
     """
     A class responsible for evaluating the chess position.
+    Using Piece-Square Table Only (PeSTO) evaluation at the moment, see:
+    https://github.com/KYLChiu/sporkfish/issues/88
 
     Methods:
-    - __init__():
-        Initialize the Evaluator.
-
     - evaluate(board: Board) -> float:
         Evaluate the chess position based on material and piece-square tables.
-
     """
+
+    MG_PIECE_VALUES = {
+        chess.PAWN: 82.0,
+        chess.KNIGHT: 337.0,
+        chess.BISHOP: 365.0,
+        chess.ROOK: 477.0,
+        chess.QUEEN: 1025.0,
+        chess.KING: 12000.0,
+    }
+
+    EG_PIECE_VALUES = {
+        chess.PAWN: 94.0,
+        chess.KNIGHT: 281.0,
+        chess.BISHOP: 297.0,
+        chess.ROOK: 512.0,
+        chess.QUEEN: 936.0,
+        chess.KING: 12000.0,
+    }
+
+    # Delta pruning margin for searcher, evaluator dependent
+    DELTA = 200.0
 
     # fmt: off
 
@@ -32,7 +56,7 @@ class Evaluator:
                 47, 81, 62, 59, 67, 106, 120, 60,
                 82, 82, 82, 82, 82, 82, 82, 82,
                 )
-    
+
     EG_PAWN = (
                 94, 94, 94, 94, 94, 94, 94, 94,
                 272, 267, 252, 228, 241, 226, 259, 281,
@@ -55,7 +79,7 @@ class Evaluator:
                 308, 284, 325, 334, 336, 355, 323, 318,
                 232, 316, 279, 304, 320, 309, 318, 314,
                 )
-    
+
     EG_KNIGHT = (
                 223, 243, 268, 253, 250, 254, 218, 182,
                 256, 273, 256, 279, 272, 256, 257, 229,
@@ -77,7 +101,7 @@ class Evaluator:
                 369, 380, 381, 365, 372, 386, 398, 366,
                 332, 362, 351, 344, 352, 353, 326, 344,
                 )
-    
+
     EG_BISHOP = (
                 283, 276, 286, 289, 290, 288, 280, 273,
                 289, 293, 304, 285, 294, 284, 293, 283,
@@ -88,7 +112,7 @@ class Evaluator:
                 283, 279, 290, 296, 301, 288, 282, 270,
                 274, 288, 274, 292, 288, 281, 292, 280,
                 )
-    
+
     MG_ROOK = (
                 509, 519, 509, 528, 540, 486, 508, 520,
                 504, 509, 535, 539, 557, 544, 503, 521,
@@ -99,7 +123,7 @@ class Evaluator:
                 433, 461, 457, 468, 476, 488, 471, 406,
                 458, 464, 478, 494, 493, 484, 440, 451,
                 )
-    
+
     EG_ROOK = (
                 525, 522, 530, 527, 524, 524, 520, 517,
                 523, 525, 525, 523, 509, 515, 520, 515,
@@ -121,7 +145,7 @@ class Evaluator:
                 990, 1017, 1036, 1027, 1033, 1040, 1022, 1026,
                 1024, 1007, 1016, 1035, 1010, 1000, 994, 975,
                 )
-    
+
     EG_QUEEN = (
                 927, 958, 958, 963, 963, 955, 946, 956,
                 919, 956, 968, 977, 994, 961, 966, 936,
@@ -143,7 +167,7 @@ class Evaluator:
                 12001, 12007, 11992, 11936, 11957, 11984, 12009, 12008,
                 11985, 12036, 12012, 11946, 12008, 11972, 12024, 12014,
                 )
-    
+
     EG_KING = (
                 11926, 11965, 11982, 11982, 11989, 12015, 12004, 11983,
                 11988, 12017, 12014, 12017, 12017, 12038, 12023, 12011,
@@ -154,7 +178,7 @@ class Evaluator:
                 11973, 11989, 12004, 12013, 12014, 12004, 11995, 11983,
                 11947, 11966, 11979, 11989, 11972, 11986, 11976, 11957,
                 )
-    
+
     # fmt : on
 
     MG_PESTO = {
@@ -211,21 +235,22 @@ class Evaluator:
         # - Chess board implements A1 as first element, H8 as last
         # - Piece square table implements A8 as first element, H1 as last element
         flip: Callable[[int, int, chess.Color]] = (
-            lambda square, flipped_sq, color: square if not color else flipped_sq
+            lambda square, flipped_square, color: square if not color else flipped_square
         )
 
         phase = 0
 
         for square in self.SQUARES:
             # square ^ 56 flips the board vertically to match alignment of PSQT
-            flipped_sq = self.VERTICALLY_FLIPPED_SQUARES[square]
-            piece = board.piece_at(flipped_sq)
+            flipped_square = self.VERTICALLY_FLIPPED_SQUARES[square]
+            piece = board.piece_at(flipped_square)
             if piece:
+                aligned_square = flip(square, flipped_square, piece.color)
                 mg[piece.color] += self.MG_PESTO[piece.piece_type][
-                    flip(square, flipped_sq, piece.color)
+                    aligned_square
                 ]
                 eg[piece.color] += self.EG_PESTO[piece.piece_type][
-                    flip(square, flipped_sq, piece.color)
+                    aligned_square
                 ]
                 phase += self.PHASES[piece.piece_type]
 
