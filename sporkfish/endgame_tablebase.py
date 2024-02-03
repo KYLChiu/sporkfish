@@ -111,7 +111,6 @@ class EndgameTablebase:
                 for move in cboard.legal_moves:
                     cboard.push(move)
                     wdl_score = self._db.probe_wdl(cboard)
-                    print(wdl_score)
                     if wdl_score < 0:
                         # It is reversed because we push the move before we evaluate the score,
                         # so we are checking from the perspective of the opponent, if they are losing,
