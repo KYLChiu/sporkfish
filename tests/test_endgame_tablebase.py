@@ -20,6 +20,6 @@ class TestEndgameTablebase:
 
     def test_et_query_black_to_move_white_winning(self):
         et_query("8/4k3/8/8/8/8/3BB3/3K4 b - - 0 1", False)
-        
+
     def test_et_query_black_to_move_white_winning_extra_queen(self):
         et_query("8/4k3/8/8/8/8/3BB3/3K1Q2 b - - 0 1", False)
