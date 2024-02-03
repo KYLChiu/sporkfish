@@ -188,7 +188,12 @@ class MiniMaxVariants(Searcher, ABC):
         return alpha
 
     def _futility_pruning(
-        self, board: Board, depth: int, capture: bool, move: chess.Move, alpha: float
+        self,
+        board: Board,
+        depth: int,
+        was_capture: bool,
+        move: chess.Move,
+        alpha: float,
     ) -> bool:
         """
         Implements futility pruning.
@@ -202,8 +207,8 @@ class MiniMaxVariants(Searcher, ABC):
         :type board: chess.Board
         :param depth: The current depth in the search tree.
         :type depth: int
-        :param capture: Indicates if the previous move was a capture.
-        :type capture: bool
+        :param was_capture: Indicates if the previous move was a capture.
+        :type was_capture: bool
         :param move: The move that was made.
         :type move: chess.Move
         :param alpha: The current best score for the maximizing player.
@@ -211,7 +216,12 @@ class MiniMaxVariants(Searcher, ABC):
         :return: True if the position can be pruned due to futility margin checks, False otherwise.
         :rtype: bool
         """
-        if depth <= 3 and not capture and not board.is_check() and not move.promotion:
+        if (
+            depth <= 3
+            and not was_capture
+            and not board.is_check()
+            and not move.promotion
+        ):
             # TODO: consider using different futility margins
             # Half a pawn margin is very aggressive
             if (
