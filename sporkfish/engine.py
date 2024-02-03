@@ -3,8 +3,8 @@ from typing import Optional
 import chess
 
 from .board.board import Board
-from .opening_book import OpeningBook
 from .endgame_tablebase import EndgameTablebase
+from .opening_book import OpeningBook
 from .searcher.searcher import Searcher
 
 
@@ -17,7 +17,12 @@ class Engine:
     - _opening_book (OpeningBook): The opening book for initial moves.
     """
 
-    def __init__(self, searcher: Searcher, opening_book: OpeningBook, endgame_tablebase: EndgameTablebase) -> None:
+    def __init__(
+        self,
+        searcher: Searcher,
+        opening_book: OpeningBook,
+        endgame_tablebase: EndgameTablebase,
+    ) -> None:
         """
         Initialize the Engine with a searcher and an opening book.
 

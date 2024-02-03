@@ -31,7 +31,9 @@ class EndgameTablebaseConfig(Configurable):
 class EndgameTablebase:
     """Class for handling the endgame tablebase in chess engines."""
 
-    def __init__(self, config: EndgameTablebaseConfig = EndgameTablebaseConfig()) -> None:
+    def __init__(
+        self, config: EndgameTablebaseConfig = EndgameTablebaseConfig()
+    ) -> None:
         """
         Initialize the EndgameTablebase instance.
 
@@ -41,7 +43,9 @@ class EndgameTablebase:
         """
         self._config = config
         if self._config.endgame_tablebase_path:
-            self._db = self._load(self._resource_path(self._config.endgame_tablebase_path))
+            self._db = self._load(
+                self._resource_path(self._config.endgame_tablebase_path)
+            )
         else:
             logging.warning(
                 f"Skip loading endgame tablebase as the endgame tablebase binary path is not passed in configuration."
@@ -63,9 +67,7 @@ class EndgameTablebase:
             base_path = os.path.abspath(".")
         return os.path.join(base_path, relative_path)
 
-    def _load(
-        self, endgame_tablebase_path: str
-    ) -> Optional[chess.syzygy.Tablebase]:
+    def _load(self, endgame_tablebase_path: str) -> Optional[chess.syzygy.Tablebase]:
         """
         Load the endgame database from the specified path.
 
@@ -77,11 +79,15 @@ class EndgameTablebase:
         """
 
         try:
-            r = chess.syzygy.open_tablebase (endgame_tablebase_path)
-            logging.info(f"Endgame tablebase succesfully loaded from {endgame_tablebase_path}.")
+            r = chess.syzygy.open_tablebase(endgame_tablebase_path)
+            logging.info(
+                f"Endgame tablebase succesfully loaded from {endgame_tablebase_path}."
+            )
             return r
         except FileNotFoundError as _:
-            logging.warning(f"No endgame tablebase found at {endgame_tablebase_path}, skipping.")
+            logging.warning(
+                f"No endgame tablebase found at {endgame_tablebase_path}, skipping."
+            )
             return None
 
     def query(self, board: Board) -> Optional[chess.Move]:
@@ -106,9 +112,9 @@ class EndgameTablebase:
                     cboard.push(move)
                     wdl_score = self._db.probe_wdl(cboard)
                     print(wdl_score)
-                    if wdl_score < 0: 
-                        # It is reversed because we push the move before we evaluate the score, 
-                        # so we are checking from the perspective of the opponent, if they are losing, 
+                    if wdl_score < 0:
+                        # It is reversed because we push the move before we evaluate the score,
+                        # so we are checking from the perspective of the opponent, if they are losing,
                         # then we are winning.
                         return move
                     cboard.pop()
