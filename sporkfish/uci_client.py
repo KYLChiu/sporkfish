@@ -233,7 +233,7 @@ class UCIClient:
             OpeningBookConfig.from_dict(config.get("OpeningBookConfig"))  # type: ignore
         )
         et = EndgameTablebase(
-            EndgameTablebaseConfig.from_dict(config.get("EndgameTablebaseConfig"))
+            EndgameTablebaseConfig.from_dict(config.get("EndgameTablebaseConfig"))  # type: ignore
         )
         eng = Engine(search, ob, et)
         return eng

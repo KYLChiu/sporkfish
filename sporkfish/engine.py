@@ -48,13 +48,14 @@ class Engine:
         counter = 0
         end_move = None
         for square in range(0, 64):
+            # Search board and count number of pieces present- if less than threshold trigger endgame tablebase.
             if board.piece_at(square):
                 counter += 1
             if counter > 6:
                 break
         if counter <= 6:
-            end_move = self._endgame_tablebase.query(board)
-            return end_move
+            if end_move := self._endgame_tablebase.query(board):
+                return end_move
         return self._searcher.search(board, timeout)[1]
 
     def score(self, board: Board, timeout: Optional[float] = None) -> float:
