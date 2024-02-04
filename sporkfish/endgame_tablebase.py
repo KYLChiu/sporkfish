@@ -90,7 +90,7 @@ class EndgameTablebase:
             )
             return None
 
-    def _should_query(self, board: Board, max_syzygy_size: int = 6):
+    def _should_query(self, board: Board, max_syzygy_size: int = 6) -> bool:
         """
         Determine whether to query the endgame tablebase based on the number of pieces on the board.
 

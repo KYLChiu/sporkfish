@@ -1,11 +1,15 @@
-def run_perf_analytics(test_name: str, f, *args, **kwargs) -> None:
+from typing import Any, Callable
+
+
+def run_perf_analytics(test_name: str, f: Callable[..., Any], *args, **kwargs) -> None:
     """
     Run performance analytics on a given function.
 
     :param test_name: Name of the test.
     :type test_name: str
     :param f: Function to analyze performance for.
-    :type f: callable
+    :type f: Callable[..., Any]
+    :param args: Positional arguments to pass to the function.
     :param kwargs: Additional keyword arguments to pass to the function.
     :type kwargs: dict
     """
@@ -34,8 +38,8 @@ def run_perf_analytics(test_name: str, f, *args, **kwargs) -> None:
     with open(
         os.path.join(perf_test_folder, f"{test_name}.txt"),
         "w",
-    ) as f:
-        sys.stdout = f
+    ) as file:
+        sys.stdout = file
         print(
             "------------------------------------------------------------------------------------------------"
         )

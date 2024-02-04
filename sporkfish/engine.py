@@ -1,7 +1,7 @@
+import logging
 from typing import Optional
 
 import chess
-import logging
 
 from .board.board import Board
 from .endgame_tablebase import EndgameTablebase
