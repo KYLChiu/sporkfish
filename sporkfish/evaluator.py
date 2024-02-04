@@ -232,7 +232,7 @@ class Evaluator:
         # Assumes:
         # - Chess board implements A1 as first element, H8 as last
         # - Piece square table implements A8 as first element, H1 as last element
-        def flip(square, flipped_square, color):
+        def flip(square: int, flipped_square: int, color: chess.Color) -> int:
             return square if not color else flipped_square
 
         phase = 0
