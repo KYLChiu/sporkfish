@@ -29,7 +29,7 @@
                 "donjayamanne.githistory",
                 "KevinRose.vsc-python-indent",
                 "charliermarsh.ruff"
-                // "ms-python.mypy-type-checker"
+                // "ms-python.mypy-type-checker" // next PR, does not comply with our mypy.ini file
             ],
             "settings": {
                 "[python]": {

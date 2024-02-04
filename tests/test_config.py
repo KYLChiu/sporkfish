@@ -1,6 +1,6 @@
 from config import load_config
-from sporkfish.searcher.move_ordering import MoveOrderMode
 from sporkfish.searcher.searcher_config import SearcherConfig, SearchMode
+from sporkfish.searcher.move_ordering import MoveOrderMode
 
 
 def test_load_config():
