@@ -39,7 +39,7 @@ class Engine:
 
     def best_move(self, board: Board, timeout: Optional[float] = None) -> chess.Move:
         """
-        Return the best move based on opening book queries, endgame tablebase and searcher.
+        Return the best move based on opening book, endgame tablebase and searcher.
 
         :param board: The current chess board position.
         :type board: Board
@@ -50,30 +50,11 @@ class Engine:
         """
         if opening_move := self._opening_book.query(board):
             return opening_move
+        elif end_move := self._endgame_tablebase.query(board):
+            return end_move
 
-        end_move = self._use_endgame_tablebase(board)
-        return end_move or self._searcher.search(board, timeout)[1]
-
-    def _use_endgame_tablebase(self, board: Board) -> Optional[chess.Move]:
-        """
-        Return endgame tablebase move if applicable.
-
-        :param board: The current chess board position.
-        :type board: Board
-        :return: The selected chess move.
-        :rtype: Optional[chess.Move]
-        """
-        counter = 0
-        for square in chess.SQUARES:
-            # Search board and count number of pieces present- if less than threshold trigger endgame tablebase.
-            if board.piece_at(square):
-                counter += 1
-            if counter > 6:
-                break
-        if counter <= 6:
-            if end_move := self._endgame_tablebase.query(board):
-                return end_move
-        return None
+        _, searched_move = self._searcher.search(board, timeout)[1]
+        return searched_move
 
     def score(self, board: Board, timeout: Optional[float] = None) -> float:
         """
@@ -81,9 +62,9 @@ class Engine:
 
         :param board: The current chess board position.
         :type board: Board
-        :return: The score of the searcher.
         :param timeout: Time in seconds until the engine stops searching.
         :type timeout: Optional[float]
+        :return: The score of the searcher.
         :rtype: float
         """
         return self._searcher.search(board, timeout)[0]

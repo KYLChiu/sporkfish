@@ -90,6 +90,26 @@ class EndgameTablebase:
             )
             return None
 
+    def _should_query(self, board: Board, max_syzygy_size: int = 6):
+        """
+        Determine whether to query the endgame tablebase based on the number of pieces on the board.
+
+        :param board: The current state of the chess board.
+        :type board: chess.Board
+        :param max_syzygy_size: The maximum number of pieces beyond which the endgame tablebase should not be queried, defaults to 6
+        :type max_syzygy_size: int
+
+        :return: True if the endgame tablebase should be queried, False otherwise
+        :rtype: bool
+        """
+        piece_count = 0
+        for square in chess.SQUARES:
+            if board.piece_at(square):
+                piece_count += 1
+            if piece_count > max_syzygy_size:
+                return False
+        return True
+
     def query(self, board: Board) -> Optional[chess.Move]:
         """
         Query the endgame database for a given chess board position.
@@ -103,21 +123,21 @@ class EndgameTablebase:
 
         try:
             if self._db:
+                if not self._should_query(board):
+                    return None
+
                 # We need to use a chess.Board() to be compatible with the endgame tablebase
                 # This is a small performace hit but is miniscule compared to searching
                 cboard = chess.Board()
                 cboard.set_fen(board.fen())
-
                 for move in cboard.legal_moves:
                     cboard.push(move)
-                    wdl_score = self._db.probe_wdl(cboard)
-                    # WDL Score: Returns 2 if the side to move is winning, 0 if the position is a draw and -2 if the side to move is losing.
-                    # Returns 1 in case of a cursed win and -1 in case of a blessed loss. 
+                    # WDL Score: returns 2 if the side to move is winning, 0 if the position is a draw and -2 if the side to move is losing.
+                    # Returns 1 in case of a cursed win and -1 in case of a blessed loss.
                     # Mate can be forced but the position can be drawn due to the fifty-move rule.
-                    if wdl_score < 0:
-                        # It is reversed because we push the move before we evaluate the score,
-                        # so we are checking from the perspective of the opponent, if they are losing,
-                        # then we are winning.
+                    # We check WDL score < 0 here, since we pushed our legal move and so its the opponents turn.
+                    # If they are losing, we are winning.
+                    if self._db.probe_wdl(cboard) < 0:
                         return move
                     cboard.pop()
                 return None
