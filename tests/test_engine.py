@@ -1,7 +1,5 @@
 import time
 
-import chess
-
 from sporkfish import engine, opening_book
 from sporkfish.board.board_factory import BoardFactory, BoardPyChess
 from sporkfish.endgame_tablebase import EndgameTablebase, EndgameTablebaseConfig

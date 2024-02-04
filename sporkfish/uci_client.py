@@ -8,7 +8,6 @@ from .board.board import Board
 from .board.board_factory import BoardFactory, BoardPyChess
 from .endgame_tablebase import EndgameTablebase, EndgameTablebaseConfig
 from .engine import Engine
-from .evaluator import Evaluator
 from .opening_book import OpeningBook, OpeningBookConfig
 from .searcher.searcher_config import SearcherConfig
 from .searcher.searcher_factory import SearcherFactory

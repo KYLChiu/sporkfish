@@ -4,7 +4,6 @@ from typing import Callable
 import chess
 
 from .board.board import Board
-from .configurable import Configurable
 
 
 class EvaluateMode(Enum):

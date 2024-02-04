@@ -1,7 +1,6 @@
 import os
 import sys
 
-import mypy
 import pytest
 
 # Add the parent directory to sys.path

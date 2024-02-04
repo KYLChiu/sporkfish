@@ -1,5 +1,3 @@
-from typing import Any
-
 import pytest
 from init_board_helper import board_setup, init_board, score_fen
 
