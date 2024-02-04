@@ -6,9 +6,50 @@ Sporkfish is a Python-based chess engine. Chess programming techniques, although
 
 - - - -
 
-## Usage
+## Set-up
 
-### Set up
+See any of the following sections to quickly setup your development environment. 
+- [Using DevContainer with VSCode](#using-devcontainer-with-vscode)* *recommended*
+- [Using DevContainer with PyCharm](#using-devcontainer-with-pycharm)
+- [Using Github Codespace](#using-github-codespace)
+
+### Using DevContainer with VSCode 
+
+Prerequisits:
+- [VSCode](https://code.visualstudio.com/download)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+
+Instructions: 
+1. Make sure `Docker Desktop` is up and running.
+2. Open up the Command Palette and run `Dev Containers: Rebuild Container` 
+3. The window should reload and you will see `[Dev Container]` in the URL bar as well as on the status bar bottom left of the window to indicate your setup is complete. 
+
+This will setup a Docker container to run in Docker Desktop with all the necessary dependencies (python, pip, git, ...) with the correct versions. 
+
+### Using DevContainer with PyCharm 
+
+Prerequisits:
+- [PyCharm](https://www.jetbrains.com/pycharm/download/)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+
+Instructions:
+
+#TODO - Please see jetbrains docs, PyCharm setup is similar to VSCode
+
+https://www.jetbrains.com/help/pycharm/connect-to-devcontainer.html
+
+### Using Github Codespace
+
+Prerequisits:
+- [VSCode](https://code.visualstudio.com/download)* *optional*
+
+Instructions:
+1. In this Github repository, click on the Code dropdown, select Codespace and click `Create`. 
+2. Confirm codespace settings, for Machine type select `2-core` (this can be changed later if you require more power)
+
+This will setup a Dockeer container to run in Github with all the necessary dependencies (python, pip, git, ...) with the correct versions. An active internet connection will be required for this, and this will use up your monthly allowance for Github codespace. 
+
+### Using native Docker
 
 To quickly set up the environment, you can use docker. From a terminal in the root directory:
 
@@ -19,6 +60,8 @@ docker run -it kylchiu/sporkfish-dev:latest
 ```
 
 This generates an interactive bash shell for you to run the program in.
+
+## Usage
 
 ### Lichess
 
