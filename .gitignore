@@ -170,4 +170,6 @@ api_token.txt
 
 # Profiling
 prof/
+
+# Performance testing
 perf/

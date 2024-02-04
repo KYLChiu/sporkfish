@@ -3,6 +3,6 @@
 # Run pip install
 pip install -r requirements.txt
 
-precommit install
+pre-commit install
 
 exit 0
