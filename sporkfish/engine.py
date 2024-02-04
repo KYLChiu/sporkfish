@@ -24,12 +24,14 @@ class Engine:
         endgame_tablebase: EndgameTablebase,
     ) -> None:
         """
-        Initialize the Engine with a searcher and an opening book.
+        Initialize the Engine with a searcher, an opening book and an endgame tablebase.
 
         :param searcher: The chess move searcher.
         :type searcher: Searcher
         :param opening_book: The opening book for initial moves.
         :type opening_book: OpeningBook
+        :param endgame_tablebase: The endgame tablebase for final moves.
+        :type endgame_tablebase: EndgameTablebase
         """
         self._searcher = searcher
         self._opening_book = opening_book
@@ -37,7 +39,7 @@ class Engine:
 
     def best_move(self, board: Board, timeout: Optional[float] = None) -> chess.Move:
         """
-        Return the best move based on opening book queries and searcher.
+        Return the best move based on opening book queries, endgame tablebase and searcher.
 
         :param board: The current chess board position.
         :type board: Board

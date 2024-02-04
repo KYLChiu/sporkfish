@@ -26,11 +26,11 @@ def test_timeout() -> None:
     assert time.time() - start < 1
 
 
-def use_endgame_tablebase(fen: str, expected_move: bool):
+def use_endgame_tablebase(fen: str, move_expected: bool):
     engine = create_engine(1)
     board = BoardFactory.create(BoardPyChess)
     board.set_fen(fen)
-    assert bool(engine._use_endgame_tablebase(board)) is expected_move
+    assert bool(engine._use_endgame_tablebase(board)) is move_expected
 
 
 class TestEngine:

@@ -3,12 +3,12 @@ import chess
 from sporkfish.endgame_tablebase import EndgameTablebase, EndgameTablebaseConfig
 
 
-def et_query(fen: str, expected_move: bool):
+def et_query(fen: str, move_expected: bool):
     board = chess.Board()
     board.set_fen(fen)
     et = EndgameTablebase(EndgameTablebaseConfig("data/endgame_tablebases"))
     move = et.query(board)
-    if expected_move:
+    if move_expected:
         assert move, "Expected move but none returned."
     else:
         assert not move, "Didn't expect move but returned valid move."

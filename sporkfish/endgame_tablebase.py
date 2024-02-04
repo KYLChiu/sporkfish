@@ -48,15 +48,15 @@ class EndgameTablebase:
             )
         else:
             logging.warning(
-                f"Skip loading endgame tablebase as the endgame tablebase binary path is not passed in configuration."
+                "Skip loading endgame tablebase as the endgame tablebase binary path is not passed in configuration."
             )
 
-    def _resource_path(self, relative_path: str) -> str:
+    def _resource_path(self, relative_to_absolute_path: str) -> str:
         """
         Get the absolute path to a resource.
 
-        :param relative_path: Relative path to the resource.
-        :type relative_path: str
+        :param relative_to_absolute_path: Relative path to the resource.
+        :type relative_to_absolute_path: str
         :return: Absolute path to the resource.
         :rtype: str
         """
@@ -65,7 +65,7 @@ class EndgameTablebase:
             base_path = sys._MEIPASS
         else:
             base_path = os.path.abspath(".")
-        return os.path.join(base_path, relative_path)
+        return os.path.join(base_path, relative_to_absolute_path)
 
     def _load(self, endgame_tablebase_path: str) -> Optional[chess.syzygy.Tablebase]:
         """
@@ -111,6 +111,9 @@ class EndgameTablebase:
                 for move in cboard.legal_moves:
                     cboard.push(move)
                     wdl_score = self._db.probe_wdl(cboard)
+                    # WDL Score: Returns 2 if the side to move is winning, 0 if the position is a draw and -2 if the side to move is losing.
+                    # Returns 1 in case of a cursed win and -1 in case of a blessed loss. 
+                    # Mate can be forced but the position can be drawn due to the fifty-move rule.
                     if wdl_score < 0:
                         # It is reversed because we push the move before we evaluate the score,
                         # so we are checking from the perspective of the opponent, if they are losing,
