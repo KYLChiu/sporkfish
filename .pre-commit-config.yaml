@@ -19,6 +19,10 @@ repos:
     hooks:
       - id: check-github-actions
       - id: check-github-workflows
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: v0.0.116
+    hooks:
+      - id: ruff
   # --- This is so tedious to get working that I'm leaving it to a next PR; it does not simulate local mypy at all ---
   # - repo: https://github.com/pre-commit/mirrors-mypy
   #   rev: "v0.931"
