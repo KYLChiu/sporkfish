@@ -1,6 +1,7 @@
 from typing import Optional
 
 import chess
+import logging
 
 from .board.board import Board
 from .endgame_tablebase import EndgameTablebase
@@ -49,10 +50,15 @@ class Engine:
         :rtype: chess.Move
         """
         if opening_move := self._opening_book.query(board):
+            logging.info(f"Best move {opening_move.uci()} found in opening book.")
             return opening_move
         elif end_move := self._endgame_tablebase.query(board):
+            logging.info(f"Best move {end_move.uci()} found in endgame tablebase.")
             return end_move
 
+        logging.info(
+            f"No move found in opening book or endgame searcher or they are not configured. Delegating to searcher."
+        )
         _, searched_move = self._searcher.search(board, timeout)[1]
         return searched_move
 

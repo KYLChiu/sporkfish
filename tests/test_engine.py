@@ -2,7 +2,7 @@ import time
 
 import chess
 
-from sporkfish import engine, evaluator, opening_book
+from sporkfish import engine, opening_book
 from sporkfish.board.board_factory import BoardFactory, BoardPyChess
 from sporkfish.endgame_tablebase import EndgameTablebase, EndgameTablebaseConfig
 from sporkfish.searcher.searcher_config import SearcherConfig
@@ -24,18 +24,3 @@ def test_timeout() -> None:
     _ = eng.score(board, 1e-3)
     # Timed out, impossible that depth 100 is <1 sec
     assert time.time() - start < 1
-
-
-def use_endgame_tablebase(fen: str, move_expected: bool):
-    engine = create_engine(1)
-    board = BoardFactory.create(BoardPyChess)
-    board.set_fen(fen)
-    assert bool(engine._use_endgame_tablebase(board)) is move_expected
-
-
-class TestEngine:
-    def test_use_endgame_tablebase_white_to_move_white_winning(self):
-        use_endgame_tablebase("8/4k3/8/8/8/8/3BB3/3K4 w - - 0 1", True)
-
-    def test_use_endgame_tablebase_7piece(self):
-        use_endgame_tablebase("8/4k3/4ppp1/8/8/Q7/3BB3/3K4 b - - 0 1", False)
