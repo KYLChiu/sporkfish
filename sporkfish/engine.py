@@ -59,7 +59,7 @@ class Engine:
         logging.info(
             f"No move found in opening book or endgame searcher or they are not configured. Delegating to searcher."
         )
-        _, searched_move = self._searcher.search(board, timeout)[1]
+        _, searched_move = self._searcher.search(board, timeout)
         return searched_move
 
     def score(self, board: Board, timeout: Optional[float] = None) -> float:
