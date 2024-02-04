@@ -6,6 +6,7 @@ from config import load_config
 
 from .board.board import Board
 from .board.board_factory import BoardFactory, BoardPyChess
+from .endgame_tablebase import EndgameTablebase, EndgameTablebaseConfig
 from .engine import Engine
 from .evaluator import Evaluator
 from .opening_book import OpeningBook, OpeningBookConfig
@@ -231,5 +232,8 @@ class UCIClient:
         ob = OpeningBook(
             OpeningBookConfig.from_dict(config.get("OpeningBookConfig"))  # type: ignore
         )
-        eng = Engine(search, ob)
+        et = EndgameTablebase(
+            EndgameTablebaseConfig.from_dict(config.get("EndgameTablebaseConfig"))  # type: ignore
+        )
+        eng = Engine(search, ob, et)
         return eng

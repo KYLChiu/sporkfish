@@ -73,7 +73,7 @@ class OpeningBook:
         :type opening_book_path: str
         :return: The opened opening database reader.
                  Returns None if the file is not found.
-        :rtype: chess.polyglot.MemoryMappedReader
+        :rtype: Optional[chess.polyglot.MemoryMappedReader]
         """
 
         try:
