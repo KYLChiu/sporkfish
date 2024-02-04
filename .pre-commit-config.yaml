@@ -23,3 +23,5 @@ repos:
     rev: "v0.931"
     hooks:
       - id: mypy
+        args: [--follow-imports=skip, --config-file=mypy.ini, --install-types, --non-interactive, --verbose]
+        exclude: "tests"

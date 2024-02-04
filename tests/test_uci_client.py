@@ -9,7 +9,7 @@ def init_client() -> uci_client.UCIClient:
 
 
 def test_uci_client_init(init_client):
-    client = init_client
+    _ = init_client
 
 
 def test_uci_client_go(init_client):
