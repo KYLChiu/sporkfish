@@ -15,7 +15,7 @@ See any of the following sections to quickly setup your development environment.
 
 ### Using DevContainer with VSCode 
 
-Prerequisits:
+Prerequisites:
 - [VSCode](https://code.visualstudio.com/download)
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 
@@ -28,7 +28,7 @@ This will setup a Docker container to run in Docker Desktop with all the necessa
 
 ### Using DevContainer with PyCharm 
 
-Prerequisits:
+Prerequisites:
 - [PyCharm](https://www.jetbrains.com/pycharm/download/)
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 
@@ -40,7 +40,7 @@ https://www.jetbrains.com/help/pycharm/connect-to-devcontainer.html
 
 ### Using Github Codespace
 
-Prerequisits:
+Prerequisites:
 - [VSCode](https://code.visualstudio.com/download)* *optional*
 
 Instructions:

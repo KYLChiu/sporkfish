@@ -27,7 +27,19 @@
                 "donjayamanne.githistory",
                 "KevinRose.vsc-python-indent",
                 "ms-python.python",
-                "ms-python.vscode-pylance"
+                "ms-python.vscode-pylance",
+                "ms-python.black-formatter",
+                "ms-python.isort",
+                "ms-python.mypy-type-checker"
+            ],
+            "editor.defaultFormatter": "ms-python.black-formatter",
+            "editor.formatOnSave": true,
+            "editor.codeActionsOnSave": {
+                "source.organizeImports": true
+            },
+            "isort.args": [
+                "--profile",
+                "black"
             ]
         }
     },
