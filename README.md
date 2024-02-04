@@ -123,6 +123,7 @@ Search:
 * [Delta pruning](https://www.chessprogramming.org/Delta_Pruning)
 * [Aspiration windows](https://www.chessprogramming.org/Aspiration_Windows)
 * [Transposition tables with Zobrist hashing](https://mediocrechess.blogspot.com/2007/01/guide-transposition-tables.html)
+* [Syzygy endgame tablebases](https://python-chess.readthedocs.io/en/latest/syzygy.html#chess.syzygy.Tablebase)
 
 Move ordering:
 
