@@ -57,7 +57,7 @@ class Engine:
             return end_move
 
         logging.info(
-            f"No move found in opening book or endgame searcher or they are not configured. Delegating to searcher."
+            f"No move found in opening book or endgame tablebase or they are not configured. Delegating to searcher."
         )
         _, searched_move = self._searcher.search(board, timeout)
         return searched_move
