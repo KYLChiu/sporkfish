@@ -361,7 +361,6 @@ class TestMvvLvvHeuristic:
         Test mvv lva heuistic on an end game board
         """
         board = init_board(fen_string)
-        s = _init_searcher
 
         all_moves = board.legal_moves
         num_moves = len(move_scores)

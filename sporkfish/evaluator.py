@@ -1,5 +1,4 @@
 from enum import Enum
-from typing import Callable
 
 import chess
 
@@ -233,9 +232,8 @@ class Evaluator:
         # Assumes:
         # - Chess board implements A1 as first element, H8 as last
         # - Piece square table implements A8 as first element, H1 as last element
-        flip: Callable[[int, int, chess.Color]] = (
-            lambda square, flipped_square, color: square if not color else flipped_square
-        )
+        def flip(square, flipped_square, color):
+            return square if not color else flipped_square
 
         phase = 0
 

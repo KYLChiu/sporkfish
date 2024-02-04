@@ -228,8 +228,8 @@ class MiniMaxVariants(Searcher, ABC):
         for depth in range(1, self._searcher_config.max_depth + 1):
             new_board = copy.deepcopy(board)
 
-            alpha = -float("inf")
-            beta = float("inf")
+            -float("inf")
+            float("inf")
 
             self._statistics.reset()
             start_time = time.time()
