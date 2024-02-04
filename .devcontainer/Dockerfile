@@ -1,5 +1,5 @@
 # See https://containers.dev/guide/dockerfile
-ARG VARIANT=3.11-bookworm
+ARG VARIANT
 FROM mcr.microsoft.com/devcontainers/python:${VARIANT}
 
 # Install additional OS packages.

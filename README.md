@@ -6,41 +6,62 @@ Sporkfish is a Python-based chess engine. Chess programming techniques, although
 
 - - - -
 
-## Usage
+## Set-up
 
-### Set up
+See any of the following sections to quickly setup your development environment. 
+- [Using DevContainer with VSCode](#using-devcontainer-with-vscode)* *recommended*
+- [Using DevContainer with PyCharm](#using-devcontainer-with-pycharm)
+- [Using Github Codespace](#using-github-codespace)
 
-As a general case `Using DevContainer with VSCode` or `Using Github Codespace`
+### Using DevContainer with VSCode 
 
-Install: 
+Prerequisits:
 - [VSCode](https://code.visualstudio.com/download)
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 
-#### Using DevContainer with VSCode 
-
-1. Make sure Docker Desktop is up and running.
+Instructions: 
+1. Make sure `Docker Desktop` is up and running.
 2. Open up the Command Palette and run `Dev Containers: Rebuild Container` 
-3. A warning might pop up saying `Not all host requirements in devcontainer.json are met by the Docker daemon.`, disregard this and continue. 
-4. The window should reload and you will see [Dev Container] in the URL bar as well as on the status bar bottom right of the window to indicate your setup is complete. 
+3. The window should reload and you will see `[Dev Container]` in the URL bar as well as on the status bar bottom left of the window to indicate your setup is complete. 
 
-This will setup a Docker container to run in Docker Desktop with all the neceessary dependencies (python, pip, git, ...) with the correct versions. 
+This will setup a Docker container to run in Docker Desktop with all the necessary dependencies (python, pip, git, ...) with the correct versions. 
 
-\* Please exit out of the container to commit your git changes for now as the ssh keys aare not being mounted to the container. This will be fixed soon. 
+### Using DevContainer with PyCharm 
 
-#### Using Github Codespace
+Prerequisits:
+- [PyCharm](https://www.jetbrains.com/pycharm/download/)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 
-You do not need to install Docker Desktop with this option. 
+Instructions:
 
+#TODO - Please see jetbrains docs, PyCharm setup is similar to VSCode
+
+https://www.jetbrains.com/help/pycharm/connect-to-devcontainer.html
+
+### Using Github Codespace
+
+Prerequisits:
+- [VSCode](https://code.visualstudio.com/download)* *optional*
+
+Instructions:
 1. In this Github repository, click on the Code dropdown, select Codespace and click `Create`. 
-2. Continue through all prompts using default options. 
+2. Confirm codespace settings, for Machine type select `2-core` (this can be changed later if you require more power)
 
-This will setup a Docker container to run in Github instead of Docker Desktop. All else being equal, but an active internet connection will be required for this, and this will use up your monthly allowance for Github codespace. 
+This will setup a Dockeer container to run in Github with all the necessary dependencies (python, pip, git, ...) with the correct versions. An active internet connection will be required for this, and this will use up your monthly allowance for Github codespace. 
 
-#### Using DevContainer without VSCode
+### Using native Docker
 
-You do not need to install VSCode with this option.
+To quickly set up the environment, you can use docker. From a terminal in the root directory:
 
-#TODO
+```
+docker pull kylchiu/sporkfish-dev:latest
+docker build -t kylchiu/sporkfish-dev:latest .
+docker run -it kylchiu/sporkfish-dev:latest
+```
+
+This generates an interactive bash shell for you to run the program in.
+
+## Usage
 
 ### Lichess
 

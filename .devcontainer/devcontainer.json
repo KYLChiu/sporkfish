@@ -5,7 +5,10 @@
     // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
     // "image": "mcr.microsoft.com/devcontainers/typescript-node:0-20",
     "build": {
-        "dockerfile": "Dockerfile"
+        "dockerfile": "Dockerfile",
+        "args": {
+            "VARIANT": "3.11-bookworm"
+        }
     },
     // Features to add to the dev container. More info: https://containers.dev/features.
     "features": {
@@ -32,9 +35,8 @@
     "forwardPorts": [],
     // Predefined ports
     "portsAttributes": {},
-    "hostRequirements": {
-        "cpus": 4,
-        "memory": "8gb",
-        "storage": "32gb"
-    }
+    // See https://code.visualstudio.com/remote/advancedcontainers/add-local-file-mount
+    "mounts": [
+        "source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/root/.ssh,type=bind,consistency=cached,readonly"
+    ]
 }
