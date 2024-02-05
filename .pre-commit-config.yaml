@@ -31,4 +31,4 @@ repos:
         stages: [push]
       # Run the formatter.
       - id: ruff-format
-        stages: [commit]
+        stages: [push]
