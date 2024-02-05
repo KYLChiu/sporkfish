@@ -162,8 +162,9 @@ cython_debug/
 # API token
 api_token.txt
 
-# vscode
-.vscode
+# vscode - but not the settings.json file
+.vscode/*
+!.vscode/settings.json
 
 # Mac
 .DS_Store
