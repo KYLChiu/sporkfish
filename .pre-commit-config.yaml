@@ -14,12 +14,14 @@ repos:
     rev: v0.1.0
     hooks:
       - id: dockerfilelint
-        stages: [commit]
+        stages: [push]
   - repo: https://github.com/sirosen/check-jsonschema
     rev: 0.10.0
     hooks:
       - id: check-github-actions
+        stages: [push]
       - id: check-github-workflows
+        stages: [push]
   - repo: https://github.com/charliermarsh/ruff-pre-commit
     rev: v0.2.0
     hooks:
