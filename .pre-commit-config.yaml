@@ -3,13 +3,21 @@ repos:
     rev: v4.1.0
     hooks:
       - id: check-added-large-files # prevents giant files from being committed.
+        stages: [commit]
       - id: check-case-conflict # checks for files that would conflict in case-insensitive filesystems.
+        stages: [commit]
       - id: check-merge-conflict # checks for files that contain merge conflict strings.
+        stages: [commit]
       - id: check-yaml # checks yaml files for parseable syntax.
+        stages: [commit]
       - id: detect-private-key # detects the presence of private keys.
+        stages: [commit]
       - id: mixed-line-ending # replaces or checks mixed line ending.
+        stages: [commit]
       - id: requirements-txt-fixer # sorts entries in requirements.txt.
+        stages: [commit]
       - id: trailing-whitespace # trims trailing whitespace.
+        stages: [commit]
   - repo: https://github.com/pryorda/dockerfilelint-precommit-hooks
     rev: v0.1.0
     hooks:
