@@ -3,6 +3,7 @@
 # Run pip install
 pip install -r requirements.txt
 
-pre-commit install
+# Install pre-commit and pre-push
+pre-commit install --hook-type pre-commit --hook-type pre-push
 
 exit 0
