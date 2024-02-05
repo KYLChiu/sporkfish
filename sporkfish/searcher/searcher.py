@@ -32,6 +32,22 @@ class Searcher(ABC):
     def _log_info(
         self, elapsed: float, score: float, move: chess.Move, depth: int
     ) -> None:
+        """
+        Log information about the search process.
+
+        This method logs various statistics and details about the search process,
+        including elapsed time, evaluation score, nodes visited, nodes per second (NPS),
+        search depth, and the principal variation (PV).
+
+        :param elapsed: The time elapsed for the search process, in seconds.
+        :type elapsed: float
+        :param score: The evaluation score of the best move found.
+        :type score: float
+        :param move: The best move found during the search.
+        :type move: chess.Move
+        :param depth: The depth of the search.
+        :type depth: int
+        """
         fields = {
             "depth": depth,
             # time in ms
@@ -50,4 +66,17 @@ class Searcher(ABC):
     def search(
         self, board: Board, timeout: Optional[float] = None
     ) -> Tuple[float, chess.Move]:
+        """
+        Abstract method to search for the best move in a given board position.
+
+        :param board: The current state of the chess board.
+        :type board: chess.Board
+        :param timeout: Optional timeout value for the search operation.
+                       If provided, the search should terminate after the specified time.
+        :type timeout: Optional[float]
+
+        :return: A tuple containing the evaluation score of the best move found
+                 and the corresponding move itself.
+        :rtype: Tuple[float, chess.Move]
+        """
         pass

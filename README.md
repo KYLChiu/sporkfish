@@ -8,25 +8,25 @@ Sporkfish is a Python-based chess engine. Chess programming techniques, although
 
 ## Set-up
 
-See any of the following sections to quickly setup your development environment. 
+See any of the following sections to quickly setup your development environment.
 - [Using DevContainer with VSCode](#using-devcontainer-with-vscode)* *recommended*
 - [Using DevContainer with PyCharm](#using-devcontainer-with-pycharm)
 - [Using Github Codespace](#using-github-codespace)
 
-### Using DevContainer with VSCode 
+### Using DevContainer with VSCode
 
 Prerequisites:
 - [VSCode](https://code.visualstudio.com/download)
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 
-Instructions: 
+Instructions:
 1. Make sure `Docker Desktop` is up and running.
-2. Open up the Command Palette and run `Dev Containers: Rebuild Container` 
-3. The window should reload and you will see `[Dev Container]` in the URL bar as well as on the status bar bottom left of the window to indicate your setup is complete. 
+2. Open up the Command Palette and run `Dev Containers: Rebuild Container`
+3. The window should reload and you will see `[Dev Container]` in the URL bar as well as on the status bar bottom left of the window to indicate your setup is complete.
 
-This will setup a Docker container to run in Docker Desktop with all the necessary dependencies (python, pip, git, ...) with the correct versions. 
+This will setup a Docker container to run in Docker Desktop with all the necessary dependencies (python, pip, git, ...) with the correct versions.
 
-### Using DevContainer with PyCharm 
+### Using DevContainer with PyCharm
 
 Prerequisites:
 - [PyCharm](https://www.jetbrains.com/pycharm/download/)
@@ -44,10 +44,10 @@ Prerequisites:
 - [VSCode](https://code.visualstudio.com/download)* *optional*
 
 Instructions:
-1. In this Github repository, click on the Code dropdown, select Codespace and click `Create`. 
+1. In this Github repository, click on the Code dropdown, select Codespace and click `Create`.
 2. Confirm codespace settings, for Machine type select `2-core` (this can be changed later if you require more power)
 
-This will setup a Dockeer container to run in Github with all the necessary dependencies (python, pip, git, ...) with the correct versions. An active internet connection will be required for this, and this will use up your monthly allowance for Github codespace. 
+This will setup a Dockeer container to run in Github with all the necessary dependencies (python, pip, git, ...) with the correct versions. An active internet connection will be required for this, and this will use up your monthly allowance for Github codespace.
 
 ### Using native Docker
 
@@ -116,13 +116,14 @@ black .
 Search:
 
 * [Negamax with fail-soft alpha-beta pruning](https://www.cs.cornell.edu/courses/cs312/2002sp/lectures/rec21.htm)
-* [PolyGlot opening book querying](https://python-chess.readthedocs.io/en/latest/polyglot.html)
 * [Quiescence search](https://www.chessprogramming.org/Quiescence_Search)
 * [Iterative deepening](https://www.chessprogramming.org/Iterative_Deepening)
 * [Null move pruning](https://www.chessprogramming.org/Null_Move_Pruning)
+* [Futility pruning](https://www.chessprogramming.org/Futility_Pruning)
 * [Delta pruning](https://www.chessprogramming.org/Delta_Pruning)
 * [Aspiration windows](https://www.chessprogramming.org/Aspiration_Windows)
 * [Transposition tables with Zobrist hashing](https://mediocrechess.blogspot.com/2007/01/guide-transposition-tables.html)
+* [PolyGlot opening book](https://python-chess.readthedocs.io/en/latest/polyglot.html)
 * [Syzygy endgame tablebases](https://python-chess.readthedocs.io/en/latest/syzygy.html#chess.syzygy.Tablebase)
 
 Move ordering:

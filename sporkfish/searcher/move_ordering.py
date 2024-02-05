@@ -15,6 +15,18 @@ class MoveOrderMode(Enum):
 class MoveOrder(ABC):
     @abstractmethod
     def evaluate(self, board: Board, move: chess.Move) -> float:
+        """
+        Abstract method to evaluate the desirability of a move in a given board position.
+        Higher values indicate more desirable moves.
+
+        :param board: The current state of the chess board.
+        :type board: Board
+        :param move: The move to be evaluated.
+        :type move: chess.Move
+
+        :return: A floating-point value representing the evaluation of the move.
+        :rtype: float
+        """
         pass
 
 

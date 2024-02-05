@@ -65,7 +65,22 @@ class NegamaxSp(MiniMaxVariants):
 
         # recursive search with alpha-beta pruning
         for move in legal_moves:
+            capture = (
+                board.is_capture(move)
+                if self._searcher_config.enable_futility_pruning
+                else False
+            )
+
             board.push(move)
+
+            # futility pruning
+            if (
+                self._searcher_config.enable_futility_pruning
+                and self._futility_pruning(board, depth, capture, move, alpha)
+            ):
+                board.pop()
+                continue
+
             child_value = -self._negamax(board, depth - 1, -beta, -alpha)
             board.pop()
 
@@ -84,8 +99,21 @@ class NegamaxSp(MiniMaxVariants):
         self, board: Board, depth: int, alpha: float, beta: float
     ) -> bool:
         """
-        Null move pruning - reduce the search space by trying a null move,
-        then seeing if the score of the subtree search is still high enough to cause a beta cutoff
+        Implements null move pruning, a technique to reduce the search space by attempting a 'null move'.
+        It evaluates whether skipping a move (null move) would still allow achieving a beta cutoff,
+        thereby avoiding unnecessary exploration of certain branches of the game tree.
+
+        :param board: The current state of the chess board.
+        :type board: chess.Board
+        :param depth: The current depth in the search tree.
+        :type depth: int
+        :param alpha: The current best score for the maximizing player.
+        :type alpha: float
+        :param beta: The current best score for the minimizing player.
+        :type beta: float
+
+        :return: True if the null move leads to a beta cutoff, indicating a possible pruning opportunity.
+        :rtype: bool
         """
         # TODO: add zugzwang check
         # Will make depth_reduction_factor configurable later
@@ -159,5 +187,5 @@ class NegamaxSp(MiniMaxVariants):
         :rtype: Tuple[float, Move]
         """
 
-        score, move = self._iterative_deepening(board, timeout)
+        score, move = self._iterative_deepening_search(board, timeout)
         return score, move

@@ -25,6 +25,22 @@ class MiniMaxVariants(Searcher, ABC):
     def _start_search_from_root(
         self, board_to_search: Board, depth: int, alpha: float, beta: float
     ) -> Tuple[float, chess.Move]:
+        """
+        Abstract method to start the search from the root of the game tree.
+
+        :param board_to_search: The current state of the chess board to search.
+        :type board_to_search: chess.Board
+        :param depth: The depth of the search.
+        :type depth: int
+        :param alpha: The lower bound of the search window.
+        :type alpha: float
+        :param beta: The upper bound of the search window.
+        :type beta: float
+
+        :return: A tuple containing the evaluation score of the best move found
+                 and the corresponding move itself.
+        :rtype: Tuple[float, chess.Move]
+        """
         pass
 
     def __init__(
@@ -50,7 +66,20 @@ class MiniMaxVariants(Searcher, ABC):
         return self._evaluator
 
     def _ordered_moves(self, board: Board, legal_moves: Any) -> Any:
-        # order moves from best to worse
+        """
+        Order the given legal moves from best to worst based on a move ordering heuristic.
+
+        This method sorts the legal moves based on a move ordering heuristic, which aims to prioritize
+        moves that are likely to lead to better positions or outcomes. The ordering can help improve
+        the efficiency of the search algorithm by considering more promising moves first.
+
+        :param board: The current state of the chess board.
+        :type board: chess.Board
+        :param legal_moves: The legal moves to be ordered.
+        :type legal_moves: Any
+        :return: The ordered legal moves.
+        :rtype: Any
+        """
         return sorted(
             legal_moves,
             key=lambda move: (self._move_order.evaluate(board, move),),
@@ -80,9 +109,8 @@ class MiniMaxVariants(Searcher, ABC):
         :rtype: Tuple[float, chess.Move]
         """
         if self._searcher_config.enable_aspiration_windows and depth > 1:
-            # Aspiration window size: 50 centipawn is worth about 1/2 of a pawn in our eval function
-            # We leave configuration for this to another PR
-            window_size = 50
+            # We leave configuration for window_size to another PR
+            window_size = self.evaluator.MG_PIECE_VALUES[chess.PAWN] // 2
             alpha = prev_score - window_size
             beta = prev_score + window_size
             score, move = self._start_search_from_root(
@@ -103,16 +131,25 @@ class MiniMaxVariants(Searcher, ABC):
 
     def _quiescence(self, board: Board, depth: int, alpha: float, beta: float) -> float:
         """
-        Quiescence search to help the horizon effect (improving checking of tactical possibilities).
+        Perform a quiescence search to help alleviate the horizon effect and improve checking of tactical possibilities.
 
-        Parameters:
-            board (Board): The chess board.
-            alpha (float): The lower bound of the search window.
-            beta (float): The upper bound of the search window.
-            depth (int): max recursion limit
+        Quiescence search is a variation of the standard search algorithm used in chess engines.
+        It is specifically designed to handle positions where the board state is highly dynamic, such as positions
+        with captures, checks, or threats. In such positions, the standard evaluation function may not accurately
+        reflect the true value of the position, leading to the horizon effect, where the search terminates prematurely
+        due to missing important tactical moves.
 
-        Returns:
-            int: The evaluated score after quiescence search.
+        :param board: The current state of the chess board.
+        :type board: chess.Board
+        :param depth: The maximum recursion limit.
+        :type depth: int
+        :param alpha: The lower bound of the search window.
+        :type alpha: float
+        :param beta: The upper bound of the search window.
+        :type beta: float
+
+        :return: The evaluated score after quiescence search.
+        :rtype: float
         """
 
         self._statistics.increment()
@@ -128,34 +165,13 @@ class MiniMaxVariants(Searcher, ABC):
         if alpha < stand_pat:
             alpha = stand_pat
 
-        legal_moves = (move for move in board.legal_moves if board.is_capture(move))
-        legal_moves = self._ordered_moves(board, legal_moves)
-
-        # Assuming the input move is a capturing move, returns the captured piece
-        def captured_piece(board: Board, move: chess.Move) -> chess.PieceType:
-            return (
-                chess.PAWN
-                if board.is_en_passant(move)
-                else board.piece_at(move.to_square).piece_type  # type: ignore
-            )
+        legal_moves = self._ordered_moves(
+            board, (move for move in board.legal_moves if board.is_capture(move))
+        )
 
         for move in legal_moves:
-            # Delta pruning
-            # Rationale: if our position is such that:
-            # evaluation + captured piece value + safety margin (delta) doesn't exceed what I can already guarantee,
-            # then there is no point to continue the search for this branch.
-            # The safety margin leaves some room for searching for sacrifices,
-            # i.e. taking a pawn down a rook usually will not help but taking a bishop down a rook may help.
-            # The delta value should be tuned based on piece values of the evaluator.
-            # TODO: consider add check for late endgame - it should not be enabled there because
-            # transitions into won endgames made at the expense of some material will no longer be considered
-            # However we might remedy this directly with endgame tablebases.
-            if (
-                self._searcher_config.enable_delta_pruning
-                and stand_pat
-                + self.evaluator.MG_PIECE_VALUES[captured_piece(board, move)]
-                + self.evaluator.DELTA
-                < alpha
+            if self._searcher_config.enable_delta_pruning and self._delta_pruning(
+                board, move, stand_pat, alpha
             ):
                 continue
 
@@ -171,56 +187,153 @@ class MiniMaxVariants(Searcher, ABC):
 
         return alpha
 
+    def _futility_pruning(
+        self,
+        board: Board,
+        depth: int,
+        was_capture: bool,
+        move: chess.Move,
+        alpha: float,
+    ) -> bool:
+        """
+        Implements futility pruning.
+
+        If the evaluation of the current position, when extended by a margin, falls below the minimum score
+        we can guarantee, then it's not worthwhile to continue the search.
+        However, it's important to note that we still need to consider tactical possibilities due to captures,
+        promotions, and checks.
+
+        :param board: The current board state.
+        :type board: chess.Board
+        :param depth: The current depth in the search tree.
+        :type depth: int
+        :param was_capture: Indicates if the previous move was a capture.
+        :type was_capture: bool
+        :param move: The move that was made.
+        :type move: chess.Move
+        :param alpha: The current best score for the maximizing player.
+        :type alpha: float
+        :return: True if the position can be pruned due to futility margin checks, False otherwise.
+        :rtype: bool
+        """
+        if (
+            depth <= 3
+            and not was_capture
+            and not board.is_check()
+            and not move.promotion
+        ):
+            # TODO: consider using different futility margins
+            # Half a pawn margin is very aggressive
+            if (
+                self._evaluator.evaluate(board)
+                + depth * self.evaluator.MG_PIECE_VALUES[chess.PAWN] // 2
+                <= alpha
+            ):
+                return True
+        return False
+
+    def _delta_pruning(
+        self, board: Board, move: chess.Move, stand_pat: float, alpha: float
+    ) -> bool:
+        """
+        Implementes delta pruning.
+
+        Rationale: If our position is such that the evaluation value plus the captured piece value plus a safety margin (delta)
+                    doesn't exceed what we can already guarantee, then there is no point to continue the search for this branch.
+                    The safety margin allows for searching for sacrifices; for example, taking a pawn down a rook usually will not help,
+                    but taking a bishop down a rook may help. The delta value should be tuned based on the piece values of the evaluator.
+
+        TODO: Consider adding a check for the late endgame - it should not be enabled there because transitions into won endgames made at the
+                expense of some material will no longer be considered. However, we might remedy this directly with endgame tablebases.
+
+        :param board: The current board state.
+        :type board: chess.Board
+        :param move: The move to be considered.
+        :type move: chess.Move
+        :param stand_pat: The stand pat score for the current position.
+        :type stand_pat: float
+        :param alpha: The alpha value representing the minimum score needed.
+        :type alpha: float
+        :return: True if the position can be pruned due to delta margin checks, False otherwise.
+        :rtype: bool
+        """
+        # Assumes the input move is already a capturing move
+        # This is valid when called in quiescence search
+        captured_piece = (
+            chess.PAWN
+            if board.is_en_passant(move)
+            else board.piece_at(move.to_square).piece_type  # type: ignore
+        )
+        return (
+            True
+            if stand_pat
+            + self.evaluator.MG_PIECE_VALUES[captured_piece]
+            + self.evaluator.DELTA
+            < alpha
+            else False
+        )
+
     @stopit.threading_timeoutable(default=(float("-inf"), chess.Move.null(), 0.0, 1))
-    def _do_search_with_info(
+    def _search_timeoutable(
         self,
         board_to_search: Board,
         depth: int,
-        start_time: float,
         prev_score: float,
     ) -> Tuple[float, chess.Move, float, int]:
         """
-        Perform an aspiration windows search on the given chess board up to the specified depth.
+        Creates a search function wrapper with timeout argument, in seconds.
+        If search time exceeds the timeout argument, this function immediately returns.
 
-        Parameters:
-        - board_to_search (Board): The chess board to search.
-        - depth (int): The depth of the search.
-        - start_time (float): The start time of the search.
-        - prev_score (float): The previous score from a shallower search.
+        :param board_to_search: The chess board to search.
+        :type board_to_search: chess.Board
+        :param depth: The depth of the search.
+        :type depth: int
+        :param prev_score: The previous score from a shallower search.
+        :type prev_score: float
 
-        Returns:
-        Tuple[float, chess.Move, float, int]: A tuple containing the following:
-        - float: The score of the best move found during the search.
-        - chess.Move: The best move found.
-        - float: The elapsed time of the search.
-        - int: A flag indicating whether the search was terminated due to a timeout (1 for timeout, 0 otherwise).
+        :return: A tuple containing the following:
+                 - The score of the best move found during the search.
+                 - The best move found.
+                 - The elapsed time of the search.
+                 - A flag indicating whether the search was terminated due to a timeout (1 for timeout, 0 otherwise).
+        :rtype: tuple[float, chess.Move, float, int]
 
-        Raises:
-        - Exception: If an unexpected error occurs during the search.
+        :raises Exception: If an unexpected error occurs during the search.
         """
         try:
+            start_time = time.time()
             score, move = self._aspiration_windows_search(
                 board_to_search, depth, prev_score
             )
-
             elapsed = time.time() - start_time
             self._log_info(elapsed, score, move, depth)
-
             return score, move, elapsed, 0
         except stopit.utils.TimeoutException:
             return float("-inf"), chess.Move.null(), 0.0, 1
         except Exception:
             raise
 
-    def _iterative_deepening(
+    def _iterative_deepening_search(
         self, board: Board, timeout: Optional[float]
     ) -> Tuple[float, chess.Move]:
         """
-        Iterative deepening
-        This conducts a fixed-depth search for depths ranging from 1 to max_depth.
-        1) It enables the transposition table (cache) to be easily utilized.
-        2) If time constraints prevent a complete search, the function can return the best move found up to the previous depth.
-        3) It facilitates the use of aspiration windows, as implemented in the _aspiration_windows_search function.
+        Conduct an iterative deepening search on the given chess board.
+
+        This method conducts a fixed-depth search for depths ranging from 1 to the maximum depth specified in the configuration.
+        It enables the transposition table (cache) to be easily utilized.
+        If time constraints prevent a complete search, the function can return the best move found up to the previous depth.
+        It facilitates the use of aspiration windows, as implemented in the _aspiration_windows_search function.
+
+        :param board: The chess board to search.
+        :type board: chess.Board
+        :param timeout: Optional timeout for the search operation, in seconds.
+                        If specified, the search will stop after the timeout has elapsed.
+                        If None, the search will continue until the maximum depth is reached.
+        :type timeout: Optional[float]
+
+        :return: A tuple containing the score of the best move found during the search
+                 and the corresponding best move.
+        :rtype: Tuple[float, chess.Move]
         """
         score = -float("inf")
         move = chess.Move.null()
@@ -229,14 +342,12 @@ class MiniMaxVariants(Searcher, ABC):
             new_board = copy.deepcopy(board)
 
             self._statistics.reset()
-            start_time = time.time()
 
             time_left = timeout
-            new_score, new_move, elapsed, error_code = self._do_search_with_info(
+            new_score, new_move, elapsed, error_code = self._search_timeoutable(
                 timeout=time_left,
                 board_to_search=new_board,
                 depth=depth,
-                start_time=start_time,
                 prev_score=score,
             )
 
@@ -265,4 +376,17 @@ class MiniMaxVariants(Searcher, ABC):
     def search(
         self, board: Board, timeout: Optional[float] = None
     ) -> Tuple[float, chess.Move]:
+        """
+        Abstract method to search for the best move in a given board position.
+
+        :param board: The current state of the chess board.
+        :type board: chess.Board
+        :param timeout: Optional timeout value for the search operation.
+                       If provided, the search should terminate after the specified time.
+        :type timeout: Optional[float]
+
+        :return: A tuple containing the evaluation score of the best move found
+                 and the corresponding move itself.
+        :rtype: Tuple[float, chess.Move]
+        """
         pass

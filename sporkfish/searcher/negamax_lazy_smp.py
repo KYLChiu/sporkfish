@@ -47,14 +47,14 @@ class NegaMaxLazySmp(NegamaxSp):
         :rtype: Tuple[float, chess.Move]
         """
 
+        def task() -> Tuple[float, chess.Move]:
+            return NegamaxSp._start_search_from_root(self, board, depth, alpha, beta)
+
         # Let processes race down lazily and see who completes first
         # We need to add more asymmetry but a task for later
-        def task() -> Tuple[float, chess.Move]:
-            return self._start_search_from_root(board, depth, alpha, beta)
-
         futures = []
         for i in range(self._num_processes):  # type: ignore
-            futures.append(self._pool.apipe(task, i))
+            futures.append(self._pool.apipe(task))
 
         while True:
             for future in futures:
@@ -62,4 +62,6 @@ class NegaMaxLazySmp(NegamaxSp):
                     res: Tuple[float, chess.Move] = future.get()
                     return res
             else:
-                continue  # Continue the loop if no result is ready yet
+                # Continue the loop if no result is ready yet
+                # Busy waiting is fine here because in principle, nothing else needs to be done
+                continue
