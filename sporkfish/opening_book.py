@@ -44,7 +44,7 @@ class OpeningBook:
             self._db = self._load(self._resource_path(self._config.opening_book_path))
         else:
             logging.warning(
-                f"Skip loading opening book as the opening book binary path is not passed in configuration."
+                "Skip loading opening book as the opening book binary path is not passed in configuration."
             )
 
     def _resource_path(self, relative_path: str) -> str:

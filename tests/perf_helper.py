@@ -1,3 +1,7 @@
+import cProfile
+import os
+import pstats
+import sys
 from typing import Any, Callable
 
 
@@ -13,10 +17,6 @@ def run_perf_analytics(test_name: str, f: Callable[..., Any], *args, **kwargs) -
     :param kwargs: Additional keyword arguments to pass to the function.
     :type kwargs: dict
     """
-    import cProfile
-    import os
-    import pstats
-    import sys
 
     profiler = cProfile.Profile()
     profiler.enable()

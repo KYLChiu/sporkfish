@@ -1,5 +1,3 @@
-from typing import Any
-
 import pytest
 from init_board_helper import board_setup, init_board, score_fen
 
@@ -363,7 +361,6 @@ class TestMvvLvvHeuristic:
         Test mvv lva heuistic on an end game board
         """
         board = init_board(fen_string)
-        s = _init_searcher
 
         all_moves = board.legal_moves
         num_moves = len(move_scores)
