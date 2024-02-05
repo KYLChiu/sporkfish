@@ -26,8 +26,6 @@ repos:
       # Run the linter.
       - id: ruff
         args: [ --fix ]
-        stages: [commit]
-      - id: ruff
         stages: [push]
       # Run the formatter.
       - id: ruff-format
