@@ -32,10 +32,7 @@ jobs:
         run: docker exec sporkfish-container pytest -sv
       - name: Check typing (mypy)
         run: docker exec sporkfish-container mypy --install-types --non-interactive
-      - name: Check code format (black)
-        run: docker exec sporkfish-container black --check .
-      - name: Check imports format (isort)
-        run: docker exec sporkfish-container isort --check --profile black .
-        
-     
-      
+      - name: Check code and imports format (ruff)
+        run: docker exec sporkfish-container ruff check .
+
+

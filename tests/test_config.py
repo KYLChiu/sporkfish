@@ -25,4 +25,4 @@ def test_create_from_dict():
     assert searcher_cfg.max_depth == 10
     assert searcher_cfg.search_mode == SearchMode.SINGLE_PROCESS
     assert searcher_cfg.move_order_mode == MoveOrderMode.MVV_LVA
-    assert searcher_cfg.enable_transposition_table == False
+    assert searcher_cfg.enable_transposition_table is False

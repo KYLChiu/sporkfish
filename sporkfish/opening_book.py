@@ -44,7 +44,7 @@ class OpeningBook:
             self._db = self._load(self._resource_path(self._config.opening_book_path))
         else:
             logging.warning(
-                f"Skip loading opening book as the opening book binary path is not passed in configuration."
+                "Skip loading opening book as the opening book binary path is not passed in configuration."
             )
 
     def _resource_path(self, relative_path: str) -> str:
@@ -73,7 +73,7 @@ class OpeningBook:
         :type opening_book_path: str
         :return: The opened opening database reader.
                  Returns None if the file is not found.
-        :rtype: chess.polyglot.MemoryMappedReader
+        :rtype: Optional[chess.polyglot.MemoryMappedReader]
         """
 
         try:

@@ -90,9 +90,7 @@ class ZobristHasher:
         # Sporkfish's lucky number
         np.random.seed(10101010)
 
-        self._piece_hashes = np.random.randint(
-            0, 2**64, size=(64, 12), dtype=np.uint64
-        )
+        self._piece_hashes = np.random.randint(0, 2**64, size=(64, 12), dtype=np.uint64)
         self._turn_hash = np.random.randint(0, 2**64, dtype=np.uint64)
 
         self._en_passant_hashes = np.random.randint(0, 2**64, size=8, dtype=np.uint64)
