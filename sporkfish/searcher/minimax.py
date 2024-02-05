@@ -101,7 +101,7 @@ class MiniMaxVariants(Searcher, ABC):
             )
         return score, move
 
-    def _quiescence(self, board: Board, depth: int, alpha: float, beta: float) -> float:
+    def _quiescence(self, board: Board, depth: int, alpha: float, beta: float):
         """
         Quiescence search to help the horizon effect (improving checking of tactical possibilities).
 
