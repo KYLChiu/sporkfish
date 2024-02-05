@@ -33,3 +33,4 @@ repos:
       - id: mypy
         args: [--config-file=mypy.ini, --install-types, --non-interactive]
         exclude: "tests"
+        stages: ["push"]
