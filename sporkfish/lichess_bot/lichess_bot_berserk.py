@@ -121,13 +121,17 @@ class LichessBotBerserk(LichessBot):
                 best_move = self._get_best_move(color, time, inc)
                 self.client.bots.make_move(game_id, best_move)
 
+        # function?? 
+        # get the full json object of gamestate, refer lichess api for full json payload
         states = self.client.bots.stream_game_state(game_id)
+        # why return the next iterable?
         game_full = next(states)
         logging.debug(f"Full game data: {game_full}")
         color = 0 if game_full["white"].get("id") == self._bot_id else 1
         prev_moves_start = game_full["state"]["moves"] or ""
         num_moves_start = len(prev_moves_start.split())
 
+        # why restart game when there are prev moves?
         if num_moves_start > 0:
             logging.info(f"Restarting game with id: {game_id}")
         else:
@@ -136,8 +140,8 @@ class LichessBotBerserk(LichessBot):
         # If white (and playing a new game), we need to play a move to get new states
         set_pos_and_play_move(
             num_moves_start, color, prev_moves_start, game_id, game_full
-        )
-
+        )  
+        # wrap this in a handle_gamestate_function?   
         for state in states:
             logging.debug(f"Game state: {state}")
             if state["type"] == "gameState":
@@ -145,12 +149,37 @@ class LichessBotBerserk(LichessBot):
                 prev_moves = state["moves"]
                 set_pos_and_play_move(num_moves, color, prev_moves, game_id, state)
 
+    def should_accept_challenge(event):
+        # need list of speed type that we accept
+        if event['challenge']['speed'] == 'rapid':
+            True()
+        else:
+            False
+
     def run(self) -> None:
         """
         Start the Lichess bot, listening to incoming events sequentially and playing games accordingly.
         """
-
         events = self.client.bots.stream_incoming_events()
         for event in events:
-            if event.get("type") == "gameStart":
+            if event['type'] == 'challenge':
+                if self.should_accept_challenge(event):
+                    self.client.bots.accept_challenge(event['challenge']['id'])
+                else:
+                    self.client.bots.decline_challenge(event['challenge']['id'])
+            elif event['type'] == "gameStart":
                 self._play_game(event["game"]["fullId"])
+            elif event['type'] == 'gameFinish':
+                self.client.post_message(event['game']['fullId'],'GGWP, Thanks for playing with Sporkfish!')
+                self.client.abort_game(event['game']['fullId'])
+                
+
+
+        
+
+        #TODO
+        #other scenarios such as decline/cancel challenges e.g. depend on what challenge it is
+        #checking game states e.g. opponent gone or if opponent resigns, how do i claim the win and exit
+        #how do i make POST requests to resign/abort a game
+        # redefine how to accept and handle different game states
+    
