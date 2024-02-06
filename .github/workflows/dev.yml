@@ -1,0 +1,38 @@
+name: Dev
+
+on:
+  pull_request:
+    branches: [ master ]
+
+  workflow_dispatch:
+
+jobs:
+  setup_and_run_tests:
+    name: setup_and_run_tests
+    defaults:
+      run:
+        working-directory: ./
+    runs-on: ubuntu-latest
+    steps:
+      # -- Setup --
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Write API_TOKEN to file
+        run: echo -n "$API_TOKEN" >> api_token.txt
+        shell: bash
+        env:
+          API_TOKEN: ${{ secrets.API_TOKEN }}
+      # -- Docker build and run --
+      - name: Build Docker image
+        run: docker build -t sporkfish-image .
+      - name: Run docker container
+        run: docker run --name sporkfish-container -d -it sporkfish-image
+      # -- Inspect code/tests --
+      - name: Check tests (pytest)
+        run: docker exec sporkfish-container pytest -sv
+      - name: Check typing (mypy)
+        run: docker exec sporkfish-container mypy --install-types --non-interactive
+      - name: Check code and imports format (ruff)
+        run: docker exec sporkfish-container ruff check .
+
+

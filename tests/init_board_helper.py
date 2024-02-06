@@ -1,5 +1,3 @@
-import chess
-
 from sporkfish import evaluator
 from sporkfish.board.board_factory import Board, BoardFactory, BoardPyChess
 
