@@ -130,13 +130,13 @@ class TestPerformance:
 
         sys.stdout = sys.__stdout__
 
-    # @pytest.mark.slow
-    # def test_perf_base(self, request_fixture, fen_string: str, max_depth: int) -> None:
-    #     self._run_perf_analytics(
-    #         request_fixture.node.name,
-    #         fen=fen_string,
-    #         max_depth=max_depth,
-    #     )
+    @pytest.mark.slow
+    def test_perf_base(self, request_fixture, fen_string: str, max_depth: int) -> None:
+        self._run_perf_analytics(
+            request_fixture.node.name,
+            fen=fen_string,
+            max_depth=max_depth,
+        )
 
     @pytest.mark.slow
     def test_perf_transposition_table(
@@ -149,63 +149,63 @@ class TestPerformance:
             enable_transposition_table=True,
         )
 
-    # @pytest.mark.slow
-    # def test_perf_null_move_pruning(
-    #     self, request_fixture, fen_string: str, max_depth: int
-    # ) -> None:
-    #     self._run_perf_analytics(
-    #         request_fixture.node.name,
-    #         fen=fen_string,
-    #         max_depth=max_depth,
-    #         enable_null_move_pruning=True,
-    #     )
+    @pytest.mark.slow
+    def test_perf_null_move_pruning(
+        self, request_fixture, fen_string: str, max_depth: int
+    ) -> None:
+        self._run_perf_analytics(
+            request_fixture.node.name,
+            fen=fen_string,
+            max_depth=max_depth,
+            enable_null_move_pruning=True,
+        )
 
-    # @pytest.mark.slow
-    # def test_perf_aspiration_windows(
-    #     self, request_fixture, fen_string: str, max_depth: int
-    # ) -> None:
-    #     self._run_perf_analytics(
-    #         request_fixture.node.name,
-    #         fen=fen_string,
-    #         max_depth=max_depth,
-    #         enable_aspiration_windows=True,
-    #     )
+    @pytest.mark.slow
+    def test_perf_aspiration_windows(
+        self, request_fixture, fen_string: str, max_depth: int
+    ) -> None:
+        self._run_perf_analytics(
+            request_fixture.node.name,
+            fen=fen_string,
+            max_depth=max_depth,
+            enable_aspiration_windows=True,
+        )
 
-    # @pytest.mark.slow
-    # def test_perf_futility_pruning(
-    #     self, request_fixture, fen_string: str, max_depth: int
-    # ) -> None:
-    #     self._run_perf_analytics(
-    #         request_fixture.node.name,
-    #         fen=fen_string,
-    #         max_depth=max_depth,
-    #         enable_futility_pruning=True,
-    #     )
+    @pytest.mark.slow
+    def test_perf_futility_pruning(
+        self, request_fixture, fen_string: str, max_depth: int
+    ) -> None:
+        self._run_perf_analytics(
+            request_fixture.node.name,
+            fen=fen_string,
+            max_depth=max_depth,
+            enable_futility_pruning=True,
+        )
 
-    # @pytest.mark.slow
-    # def test_perf_delta_pruning(
-    #     self, request_fixture, fen_string: str, max_depth: int
-    # ) -> None:
-    #     self._run_perf_analytics(
-    #         request_fixture.node.name,
-    #         fen=fen_string,
-    #         max_depth=max_depth,
-    #         enable_delta_pruning=True,
-    #     )
+    @pytest.mark.slow
+    def test_perf_delta_pruning(
+        self, request_fixture, fen_string: str, max_depth: int
+    ) -> None:
+        self._run_perf_analytics(
+            request_fixture.node.name,
+            fen=fen_string,
+            max_depth=max_depth,
+            enable_delta_pruning=True,
+        )
 
-    # @pytest.mark.slow
-    # def test_perf_combined(
-    #     self, request_fixture, fen_string: str, max_depth: int
-    # ) -> None:
-    #     """Performance test with combined general performance config on"""
-    #     self._run_perf_analytics(
-    #         request_fixture.node.name,
-    #         fen=fen_string,
-    #         max_depth=max_depth,
-    #         enable_null_move_pruning=True,
-    #         enable_delta_pruning=True,
-    #         enable_aspiration_windows=True,
-    #     )
+    @pytest.mark.slow
+    def test_perf_combined(
+        self, request_fixture, fen_string: str, max_depth: int
+    ) -> None:
+        """Performance test with combined general performance config on"""
+        self._run_perf_analytics(
+            request_fixture.node.name,
+            fen=fen_string,
+            max_depth=max_depth,
+            enable_null_move_pruning=True,
+            enable_delta_pruning=True,
+            enable_aspiration_windows=True,
+        )
 
 
 @pytest.mark.parametrize(
@@ -377,7 +377,7 @@ class TestNegamax:
         s = _init_searcher
 
         alpha, beta = param[0], param[1]
-        result = s._negamax(board, 0, alpha, beta, None)
+        result = s._negamax(board, 0, alpha, beta)
         assert result == s._quiescence(board, 4, alpha, beta)
 
     def test_negamax_depth_1(
@@ -390,7 +390,7 @@ class TestNegamax:
         s = _init_searcher
 
         alpha, beta = param[0], param[1]
-        result = s._negamax(board, 1, alpha, beta, None)
+        result = s._negamax(board, 1, alpha, beta)
 
         legal_moves = board.legal_moves
         legal_moves = s._ordered_moves(board, legal_moves)

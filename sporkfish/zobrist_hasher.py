@@ -125,8 +125,14 @@ def _incremental_zobrist_hash(
 @dataclass
 class ZobristStateInfo:
     """
-    Store the information from the current state of the board.
-    It contains board level information be used in computation of the Zobrist incremental hash.
+    Stores the information from the current state of the board.
+
+    :param zobrist_hash: The Zobrist hash value representing the current board state
+    :type zobrist_hash: np.int64
+    :param ep_file: The file where en passant is possible
+    :type ep_file: np.int8
+    :param castling_rights: An array representing castling rights, defaults to np.array([False, False, False, False])
+    :type castling_rights: np.ndarray
     """
 
     zobrist_hash: np.int64
@@ -139,10 +145,22 @@ class ZobristHasher:
         """
         Initialize the Zobrist Hasher object, used to hash board positions.
         This allows caching via the transposition table, so we don't have to evaluate positions twice.
+        Two methods are provided:
+        One hashes the board statically, doing this by retrieving the full board and hence is slow.
+        The other hashes the board after a move is made (i.e. incrementally), and is designed to be faster.
         """
 
     @staticmethod
     def _parse_ep_file(board: Board) -> np.int8:
+        """
+        Parse the en passant file from the given board.
+
+        :param board: The chess board.
+        :type board: chess.Board
+
+        :return: The file where en passant is possible.
+        :rtype: np.int8
+        """
         return (
             np.int8(chess.square_file(board.ep_square))
             if board.ep_square
@@ -151,6 +169,15 @@ class ZobristHasher:
 
     @staticmethod
     def _parse_castling_rights(board: Board) -> np.ndarray:
+        """
+        Parse the castling rights from the given board.
+
+        :param board: The chess board.
+        :type board: chess.Board
+
+        :return: An array representing castling rights.
+        :rtype: np.ndarray
+        """
         return np.array(  # type: ignore
             [
                 board.has_kingside_castling_rights(chess.WHITE),
@@ -163,13 +190,13 @@ class ZobristHasher:
 
     def full_zobrist_hash(self, board: Board) -> ZobristStateInfo:
         """
-        Hashes the given a static chess board using Zobrist hashing.
+        Compute the Zobrist hash value for the entire board.
 
-        Parameters:
-        - board (Board): The chess board.
+        :param board: The chess board.
+        :type board: Board
 
-        Returns:
-        - int: The computed Zobrist hash value for the board.
+        :return: An object containing the Zobrist hash value and other board state information.
+        :rtype: ZobristStateInfo
         """
         squares_colored_piece_types = np.array(
             [
@@ -198,6 +225,23 @@ class ZobristHasher:
         previous_from_square_piece: chess.Piece,
         captured_piece: Optional[chess.Piece],
     ) -> ZobristStateInfo:
+        """
+        Compute the Zobrist hash value incrementally after a move.
+
+        :param board: The chess board.
+        :type board: Board
+        :param move: The move being made.
+        :type move: chess.Move
+        :param prev_state: The previous Zobrist state information.
+        :type prev_state: ZobristStateInfo
+        :param previous_from_square_piece: The piece from the originating square of move.
+        :type previous_from_square_piece: chess.Piece
+        :param captured_piece: The piece captured, if any, defaults to None
+        :type captured_piece: Optional[chess.Piece]
+
+        :return: An object containing the updated Zobrist hash value and other board state information.
+        :rtype: ZobristStateInfo
+        """
         from_color_piece_type = hash(previous_from_square_piece)
 
         # XOR out the previous from square piece
