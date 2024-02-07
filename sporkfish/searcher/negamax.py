@@ -1,9 +1,11 @@
 from typing import Optional, Tuple
 
 import chess
+import numpy as np
 
 from ..board.board import Board
 from ..evaluator import Evaluator
+from ..zobrist_hasher import ZobristStateInfo
 from .minimax import MiniMaxVariants
 from .move_ordering import MoveOrder
 from .searcher_config import SearcherConfig
@@ -24,6 +26,7 @@ class NegamaxSp(MiniMaxVariants):
         depth: int,
         alpha: float,
         beta: float,
+        zobrist_state: Optional[ZobristStateInfo],
     ) -> float:
         """
         Negamax implementation with alpha-beta pruning. For non-root nodes.
@@ -41,8 +44,9 @@ class NegamaxSp(MiniMaxVariants):
 
         # Probe the transposition table for an existing entry
         if self._searcher_config.enable_transposition_table:
-            hash_value = self._zobrist_hash.hash(board)
-            tt_entry = self._transposition_table.probe(hash_value, depth)
+            tt_entry = self._transposition_table.probe(
+                zobrist_state.zobrist_hash, depth
+            )
             if tt_entry:
                 return tt_entry["score"]  # type: ignore
 
@@ -63,23 +67,43 @@ class NegamaxSp(MiniMaxVariants):
         # Move ordering
         legal_moves = self._ordered_moves(board, board.legal_moves)
 
-        # recursive search with alpha-beta pruning
+        # Recursive search with alpha-beta pruning
         for move in legal_moves:
+            # Get captures for futility pruning or transposition table
+            # This needs to be done prior to changing the board state
             capture = (
                 board.is_capture(move)
                 if self._searcher_config.enable_futility_pruning
+                or self._searcher_config.enable_transposition_table
                 else False
+            )
+            captured_piece = (
+                board.piece_at(move.to_square)
+                if self._searcher_config.enable_transposition_table and capture
+                else None
             )
 
             board.push(move)
 
-            # futility pruning
-            if (
-                self._searcher_config.enable_futility_pruning
-                and self._futility_pruning(board, depth, capture, move, alpha)
+            # Futility pruning
+            if self._searcher_config.enable_futility_pruning and self._futility_pruning(
+                board, depth, capture, move, alpha
             ):
                 board.pop()
                 continue
+
+            # Update the Zobrist hash
+            child_zobrist_state = self._zobrist_hash.incremental_zobrist_hash(
+                board,
+                move,
+                zobrist_state,
+                captured_piece
+                if self._searcher_config.enable_transposition_table
+                else None,
+            )
+            child_value = -self._negamax(
+                board, depth - 1, -beta, -alpha, child_zobrist_state
+            )
 
             child_value = -self._negamax(board, depth - 1, -beta, -alpha)
             board.pop()
@@ -91,7 +115,7 @@ class NegamaxSp(MiniMaxVariants):
                 break
 
         if self._searcher_config.enable_transposition_table:
-            self._transposition_table.store(hash_value, depth, value)
+            self._transposition_table.store(zobrist_state.zobrist_hash, depth, value)
 
         return value
 
@@ -153,10 +177,42 @@ class NegamaxSp(MiniMaxVariants):
         best_move = chess.Move.null()
         self._statistics.increment()
 
+        zobrist_state = (
+            self._zobrist_hash.full_zobrist_hash(board)
+            if self._searcher_config.enable_transposition_table
+            else None
+        )
+
         legal_moves = self._ordered_moves(board, board.legal_moves)
         for move in legal_moves:
+            # Get captures for transposition table
+            # This needs to be done prior to changing the board state
+            capture = (
+                board.is_capture(move)
+                if self._searcher_config.enable_transposition_table
+                else False
+            )
+            captured_piece = (
+                board.piece_at(move.to_square)
+                if self._searcher_config.enable_transposition_table and capture
+                else None
+            )
+
             board.push(move)
-            child_value = -self._negamax(board, depth - 1, -beta, -alpha)
+
+            # Update the Zobrist hash
+            child_zobrist_state = self._zobrist_hash.incremental_zobrist_hash(
+                board,
+                move,
+                zobrist_state,
+                captured_piece
+                if self._searcher_config.enable_transposition_table
+                else None,
+            )
+            child_value = -self._negamax(
+                board, depth - 1, -beta, -alpha, child_zobrist_state
+            )
+
             board.pop()
 
             if value < child_value:
@@ -168,8 +224,7 @@ class NegamaxSp(MiniMaxVariants):
                 break
 
         if self._searcher_config.enable_transposition_table:
-            hash_value = self._zobrist_hash.hash(board)
-            self._transposition_table.store(hash_value, depth, value)
+            self._transposition_table.store(zobrist_state.zobrist_hash, depth, value)
 
         return value, best_move
 
