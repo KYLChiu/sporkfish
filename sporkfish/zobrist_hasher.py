@@ -47,7 +47,7 @@ def _conditional_turn_hash(board_hash: np.int64, board_turn: bool) -> np.int64:
 
 
 @njit(cache=True, nogil=True)
-def _en_passant_hash(board_hash: np.uint64, en_passant_file: np.uint8) -> np.uint64:
+def _en_passant_hash(board_hash: np.int64, en_passant_file: np.int8) -> np.int64:
     return (  # type: ignore
         board_hash ^ _en_passant_keys[en_passant_file]
         if en_passant_file != _int8_max_val
@@ -56,15 +56,16 @@ def _en_passant_hash(board_hash: np.uint64, en_passant_file: np.uint8) -> np.uin
 
 
 @njit(cache=True, nogil=True)
-def _castling_hash(board_hash: np.uint64, castling_rights: np.ndarray) -> np.uint64:
-    # This transforms the castling rights from an array of 4 bools
-    # into an int from [0, 15].
+def _castling_hash(board_hash: np.int64, castling_rights: np.ndarray) -> np.int64:
+    num_castle_rights = len(castling_rights)
     assert (
-        len(castling_rights) == 4
+        num_castle_rights == 4
     ), "There should only be 4 castling rights to check, 2 for black, 2 for white."
 
+    # This transforms the castling rights from an array of 4 bools
+    # into an int from [0, 15].
     castling_keys_idx = 0
-    for idx in range(len(castling_rights)):
+    for idx in range(num_castle_rights):
         if castling_rights[idx]:
             castling_keys_idx += 1 << idx
     return board_hash ^ _castling_keys[castling_keys_idx]  # type: ignore
@@ -76,7 +77,7 @@ def _full_zobrist_hash(
     board_turn: bool,
     en_passant_file: np.int64,
     castling_rights: np.ndarray,
-) -> np.uint64:
+) -> np.int64:
     # Here we send all the colored_piece types
     board_hash = _aggregate_piece_hash(np.int64(0), colored_piece_types)
     board_hash = _conditional_turn_hash(board_hash, board_turn)
@@ -87,13 +88,13 @@ def _full_zobrist_hash(
 
 @njit(cache=True, nogil=True)
 def _incremental_zobrist_hash(
-    initial_hash: np.uint64,
+    initial_hash: np.int64,
     colored_piece_types: np.ndarray,
     prev_en_passant_file: np.int8,
     curr_en_passant_file: np.int8,
     prev_castling_rights: np.ndarray,
     curr_castling_rights: np.ndarray,
-) -> np.uint64:
+) -> np.int64:
     # Here we send in only the colored_piece_types for the new move
     # If capturing, the original piece is sent in to be XOR'd out
     # Promotions are included already as part of the colored_piece_type for the new move
@@ -172,7 +173,7 @@ class ZobristHasher:
                 for square in chess.SQUARES
                 if (piece := board.piece_at(square))
             ],
-            dtype=np.uint8,
+            dtype=np.int8,
         )
         ep_file = ZobristHasher._parse_ep_file(board)
         castling_rights = ZobristHasher._parse_castling_rights(board)
@@ -196,7 +197,7 @@ class ZobristHasher:
                 [move.from_square, moving_color_piece_type],
                 [move.to_square, moving_color_piece_type],
             ],
-            dtype=np.uint8,
+            dtype=np.int8,
         )
         if captured_piece:
             np.append(
