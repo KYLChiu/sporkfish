@@ -69,7 +69,7 @@ class NegamaxSp(MiniMaxVariants):
         # Recursive search with alpha-beta pruning
         for move in legal_moves:
             # Get captures for futility pruning or transposition table
-            # Get  piece at previous from_square for transposition table
+            # Get piece at previous from_square for transposition table
             # This needs to be done prior to changing the board state
             previous_piece_from_square = (
                 board.piece_at(move.from_square)

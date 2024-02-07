@@ -156,7 +156,7 @@ class ZobristHasher:
         Parse the en passant file from the given board.
 
         :param board: The chess board.
-        :type board: chess.Board
+        :type board: Board
 
         :return: The file where en passant is possible.
         :rtype: np.int8
@@ -173,7 +173,7 @@ class ZobristHasher:
         Parse the castling rights from the given board.
 
         :param board: The chess board.
-        :type board: chess.Board
+        :type board: Board
 
         :return: An array representing castling rights.
         :rtype: np.ndarray
