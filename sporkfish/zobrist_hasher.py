@@ -195,20 +195,23 @@ class ZobristHasher:
         board: Board,
         move: chess.Move,
         prev_state: ZobristStateInfo,
+        previous_from_square_piece: chess.Piece,
         captured_piece: Optional[chess.Piece],
     ) -> ZobristStateInfo:
-        # This isn't right, it should use the piece type before the move
-        to_color_piece_type = hash(board.piece_at(move.to_square))
-        squares = [move.from_square]
-        colored_piece_types = [to_color_piece_type]
+        from_color_piece_type = hash(previous_from_square_piece)
 
+        # XOR out the previous from square piece
+        squares = [move.from_square]
+        colored_piece_types = [from_color_piece_type]
+
+        # XOR in the to square piece, piece type depending on if promoted or not
+        squares.append(move.to_square)
         if move.promotion:
-            squares.append(move.to_square)
             colored_piece_types.append(hash(board.piece_at(move.to_square)))
         else:
-            squares.append(move.to_square)
-            colored_piece_types.append(to_color_piece_type)
+            colored_piece_types.append(from_color_piece_type)
 
+        # XOR out the captured piece if exists
         if captured_piece:
             squares.append(move.to_square)
             colored_piece_types.append(hash(captured_piece))
@@ -218,6 +221,7 @@ class ZobristHasher:
 
         ep_file = ZobristHasher._parse_ep_file(board)
         castling_rights = ZobristHasher._parse_castling_rights(board)
+
         zobrist_hash = _incremental_zobrist_hash(
             prev_state.zobrist_hash,
             squares,

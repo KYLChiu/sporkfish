@@ -69,7 +69,13 @@ class NegamaxSp(MiniMaxVariants):
         # Recursive search with alpha-beta pruning
         for move in legal_moves:
             # Get captures for futility pruning or transposition table
+            # Get  piece at previous from_square for transposition table
             # This needs to be done prior to changing the board state
+            previous_piece_from_square = (
+                board.piece_at(move.from_square)
+                if self._searcher_config.enable_transposition_table
+                else False
+            )
             capture = (
                 board.is_capture(move)
                 if self._searcher_config.enable_futility_pruning
@@ -94,7 +100,11 @@ class NegamaxSp(MiniMaxVariants):
             # Update the Zobrist hash
             child_zobrist_state = (
                 self._zobrist_hash.incremental_zobrist_hash(
-                    board, move, zobrist_state, captured_piece
+                    board,
+                    move,
+                    zobrist_state,
+                    previous_piece_from_square,
+                    captured_piece,
                 )
                 if self._searcher_config.enable_transposition_table
                 else None
@@ -183,8 +193,13 @@ class NegamaxSp(MiniMaxVariants):
 
         legal_moves = self._ordered_moves(board, board.legal_moves)
         for move in legal_moves:
-            # Get captures for transposition table
+            # Get piece at from_square and captures for transposition table
             # This needs to be done prior to changing the board state
+            previous_piece_from_square = (
+                board.piece_at(move.to_square)
+                if self._searcher_config.enable_transposition_table
+                else False
+            )
             capture = (
                 board.is_capture(move)
                 if self._searcher_config.enable_transposition_table
@@ -201,7 +216,11 @@ class NegamaxSp(MiniMaxVariants):
             # Update the Zobrist hash
             child_zobrist_state = (
                 self._zobrist_hash.incremental_zobrist_hash(
-                    board, move, zobrist_state, captured_piece
+                    board,
+                    move,
+                    zobrist_state,
+                    previous_piece_from_square,
+                    captured_piece,
                 )
                 if self._searcher_config.enable_transposition_table
                 else None
