@@ -377,7 +377,7 @@ class TestNegamax:
         s = _init_searcher
 
         alpha, beta = param[0], param[1]
-        result = s._negamax(board, 0, alpha, beta)
+        result = s._negamax(board, 0, alpha, beta, None)
         assert result == s._quiescence(board, 4, alpha, beta)
 
     def test_negamax_depth_1(
@@ -390,7 +390,7 @@ class TestNegamax:
         s = _init_searcher
 
         alpha, beta = param[0], param[1]
-        result = s._negamax(board, 1, alpha, beta)
+        result = s._negamax(board, 1, alpha, beta, None)
 
         legal_moves = board.legal_moves
         legal_moves = s._ordered_moves(board, legal_moves)
