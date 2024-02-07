@@ -1,7 +1,6 @@
 from typing import Optional, Tuple
 
 import chess
-import numpy as np
 
 from ..board.board import Board
 from ..evaluator import Evaluator
