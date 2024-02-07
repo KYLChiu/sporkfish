@@ -92,19 +92,18 @@ class NegamaxSp(MiniMaxVariants):
                 continue
 
             # Update the Zobrist hash
-            child_zobrist_state = self._zobrist_hash.incremental_zobrist_hash(
-                board,
-                move,
-                zobrist_state,
-                captured_piece
+            child_zobrist_state = (
+                self._zobrist_hash.incremental_zobrist_hash(
+                    board, move, zobrist_state, captured_piece
+                )
                 if self._searcher_config.enable_transposition_table
-                else None,
+                else None
             )
+
             child_value = -self._negamax(
                 board, depth - 1, -beta, -alpha, child_zobrist_state
             )
 
-            child_value = -self._negamax(board, depth - 1, -beta, -alpha)
             board.pop()
 
             value = max(value, child_value)
@@ -200,13 +199,12 @@ class NegamaxSp(MiniMaxVariants):
             board.push(move)
 
             # Update the Zobrist hash
-            child_zobrist_state = self._zobrist_hash.incremental_zobrist_hash(
-                board,
-                move,
-                zobrist_state,
-                captured_piece
+            child_zobrist_state = (
+                self._zobrist_hash.incremental_zobrist_hash(
+                    board, move, zobrist_state, captured_piece
+                )
                 if self._searcher_config.enable_transposition_table
-                else None,
+                else None
             )
             child_value = -self._negamax(
                 board, depth - 1, -beta, -alpha, child_zobrist_state
