@@ -28,11 +28,15 @@ _castling_keys = np.random.randint(
 
 @njit(cache=True, nogil=True)
 def _aggregate_piece_hash(
-    board_hash: np.int64, colored_piece_types: np.ndarray
+    board_hash: np.int64, squares: np.ndarray, colored_piece_types: np.ndarray
 ) -> np.int64:
+    num_pieces = len(squares)
+    assert (
+        num_pieces == len(colored_piece_types)
+    ), f"Expected the same number of squares and colored_piece_types but got length {num_pieces}, {len(colored_piece_types)} respectively."
     new_board_hash = board_hash
-    for square, color_piece_type in colored_piece_types:
-        new_board_hash ^= _piece_keys[square, color_piece_type]  # type: ignore
+    for idx in range(num_pieces):
+        new_board_hash ^= _piece_keys[squares[idx], colored_piece_types[idx]]  # type: ignore
     return new_board_hash
 
 
@@ -73,13 +77,14 @@ def _castling_hash(board_hash: np.int64, castling_rights: np.ndarray) -> np.int6
 
 @njit(cache=True, nogil=True)
 def _full_zobrist_hash(
+    squares: np.ndarray,
     colored_piece_types: np.ndarray,
     board_turn: bool,
     en_passant_file: np.int64,
     castling_rights: np.ndarray,
 ) -> np.int64:
     # Here we send all the colored_piece types
-    board_hash = _aggregate_piece_hash(np.int64(0), colored_piece_types)
+    board_hash = _aggregate_piece_hash(np.int64(0), squares, colored_piece_types)
     board_hash = _conditional_turn_hash(board_hash, board_turn)
     board_hash = _en_passant_hash(board_hash, en_passant_file)
     board_hash = _castling_hash(board_hash, castling_rights)
@@ -89,6 +94,7 @@ def _full_zobrist_hash(
 @njit(cache=True, nogil=True)
 def _incremental_zobrist_hash(
     initial_hash: np.int64,
+    squares: np.ndarray,
     colored_piece_types: np.ndarray,
     prev_en_passant_file: np.int8,
     curr_en_passant_file: np.int8,
@@ -98,7 +104,7 @@ def _incremental_zobrist_hash(
     # Here we send in only the colored_piece_types for the new move
     # If capturing, the original piece is sent in to be XOR'd out
     # Promotions are included already as part of the colored_piece_type for the new move
-    board_hash = _aggregate_piece_hash(initial_hash, colored_piece_types)
+    board_hash = _aggregate_piece_hash(initial_hash, squares, colored_piece_types)
 
     # We hash on every turn, to XOR out the previous turn hash.
     board_hash = _turn_hash(board_hash)
@@ -165,21 +171,21 @@ class ZobristHasher:
         Returns:
         - int: The computed Zobrist hash value for the board.
         """
-
-        colored_piece_types = np.array(
+        squares_colored_piece_types = np.array(
             [
-                # TODO: consider more cache friendly of doing this
                 [square, hash(piece)]
                 for square in chess.SQUARES
                 if (piece := board.piece_at(square))
             ],
             dtype=np.int8,
         )
+        squares = squares_colored_piece_types[:, 0]
+        colored_piece_types = squares_colored_piece_types[:, 1]
         ep_file = ZobristHasher._parse_ep_file(board)
         castling_rights = ZobristHasher._parse_castling_rights(board)
 
         zobrist_hash = _full_zobrist_hash(  # type: ignore
-            colored_piece_types, board.turn, ep_file, castling_rights
+            squares, colored_piece_types, board.turn, ep_file, castling_rights
         )
         return ZobristStateInfo(zobrist_hash, ep_file, castling_rights)
 
@@ -190,24 +196,27 @@ class ZobristHasher:
         prev_state: ZobristStateInfo,
         captured_piece: Optional[chess.Piece],
     ) -> ZobristStateInfo:
-        # TODO: what if it promotes?
-        moving_color_piece_type = hash(board.piece_at(move.to_square))
-        colored_piece_types = np.array(
-            [
-                [move.from_square, moving_color_piece_type],
-                [move.to_square, moving_color_piece_type],
-            ],
-            dtype=np.int8,
-        )
+        squares = [move.from_square, move.to_square]
+        from_color_piece_type = hash(board.piece_at(move.to_square))
+        colored_piece_types = [from_color_piece_type]
+
+        if move.promotion:
+            colored_piece_types.append(hash(board.piece_at(move.to_square)))
+        else:
+            colored_piece_types.append(from_color_piece_type)
+
         if captured_piece:
-            np.append(
-                colored_piece_types,
-                [[move.to_square, hash(captured_piece)]],
-            )
+            squares.append(move.to_square)
+            colored_piece_types.append(hash(captured_piece))
+
+        squares = np.array(squares, dtype=np.int8)
+        colored_piece_types = np.array(colored_piece_types, dtype=np.int8)
+
         ep_file = ZobristHasher._parse_ep_file(board)
         castling_rights = ZobristHasher._parse_castling_rights(board)
         zobrist_hash = _incremental_zobrist_hash(
             prev_state.zobrist_hash,
+            squares,
             colored_piece_types,
             prev_state.ep_file,
             ep_file,
