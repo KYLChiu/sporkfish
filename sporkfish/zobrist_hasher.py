@@ -7,19 +7,29 @@ from numba import njit
 
 from .board.board import Board
 
+_int64_min_val = np.iinfo(np.int64).min
+_int64_max_val = np.iinfo(np.int64).max
+_int8_max_val = np.iinfo(np.int8).max
+
 # TODO: we may revisit this in future as people claim this can affect collision chances
 # We set these globally as we want these to be shared across all Zobrist hashers
 np.random.seed(10101010)
-_piece_keys = np.random.randint(0, 2**64, size=(64, 12), dtype=np.uint64)
-_turn_key = np.random.randint(0, 2**64, dtype=np.uint64)
-_en_passant_keys = np.random.randint(0, 2**64, size=8, dtype=np.uint64)
-_castling_keys = np.random.randint(0, 2**64, size=16, dtype=np.uint64)
+_piece_keys = np.random.randint(
+    _int64_min_val, _int64_max_val, size=(64, 12), dtype=np.int64
+)
+_turn_key = np.random.randint(_int64_min_val, _int64_max_val, dtype=np.int64)
+_en_passant_keys = np.random.randint(
+    _int64_min_val, _int64_max_val, size=8, dtype=np.int64
+)
+_castling_keys = np.random.randint(
+    _int64_min_val, _int64_max_val, size=16, dtype=np.int64
+)
 
 
 @njit(cache=True, nogil=True)
 def _aggregate_piece_hash(
-    board_hash: np.uint64, colored_piece_types: np.ndarray
-) -> np.uint64:
+    board_hash: np.int64, colored_piece_types: np.ndarray
+) -> np.int64:
     new_board_hash = board_hash
     for square, color_piece_type in colored_piece_types:
         new_board_hash ^= _piece_keys[square, color_piece_type]  # type: ignore
@@ -27,12 +37,12 @@ def _aggregate_piece_hash(
 
 
 @njit(cache=True, nogil=True)
-def _turn_hash(board_hash: np.uint64) -> np.uint64:
+def _turn_hash(board_hash: np.int64) -> np.int64:
     return board_hash ^ _turn_key
 
 
 @njit(cache=True, nogil=True)
-def _conditional_turn_hash(board_hash: np.uint64, board_turn: bool) -> np.uint64:
+def _conditional_turn_hash(board_hash: np.int64, board_turn: bool) -> np.int64:
     return board_hash ^ _turn_key if board_turn else board_hash
 
 
@@ -40,7 +50,7 @@ def _conditional_turn_hash(board_hash: np.uint64, board_turn: bool) -> np.uint64
 def _en_passant_hash(board_hash: np.uint64, en_passant_file: np.uint8) -> np.uint64:
     return (  # type: ignore
         board_hash ^ _en_passant_keys[en_passant_file]
-        if en_passant_file != np.uint8(-1)
+        if en_passant_file != _int8_max_val
         else board_hash
     )
 
@@ -61,14 +71,14 @@ def _castling_hash(board_hash: np.uint64, castling_rights: np.ndarray) -> np.uin
 
 
 @njit(cache=True, nogil=True)
-def full_zobrist_hash(
+def _full_zobrist_hash(
     colored_piece_types: np.ndarray,
     board_turn: bool,
-    en_passant_file: np.uint64,
+    en_passant_file: np.int64,
     castling_rights: np.ndarray,
 ) -> np.uint64:
     # Here we send all the colored_piece types
-    board_hash = _aggregate_piece_hash(np.uint64(0), colored_piece_types)
+    board_hash = _aggregate_piece_hash(np.int64(0), colored_piece_types)
     board_hash = _conditional_turn_hash(board_hash, board_turn)
     board_hash = _en_passant_hash(board_hash, en_passant_file)
     board_hash = _castling_hash(board_hash, castling_rights)
@@ -76,13 +86,13 @@ def full_zobrist_hash(
 
 
 @njit(cache=True, nogil=True)
-def incremental_zobrist_hash(
+def _incremental_zobrist_hash(
     initial_hash: np.uint64,
     colored_piece_types: np.ndarray,
-    prev_en_passant_file: np.uint8,
-    curr_en_passant_file: np.uint8,
-    prev_castling_rights: np.uint8,
-    curr_castling_rights: np.uint8,
+    prev_en_passant_file: np.int8,
+    curr_en_passant_file: np.int8,
+    prev_castling_rights: np.ndarray,
+    curr_castling_rights: np.ndarray,
 ) -> np.uint64:
     # Here we send in only the colored_piece_types for the new move
     # If capturing, the original piece is sent in to be XOR'd out
@@ -112,8 +122,8 @@ class ZobristStateInfo:
     It contains board level information be used in computation of the Zobrist incremental hash.
     """
 
-    zobrist_hash: np.uint64
-    ep_file: np.uint64
+    zobrist_hash: np.int64
+    ep_file: np.int8
     castling_rights: np.ndarray
 
 
@@ -125,11 +135,11 @@ class ZobristHasher:
         """
 
     @staticmethod
-    def _parse_ep_file(board: Board) -> np.uint8:
+    def _parse_ep_file(board: Board) -> np.int8:
         return (
-            np.uint8(chess.square_file(board.ep_square))
+            np.int8(chess.square_file(board.ep_square))
             if board.ep_square
-            else np.uint8(-1)
+            else _int8_max_val
         )
 
     @staticmethod
@@ -167,7 +177,7 @@ class ZobristHasher:
         ep_file = ZobristHasher._parse_ep_file(board)
         castling_rights = ZobristHasher._parse_castling_rights(board)
 
-        zobrist_hash = full_zobrist_hash(  # type: ignore
+        zobrist_hash = _full_zobrist_hash(  # type: ignore
             colored_piece_types, board.turn, ep_file, castling_rights
         )
         return ZobristStateInfo(zobrist_hash, ep_file, castling_rights)
@@ -179,10 +189,12 @@ class ZobristHasher:
         prev_state: ZobristStateInfo,
         captured_piece: Optional[chess.Piece],
     ) -> ZobristStateInfo:
+        # TODO: what if it promotes?
+        moving_color_piece_type = hash(board.piece_at(move.to_square))
         colored_piece_types = np.array(
             [
-                [move.from_square, hash(board.piece_at(move.from_square))],
-                [move.to_square, hash(board.piece_at(move.to_square))],
+                [move.from_square, moving_color_piece_type],
+                [move.to_square, moving_color_piece_type],
             ],
             dtype=np.uint8,
         )
@@ -193,7 +205,7 @@ class ZobristHasher:
             )
         ep_file = ZobristHasher._parse_ep_file(board)
         castling_rights = ZobristHasher._parse_castling_rights(board)
-        zobrist_hash = incremental_zobrist_hash(
+        zobrist_hash = _incremental_zobrist_hash(
             prev_state.zobrist_hash,
             colored_piece_types,
             prev_state.ep_file,
