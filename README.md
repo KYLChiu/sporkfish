@@ -12,6 +12,7 @@ See any of the following sections to quickly setup your development environment.
 - [Using DevContainer with VSCode](#using-devcontainer-with-vscode)* *recommended*
 - [Using DevContainer with PyCharm](#using-devcontainer-with-pycharm)
 - [Using Github Codespace](#using-github-codespace)
+- [Using native Docker](#using-native-docker)
 
 ### Using DevContainer with VSCode
 
