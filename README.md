@@ -53,6 +53,8 @@ An active internet connection will be required for this. This will also use up y
 Prerequisites:
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 
+After cloning the repository, from the root directory, run:
+
 ```
 docker pull kylchiu/sporkfish-dev:latest
 docker build -t kylchiu/sporkfish-dev:latest .
