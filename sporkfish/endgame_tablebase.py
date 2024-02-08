@@ -27,7 +27,7 @@ class EndgameTablebaseConfig(Configurable):
         Args:
             endgame_tablebase_path (Optional[str]): Relative (to root directory) or absolute path to endgame tablebase binary. Defaults to None.
         """
-        random.seed(1) # To be configured as part of config.py later on
+        random.seed(1)  # To be configured as part of config.py later on
         self.endgame_tablebase_path = endgame_tablebase_path
 
 
@@ -143,13 +143,15 @@ class EndgameTablebase:
                     # We check DTZ score < 0 here, since we pushed our legal move and so its the opponents turn.
                     # If they are losing, we are winning.
                     dtz_score = self._db.probe_dtz(cboard)
-                    dtz_scores.append(dtz_score if dtz_score else float('inf'))
+                    dtz_scores.append(dtz_score if dtz_score else float("inf"))
                     cboard.pop()
                 # We take the maximum score because scores are negative
                 max_score = max(dtz_scores)
                 if max_score >= 0:
                     return None
-                max_score_indices = [idx for idx, score in enumerate(dtz_scores) if score == max_score]
+                max_score_indices = [
+                    idx for idx, score in enumerate(dtz_scores) if score == max_score
+                ]
                 return moves[random.choices(max_score_indices, k=1)[0]]
             return None
         except chess.syzygy.MissingTableError:
