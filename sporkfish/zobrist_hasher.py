@@ -64,7 +64,7 @@ def _castling_hash(board_hash: np.int64, castling_rights: np.ndarray) -> np.int6
     num_castle_rights = len(castling_rights)
     assert (
         num_castle_rights == 4
-    ), "There should only be 4 castling rights to check, 2 for black, 2 for white."
+    ), f"There should only be 4 castling rights to check, 2 for black, 2 for white, but got {num_castle_rights}."
 
     # This transforms the castling rights from an array of 4 bools
     # into an int from [0, 15].
