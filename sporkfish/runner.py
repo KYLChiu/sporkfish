@@ -71,7 +71,7 @@ class Runner:
         If the run mode is set to LICHESS, it runs the Lichess bot, otherwise, it runs the UCI client.
         """
         action = self.mode_actions.get(self._run_config.mode)
-        action_name = action.__name__
+        action_name = action.__name__  # type: ignore
         assert callable(action), f"Function '{action_name}' is not callable."
         assert (
             len(inspect.signature(action).parameters) == 0
