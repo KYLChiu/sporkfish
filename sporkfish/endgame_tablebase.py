@@ -140,7 +140,10 @@ class EndgameTablebase:
                     if self._db.probe_wdl(cboard) < 0:
                         return move
                     cboard.pop()
-                return None
+                min_score_index = dtz_scores.index(min(dtz_scores))
+                return (
+                    moves[min_score_index] if dtz_scores[min_score_index] < 0 else None
+                )
             return None
         except chess.syzygy.MissingTableError:
             return None
