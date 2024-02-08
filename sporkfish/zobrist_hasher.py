@@ -196,6 +196,7 @@ class ZobristHasher:
         :return: An object containing the Zobrist hash value and other board state information.
         :rtype: ZobristStateInfo
         """
+        # colored_piece_types for all pieces that exist on the board
         squares_colored_piece_types = np.array(
             [
                 [square, hash(piece)]
@@ -204,6 +205,7 @@ class ZobristHasher:
             ],
             dtype=np.int8,
         )
+        # Splice into two arrays
         squares = squares_colored_piece_types[:, 0]
         colored_piece_types = squares_colored_piece_types[:, 1]
 
@@ -243,23 +245,23 @@ class ZobristHasher:
         from_color_piece_type = hash(previous_from_square_piece)
 
         # XOR out the previous from square piece
-        _squares = [move.from_square]
-        _colored_piece_types = [from_color_piece_type]
+        squares_list = [move.from_square]
+        colored_piece_types_list = [from_color_piece_type]
 
         # XOR in the to square piece, piece type depending on if promoted or not
-        _squares.append(move.to_square)
+        squares_list.append(move.to_square)
         if move.promotion:
-            _colored_piece_types.append(hash(board.piece_at(move.to_square)))
+            colored_piece_types_list.append(hash(board.piece_at(move.to_square)))
         else:
-            _colored_piece_types.append(from_color_piece_type)
+            colored_piece_types_list.append(from_color_piece_type)
 
         # XOR out the captured piece if exists
         if captured_piece:
-            _squares.append(move.to_square)
-            _colored_piece_types.append(hash(captured_piece))
+            squares_list.append(move.to_square)
+            colored_piece_types_list.append(hash(captured_piece))
 
-        squares = np.array(_squares, dtype=np.int8)
-        colored_piece_types = np.array(_colored_piece_types, dtype=np.int8)
+        squares = np.array(squares_list, dtype=np.int8)
+        colored_piece_types = np.array(colored_piece_types_list, dtype=np.int8)
 
         ep_file = ZobristHasher._parse_ep_file(board)
         castling_rights = ZobristHasher._parse_castling_rights(board)
