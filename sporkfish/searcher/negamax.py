@@ -59,9 +59,10 @@ class NegamaxSp(MiniMaxVariants):
 
         # Null move pruning - reduce the search space by trying a null move,
         # then seeing if the score of the subtree search is still high enough to cause a beta cutoff
-        if self._searcher_config.enable_null_move_pruning:
-            if self._null_move_pruning(board, depth, alpha, beta):
-                return beta
+        if self._searcher_config.enable_null_move_pruning and self._null_move_pruning(
+            board, depth, alpha, beta
+        ):
+            return beta
 
         # Move ordering
         legal_moves = self._ordered_moves(board, board.legal_moves)
