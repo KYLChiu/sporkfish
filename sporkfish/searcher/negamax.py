@@ -42,7 +42,7 @@ class NegamaxSp(MiniMaxVariants):
         value = -float("inf")
 
         # Probe the transposition table for an existing entry
-        if self._searcher_config.enable_transposition_table:
+        if zobrist_state:
             tt_entry = self._transposition_table.probe(
                 zobrist_state.zobrist_hash, depth
             )
@@ -72,20 +72,15 @@ class NegamaxSp(MiniMaxVariants):
             # Get piece at previous from_square for transposition table
             # This needs to be done prior to changing the board state
             previous_piece_from_square = (
-                board.piece_at(move.from_square)
-                if self._searcher_config.enable_transposition_table
-                else False
+                board.piece_at(move.from_square) if zobrist_state else None
             )
             capture = (
                 board.is_capture(move)
-                if self._searcher_config.enable_futility_pruning
-                or self._searcher_config.enable_transposition_table
+                if self._searcher_config.enable_futility_pruning or zobrist_state
                 else False
             )
             captured_piece = (
-                board.piece_at(move.to_square)
-                if self._searcher_config.enable_transposition_table and capture
-                else None
+                board.piece_at(move.to_square) if zobrist_state and capture else None
             )
 
             board.push(move)
@@ -103,7 +98,7 @@ class NegamaxSp(MiniMaxVariants):
                     board,
                     move,
                     zobrist_state,
-                    previous_piece_from_square,
+                    previous_piece_from_square,  # type: ignore
                     captured_piece,
                 )
                 if zobrist_state
@@ -122,7 +117,7 @@ class NegamaxSp(MiniMaxVariants):
             if alpha >= beta:
                 break
 
-        if self._searcher_config.enable_transposition_table:
+        if zobrist_state:
             self._transposition_table.store(zobrist_state.zobrist_hash, depth, value)
 
         return value
@@ -197,18 +192,11 @@ class NegamaxSp(MiniMaxVariants):
             # Get piece at from_square and captures for transposition table
             # This needs to be done prior to changing the board state
             previous_piece_from_square = (
-                board.piece_at(move.to_square)
-                if self._searcher_config.enable_transposition_table
-                else False
-            )
-            capture = (
-                board.is_capture(move)
-                if self._searcher_config.enable_transposition_table
-                else False
+                board.piece_at(move.to_square) if zobrist_state else None
             )
             captured_piece = (
                 board.piece_at(move.to_square)
-                if self._searcher_config.enable_transposition_table and capture
+                if zobrist_state and board.is_capture(move)
                 else None
             )
 
@@ -220,7 +208,7 @@ class NegamaxSp(MiniMaxVariants):
                     board,
                     move,
                     zobrist_state,
-                    previous_piece_from_square,
+                    previous_piece_from_square,  # type: ignore
                     captured_piece,
                 )
                 if zobrist_state
@@ -240,7 +228,7 @@ class NegamaxSp(MiniMaxVariants):
             if alpha >= beta:
                 break
 
-        if self._searcher_config.enable_transposition_table:
+        if zobrist_state:
             self._transposition_table.store(zobrist_state.zobrist_hash, depth, value)
 
         return value, best_move

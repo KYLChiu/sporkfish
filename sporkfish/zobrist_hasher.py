@@ -88,7 +88,7 @@ def _full_zobrist_hash(
     board_hash = _conditional_turn_hash(board_hash, board_turn)
     board_hash = _en_passant_hash(board_hash, en_passant_file)
     board_hash = _castling_hash(board_hash, castling_rights)
-    return board_hash
+    return board_hash  # type: ignore
 
 
 @njit(cache=True, nogil=True)
@@ -119,7 +119,7 @@ def _incremental_zobrist_hash(
     board_hash = _castling_hash(board_hash, prev_castling_rights)
     board_hash = _castling_hash(board_hash, curr_castling_rights)
 
-    return board_hash
+    return board_hash  # type: ignore
 
 
 @dataclass
@@ -162,7 +162,7 @@ class ZobristHasher:
         :rtype: np.int8
         """
         return (
-            np.int8(chess.square_file(board.ep_square))
+            np.int8(chess.square_file(board.ep_square))  # type: ignore
             if board.ep_square
             else _int8_max_val
         )
@@ -245,23 +245,23 @@ class ZobristHasher:
         from_color_piece_type = hash(previous_from_square_piece)
 
         # XOR out the previous from square piece
-        squares = [move.from_square]
-        colored_piece_types = [from_color_piece_type]
+        _squares = [move.from_square]
+        _colored_piece_types = [from_color_piece_type]
 
         # XOR in the to square piece, piece type depending on if promoted or not
-        squares.append(move.to_square)
+        _squares.append(move.to_square)
         if move.promotion:
-            colored_piece_types.append(hash(board.piece_at(move.to_square)))
+            _colored_piece_types.append(hash(board.piece_at(move.to_square)))
         else:
-            colored_piece_types.append(from_color_piece_type)
+            _colored_piece_types.append(from_color_piece_type)
 
         # XOR out the captured piece if exists
         if captured_piece:
-            squares.append(move.to_square)
-            colored_piece_types.append(hash(captured_piece))
+            _squares.append(move.to_square)
+            _colored_piece_types.append(hash(captured_piece))
 
-        squares = np.array(squares, dtype=np.int8)
-        colored_piece_types = np.array(colored_piece_types, dtype=np.int8)
+        squares = np.array(_squares, dtype=np.int8)
+        colored_piece_types = np.array(_colored_piece_types, dtype=np.int8)
 
         ep_file = ZobristHasher._parse_ep_file(board)
         castling_rights = ZobristHasher._parse_castling_rights(board)

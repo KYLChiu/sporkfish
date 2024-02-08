@@ -1,8 +1,10 @@
 from typing import Dict, Optional
 
+import numpy as np
+
 
 class TranspositionTable:
-    def __init__(self, dct: Dict[int, Dict[str, float]]) -> None:
+    def __init__(self, dct: Dict[np.int64, Dict[str, float]]) -> None:
         """
         Initialize the TranspositionTable object, wrapping a shared_dict.
 
@@ -11,7 +13,7 @@ class TranspositionTable:
 
     def store(
         self,
-        zobrist_hash: int,
+        zobrist_hash: np.int64,
         depth: int,
         score: float,
     ) -> None:
@@ -25,7 +27,7 @@ class TranspositionTable:
         """
         self._table[zobrist_hash] = {"depth": depth, "score": score}
 
-    def probe(self, zobrist_hash: int, depth: int) -> Optional[Dict]:
+    def probe(self, zobrist_hash: np.int64, depth: int) -> Optional[Dict]:
         """
         Retrieve an entry from the transposition table.
 
