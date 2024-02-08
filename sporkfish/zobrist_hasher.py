@@ -83,7 +83,7 @@ def _full_zobrist_hash(
     en_passant_file: np.int64,
     castling_rights: np.ndarray,
 ) -> np.int64:
-    # Here we send all the colored_piece types for all piecse which exist on all the board
+    # Here we send all the colored_piece types for all pieces which exist on all the board
     board_hash = _aggregate_piece_hash(np.int64(0), squares, colored_piece_types)
     board_hash = _conditional_turn_hash(board_hash, board_turn)
     board_hash = _en_passant_hash(board_hash, en_passant_file)
