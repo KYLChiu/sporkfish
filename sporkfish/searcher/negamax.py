@@ -106,7 +106,7 @@ class NegamaxSp(MiniMaxVariants):
                     previous_piece_from_square,
                     captured_piece,
                 )
-                if self._searcher_config.enable_transposition_table
+                if zobrist_state
                 else None
             )
 
@@ -223,7 +223,7 @@ class NegamaxSp(MiniMaxVariants):
                     previous_piece_from_square,
                     captured_piece,
                 )
-                if self._searcher_config.enable_transposition_table
+                if zobrist_state
                 else None
             )
             child_value = -self._negamax(
