@@ -83,7 +83,7 @@ def _full_zobrist_hash(
     en_passant_file: np.int64,
     castling_rights: np.ndarray,
 ) -> np.int64:
-    # Here we send all the colored_piece types
+    # Here we send all the colored_piece types for all piecse which exist on all the board
     board_hash = _aggregate_piece_hash(np.int64(0), squares, colored_piece_types)
     board_hash = _conditional_turn_hash(board_hash, board_turn)
     board_hash = _en_passant_hash(board_hash, en_passant_file)
@@ -101,7 +101,7 @@ def _incremental_zobrist_hash(
     prev_castling_rights: np.ndarray,
     curr_castling_rights: np.ndarray,
 ) -> np.int64:
-    # Here we send in only the colored_piece_types for the new move
+    # Here we send in only the colored_piece_types for the input move
     # If capturing, the original piece is sent in to be XOR'd out
     # Promotions are included already as part of the colored_piece_type for the new move
     board_hash = _aggregate_piece_hash(initial_hash, squares, colored_piece_types)
@@ -109,7 +109,7 @@ def _incremental_zobrist_hash(
     # We hash on every turn, to XOR out the previous turn hash.
     board_hash = _turn_hash(board_hash)
 
-    # We do pairwise hashes for en en passant and castling, based on the previous and current rights.
+    # We do pairwise hashes for en passant and castling, based on the previous and current rights.
     # The first one XOR's away the previous rights and the second adds the current rights.
     # If previous_rights == current_rights then we obtain the same result as before.
     # This is likely faster than checking if both arrays are the same (to be tested).
