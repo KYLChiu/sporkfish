@@ -10,7 +10,7 @@ import stopit
 from ..board.board import Board
 from ..evaluator import Evaluator
 from ..transposition_table import TranspositionTable
-from ..zobrist_hasher import ZobristHasher
+from ..zobrist_hasher import ZobristHasher, ZobristStateInfo
 from .move_ordering import MoveOrder
 from .searcher import Searcher
 from .searcher_config import SearcherConfig
@@ -129,7 +129,14 @@ class MiniMaxVariants(Searcher, ABC):
             )
         return score, move
 
-    def _quiescence(self, board: Board, depth: int, alpha: float, beta: float) -> float:
+    def _quiescence_search(
+        self,
+        board: Board,
+        depth: int,
+        alpha: float,
+        beta: float,
+        zobrist_state: Optional[ZobristStateInfo],
+    ) -> float:
         """
         Perform a quiescence search to help alleviate the horizon effect and improve checking of tactical possibilities.
 
@@ -151,6 +158,15 @@ class MiniMaxVariants(Searcher, ABC):
         :return: The evaluated score after quiescence search.
         :rtype: float
         """
+
+        # Probe the transposition table for an existing entry
+        # We treat all cases as depth 0, so essentially as an static evaluation
+        if zobrist_state and (
+            tt_entry := self._transposition_table.probe(
+                zobrist_state.zobrist_hash, depth
+            )
+        ):
+            return tt_entry["score"]  # type: ignore
 
         self._statistics.increment()
 
@@ -175,8 +191,30 @@ class MiniMaxVariants(Searcher, ABC):
             ):
                 continue
 
+            # Get the piece from the originating square and the captured piece
+            # Existence of captured piece is guaranteed in quiescence search
+            previous_piece_from_square = (
+                board.piece_at(move.from_square) if zobrist_state else None
+            )
+            captured_piece = board.piece_at(move.to_square) if zobrist_state else None
+
             board.push(move)
-            score = -self._quiescence(board, depth - 1, -beta, -alpha)
+
+            # Update the Zobrist hash
+            child_zobrist_state = (
+                self._zobrist_hash.incremental_zobrist_hash(
+                    board,
+                    move,
+                    zobrist_state,
+                    previous_piece_from_square,  # type: ignore
+                    captured_piece,
+                )
+                if zobrist_state
+                else None
+            )
+            score = -self._quiescence_search(
+                board, depth - 1, -beta, -alpha, child_zobrist_state
+            )
             board.pop()
 
             if score >= beta:
@@ -274,7 +312,7 @@ class MiniMaxVariants(Searcher, ABC):
         )
 
     @stopit.threading_timeoutable(default=(float("-inf"), chess.Move.null(), 0.0, 1))
-    def _search_timeoutable(
+    def _timeoutable_search(
         self,
         board_to_search: Board,
         depth: int,
@@ -344,7 +382,7 @@ class MiniMaxVariants(Searcher, ABC):
             self._statistics.reset()
 
             time_left = timeout
-            new_score, new_move, elapsed, error_code = self._search_timeoutable(
+            new_score, new_move, elapsed, error_code = self._timeoutable_search(
                 timeout=time_left,
                 board_to_search=new_board,
                 depth=depth,

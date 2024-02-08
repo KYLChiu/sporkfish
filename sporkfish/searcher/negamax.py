@@ -41,21 +41,21 @@ class NegamaxSp(MiniMaxVariants):
         """
         value = -float("inf")
 
-        # Probe the transposition table for an existing entry
-        if zobrist_state:
-            tt_entry = self._transposition_table.probe(
-                zobrist_state.zobrist_hash, depth
-            )
-            if tt_entry:
-                return tt_entry["score"]  # type: ignore
-
-        self._statistics.increment()
-
         # Base case: devolve to quiescence search
         # We currently only expect max 4 captures to reach a quiet (non-capturing) position
         # This is not ideal, but otherwise the search becomes incredibly slow
         if depth == 0:
-            return self._quiescence(board, 4, alpha, beta)
+            return self._quiescence_search(board, 4, alpha, beta)
+
+        # Probe the transposition table for an existing entry
+        if zobrist_state and (
+            tt_entry := self._transposition_table.probe(
+                zobrist_state.zobrist_hash, depth
+            )
+        ):
+            return tt_entry["score"]  # type: ignore
+
+        self._statistics.increment()
 
         # Null move pruning - reduce the search space by trying a null move,
         # then seeing if the score of the subtree search is still high enough to cause a beta cutoff
