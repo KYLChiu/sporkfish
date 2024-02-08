@@ -130,20 +130,19 @@ class EndgameTablebase:
                 # This is a small performace hit but is miniscule compared to searching
                 cboard = chess.Board()
                 cboard.set_fen(board.fen())
-                for move in cboard.legal_moves:
+                dtz_scores = []
+                moves = list(cboard.legal_moves)
+                for move in moves:
                     cboard.push(move)
-                    # WDL Score: returns 2 if the side to move is winning, 0 if the position is a draw and -2 if the side to move is losing.
-                    # Returns 1 in case of a cursed win and -1 in case of a blessed loss.
-                    # Mate can be forced but the position can be drawn due to the fifty-move rule.
-                    # We check WDL score < 0 here, since we pushed our legal move and so its the opponents turn.
+                    # Returns a positive value if the side to move is winning, 0 if the position is a draw,
+                    # and a negative value if the side to move is losing.
+                    # DTZ = Number of moves to mate.
+                    # We check DTZ score < 0 here, since we pushed our legal move and so its the opponents turn.
                     # If they are losing, we are winning.
-                    if self._db.probe_wdl(cboard) < 0:
-                        return move
+                    dtz_scores.append(self._db.probe_dtz(cboard))
                     cboard.pop()
                 min_score_index = dtz_scores.index(min(dtz_scores))
-                return (
-                    moves[min_score_index] if dtz_scores[min_score_index] < 0 else None
-                )
+                return moves[min_score_index] if dtz_scores[min_score_index]<0 else None
             return None
         except chess.syzygy.MissingTableError:
             return None
