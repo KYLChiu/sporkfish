@@ -49,7 +49,8 @@ An active internet connection will be required for this. This will also use up y
 
 ### Using native Docker
 
-To quickly set up the environment, you can use docker. Pull the code from git and from a terminal in the root directory:
+Prerequisites:
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 
 ```
 docker pull kylchiu/sporkfish-dev:latest
