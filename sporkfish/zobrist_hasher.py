@@ -141,14 +141,12 @@ class ZobristStateInfo:
 
 
 class ZobristHasher:
-    def _init_(self) -> None:
-        """
-        Initialize the Zobrist Hasher object, used to hash board positions.
-        This allows caching via the transposition table, so we don't have to evaluate positions twice.
-        Two methods are provided:
-        One hashes the board statically, doing this by retrieving the full board and hence is slow.
-        The other hashes the board after a move is made (i.e. incrementally), and is designed to be faster.
-        """
+    """
+    This allows caching via the transposition table, so we don't have to evaluate positions twice.
+    Two methods are provided:
+    - One hashes the board statically, doing this by retrieving the full board and hence is slow.
+    - The other hashes the board after a move is made (i.e. incrementally), and is designed to be faster.
+    """
 
     @staticmethod
     def _parse_ep_file(board: Board) -> np.int8:
