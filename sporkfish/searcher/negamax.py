@@ -154,7 +154,8 @@ class NegamaxSp(MiniMaxVariants):
         if depth >= depth_reduction_factor and not in_check:
             null_move_depth = depth - depth_reduction_factor
             board.push(chess.Move.null())
-            value = -self._negamax(board, null_move_depth, -beta, -alpha)
+            # TODO: check if too expensive to calculate Zobrist state here
+            value = -self._negamax(board, null_move_depth, -beta, -alpha, None)
             board.pop()
             if value >= beta:
                 return True
