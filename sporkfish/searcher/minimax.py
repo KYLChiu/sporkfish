@@ -162,9 +162,7 @@ class MiniMaxVariants(Searcher, ABC):
         # Probe the transposition table for an existing entry
         # We treat all cases as depth 0, so essentially as an static evaluation
         if zobrist_state and (
-            tt_entry := self._transposition_table.probe(
-                zobrist_state.zobrist_hash, depth
-            )
+            tt_entry := self._transposition_table.probe(zobrist_state.zobrist_hash, 0)
         ):
             return tt_entry["score"]  # type: ignore
 
@@ -222,6 +220,9 @@ class MiniMaxVariants(Searcher, ABC):
 
             if score > alpha:
                 alpha = score
+
+            if zobrist_state:
+                self._transposition_table.store(zobrist_state.zobrist_hash, 0, score)
 
         return alpha
 

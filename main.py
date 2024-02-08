@@ -3,7 +3,7 @@ import logging.config
 import multiprocessing
 
 from config import load_config
-from sporkfish.runner import RunConfig, RunMode, run_lichess, run_uci
+from sporkfish.runner import RunConfig, Runner
 
 if __name__ == "__main__":
     config = load_config()
@@ -17,7 +17,5 @@ if __name__ == "__main__":
 
     logging.info("----- Sporkfish -----")
 
-    if run_config.mode == RunMode.LICHESS:
-        run_lichess()
-    else:
-        run_uci()
+    runner = Runner(run_config)
+    runner.run()
