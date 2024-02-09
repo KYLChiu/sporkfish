@@ -14,6 +14,14 @@ def move_from_et_query(fen: str):
     return move
 
 
+@pytest.mark.parametrize(
+    "fen, move_expected",
+    [
+        ("8/4k3/8/8/8/8/3BB3/3K4 w - - 0 1", True),
+        ("8/4k3/8/8/8/8/3BB3/3K4 b - - 0 1", False),
+        ("8/4k3/8/8/8/8/3BB3/3K1Q2 b - - 0 1", False),
+    ],
+)
 class TestEndgameTablebase:
     def _check_et_query_move_expected(self, fen: str, move_expected: bool):
         move = move_from_et_query(fen)
@@ -22,14 +30,8 @@ class TestEndgameTablebase:
         else:
             assert not move, "Didn't expect move but returned valid move."
 
-    def test_et_query_white_to_move_white_winning(self):
-        self._check_et_query_move_expected("8/4k3/8/8/8/8/3BB3/3K4 w - - 0 1", True)
-
-    def test_et_query_black_to_move_white_winning(self):
-        self._check_et_query_move_expected("8/4k3/8/8/8/8/3BB3/3K4 b - - 0 1", False)
-
-    def test_et_query_black_to_move_white_winning_extra_queen(self):
-        self._check_et_query_move_expected("8/4k3/8/8/8/8/3BB3/3K1Q2 b - - 0 1", False)
+    def test_et_query(self, fen, move_expected):
+        self._check_et_query_move_expected(fen, move_expected)
 
 
 @pytest.mark.parametrize(

@@ -1,9 +1,8 @@
 import logging
 import os
+import random
 import sys
 from typing import Optional
-
-import random
 
 import chess
 import chess.syzygy
@@ -13,21 +12,17 @@ from .configurable import Configurable
 
 
 class EndgameTablebaseConfig(Configurable):
-    """Configuration class for an endgame tablebase.
-
-    Attributes:
-        endgame_tablebase_path (Optional[str]): Relative (to root directory) or absolute path to endgame tablebase binary. Defaults to None.
-
-    """
+    """Configuration class for an endgame tablebase."""
 
     def __init__(self, endgame_tablebase_path: Optional[str] = None):
         """
         Initialize an EndgameTablebaseConfig instance.
 
-        Args:
-            endgame_tablebase_path (Optional[str]): Relative (to root directory) or absolute path to endgame tablebase binary. Defaults to None.
+        :param endgame_tablebase_path: Relative path (to root directory) to endgame tablebase folder. Defaults to None.
+        :type endgame_tablebase_path: Optional[str]
         """
-        random.seed(1)  # To be configured as part of config.py later on
+        # TODO: configure as part of config later on
+        random.seed(1)
         self.endgame_tablebase_path = endgame_tablebase_path
 
 
@@ -116,6 +111,7 @@ class EndgameTablebase:
     def query(self, board: Board) -> Optional[chess.Move]:
         """
         Query the endgame database for a given chess board position.
+        It uses the Depth to Zero (DTZ) as metric.
 
         :param board: The current chess board position.
         :type board: Board
@@ -134,25 +130,22 @@ class EndgameTablebase:
                 cboard = chess.Board()
                 cboard.set_fen(board.fen())
                 dtz_scores = []
-                moves = list(cboard.legal_moves)
-                for move in moves:
+                legal_moves = list(cboard.legal_moves)
+                for move in legal_moves:
                     cboard.push(move)
-                    # Returns a positive value if the side to move is winning, 0 if the position is a draw,
-                    # and a negative value if the side to move is losing.
-                    # DTZ = Number of moves to mate.
-                    # We check DTZ score < 0 here, since we pushed our legal move and so its the opponents turn.
-                    # If they are losing, we are winning.
-                    dtz_score = self._db.probe_dtz(cboard)
-                    dtz_scores.append(dtz_score if dtz_score else float("inf"))
+                    # https://python-chess.readthedocs.io/en/latest/syzygy.html
+                    dtz = self._db.probe_dtz(cboard)
+                    # We only handle unconditional "wins" (including zeroing) at the moment
+                    # This is equivalent to unconditional losses for the opponent
+                    # TODO: try to draw a cursed win?
+                    # TODO: try to save a cursed loss?
+                    dtz_scores.append(dtz if -100 <= dtz <= -1 else float("-inf"))
                     cboard.pop()
-                # We take the maximum score because scores are negative
-                max_score = max(dtz_scores)
-                if max_score >= 0:
-                    return None
-                max_score_indices = [
-                    idx for idx, score in enumerate(dtz_scores) if score == max_score
-                ]
-                return moves[random.choices(max_score_indices, k=1)[0]]
+                # The least negative number is the one closest to losing for the opponent
+                # This is valid as all scores are clamped to float("-inf") including potential positive scores
+                best_dtz_idx = dtz_scores.index(max(dtz_scores))
+                best_dtz = dtz_scores[best_dtz_idx]
+                return legal_moves[best_dtz_idx] if best_dtz != float("-inf") else None
             return None
         except chess.syzygy.MissingTableError:
             return None
