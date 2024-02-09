@@ -120,7 +120,7 @@ class EndgameTablebase:
 
     def _categorize_dtz(self, dtz: int) -> "EndgameTablebase.DTZCategory":
         """
-        Categorizes the DTZ (Distance-to-Zero) value into different categories.
+        Categorizes the DTZ (Depth to Zeroing) value into different categories.
 
         :param dtz: The DTZ value to categorize, from our perspective.
         :type dtz: int
