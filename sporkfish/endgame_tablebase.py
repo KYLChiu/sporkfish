@@ -1,7 +1,7 @@
 import logging
 import os
-import random
 import sys
+from enum import IntEnum, auto
 from typing import Optional
 
 import chess
@@ -21,13 +21,23 @@ class EndgameTablebaseConfig(Configurable):
         :param endgame_tablebase_path: Relative path (to root directory) to endgame tablebase folder. Defaults to None.
         :type endgame_tablebase_path: Optional[str]
         """
-        # TODO: configure as part of config later on
-        random.seed(1)
         self.endgame_tablebase_path = endgame_tablebase_path
 
 
 class EndgameTablebase:
     """Class for handling the endgame tablebase in chess engines."""
+
+    class DTZCategory(IntEnum):
+        """
+        Represents the different types of DTZ moves.
+        The order represents the desirability in ascending order.
+        """
+
+        UNCONDITIONAL_LOSS = auto()
+        CURSED_LOSS = auto()
+        UNCONDITIONAL_DRAW = auto()
+        CURSED_WIN = auto()
+        UNCONDITIONAL_WIN = auto()
 
     def __init__(
         self, config: EndgameTablebaseConfig = EndgameTablebaseConfig()
@@ -108,6 +118,57 @@ class EndgameTablebase:
                 return False
         return True
 
+    def _categorize_dtz(self, dtz: int) -> "EndgameTablebase.DTZCategory":
+        """
+        Categorizes the DTZ (Distance-to-Zero) value into different categories.
+
+        :param dtz: The DTZ value to categorize, from our perspective.
+        :type dtz: int
+        :return: The category of the DTZ value.
+        :rtype: EndgameTablebase.DTZCategory
+        """
+        assert isinstance(
+            dtz, int
+        ), f"Expected DTZ to be of type int but got {type(dtz).__name__}."
+        if dtz < -100:
+            return EndgameTablebase.DTZCategory.CURSED_LOSS
+        elif -100 <= dtz <= -1:
+            return EndgameTablebase.DTZCategory.UNCONDITIONAL_LOSS
+        elif dtz == 0:
+            return EndgameTablebase.DTZCategory.UNCONDITIONAL_DRAW
+        elif 1 <= dtz <= 100:
+            return EndgameTablebase.DTZCategory.UNCONDITIONAL_WIN
+        else:
+            return EndgameTablebase.DTZCategory.CURSED_WIN
+
+    def _compare_dtz(self, dtz: int, best_dtz: int, category: DTZCategory) -> int:
+        """
+        Compares two DTZ (Distance-to-Zero) values based on their categories.
+
+        :param dtz: The DTZ value to compare.
+        :type dtz: int
+        :param best_dtz: The best DTZ value so far.
+        :type best_dtz: int
+        :param category: The category of the DTZ value.
+        :type category: EndgameTablebase.DTZCategory
+        :return: The best resulting DTZ value, based on condition of the category.
+        :rtype: int
+        """
+        # We want to save our cursed loss as quickly as possible
+        if category == EndgameTablebase.DTZCategory.CURSED_LOSS:
+            return max(dtz, best_dtz)
+        # We want make the unconditional last as long as possible, in case they run out of time
+        elif category == EndgameTablebase.DTZCategory.UNCONDITIONAL_LOSS:
+            return min(dtz, best_dtz)
+        elif category == EndgameTablebase.DTZCategory.UNCONDITIONAL_DRAW:
+            return 0
+        # We want to unconditionally win as quickly as possible
+        elif category == EndgameTablebase.DTZCategory.UNCONDITIONAL_WIN:
+            return min(dtz, best_dtz)
+        # We want to extend our cursed win as much as possible, in case they run out of time
+        else:
+            return max(dtz, best_dtz)
+
     def query(self, board: Board) -> Optional[chess.Move]:
         """
         Query the endgame database for a given chess board position.
@@ -120,32 +181,33 @@ class EndgameTablebase:
         :rtype: Optional[chess.Move]
         """
 
-        try:
-            if self._db:
-                if not self._should_query(board):
-                    return None
+        if self._db and self._should_query(board):
+            # We need to use a chess.Board() to be compatible with the endgame tablebase
+            # This is a small performace hit but is miniscule compared to searching
+            cboard = chess.Board()
+            cboard.set_fen(board.fen())
+            best_move = None
+            best_dtz = -sys.maxsize
+            best_category = EndgameTablebase.DTZCategory.UNCONDITIONAL_LOSS
+            for move in board.legal_moves:
+                cboard.push(move)
+                # Refer to https://python-chess.readthedocs.io/en/latest/syzygy.html
+                # Invert the dtz as we are looking from the perspective of the opponent
+                dtz = -opp_dtz if (opp_dtz := self._db.get_dtz(cboard)) else None
+                cboard.pop()
 
-                # We need to use a chess.Board() to be compatible with the endgame tablebase
-                # This is a small performace hit but is miniscule compared to searching
-                cboard = chess.Board()
-                cboard.set_fen(board.fen())
-                dtz_scores = []
-                legal_moves = list(cboard.legal_moves)
-                for move in legal_moves:
-                    cboard.push(move)
-                    # https://python-chess.readthedocs.io/en/latest/syzygy.html
-                    dtz = self._db.probe_dtz(cboard)
-                    # We only handle unconditional "wins" (including zeroing) at the moment
-                    # This is equivalent to unconditional losses for the opponent
-                    # TODO: try to draw a cursed win?
-                    # TODO: try to save a cursed loss?
-                    dtz_scores.append(dtz if -100 <= dtz <= -1 else float("-inf"))
-                    cboard.pop()
-                # The least negative number is the one closest to losing for the opponent
-                # This is valid as all scores are clamped to float("-inf") including potential positive scores
-                best_dtz_idx = dtz_scores.index(max(dtz_scores))
-                best_dtz = dtz_scores[best_dtz_idx]
-                return legal_moves[best_dtz_idx] if best_dtz != float("-inf") else None
-            return None
-        except chess.syzygy.MissingTableError:
-            return None
+                if not dtz:
+                    continue
+
+                category = self._categorize_dtz(dtz)
+                if category > best_category:
+                    best_dtz = dtz
+                    best_move = move
+                elif category == best_category:
+                    if self._compare_dtz(dtz, best_dtz, best_category) != best_dtz:
+                        best_dtz = dtz
+                        best_move = move
+
+            return best_move
+
+        return None

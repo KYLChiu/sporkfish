@@ -14,18 +14,6 @@ def move_from_et_query(fen: str):
     return move
 
 
-@pytest.mark.parametrize(
-    "test_name, fen, move_expected",
-    [
-        ("white_to_move_white_winning", "8/4k3/8/8/8/8/3BB3/3K4 w - - 0 1", True),
-        ("black_to_move_white_winning", "8/4k3/8/8/8/8/3BB3/3K4 b - - 0 1", False),
-        (
-            "black_to_move_white_winning_extra_queen",
-            "8/4k3/8/8/8/8/3BB3/3K1Q2 b - - 0 1",
-            False,
-        ),
-    ],
-)
 class TestEndgameTablebase:
     def _check_et_query_move_expected(
         self, test_name: str, fen: str, move_expected: bool
@@ -36,8 +24,33 @@ class TestEndgameTablebase:
         else:
             assert not move, f"{test_name}: Didn't expect move but returned valid move."
 
+    @pytest.mark.parametrize(
+        "test_name, fen, move_expected",
+        [
+            ("white_to_move_white_winning", "8/4k3/8/8/8/8/3BB3/3K4 w - - 0 1", True),
+            ("black_to_move_white_winning", "8/4k3/8/8/8/8/3BB3/3K4 b - - 0 1", False),
+            (
+                "black_to_move_white_winning_extra_queen",
+                "8/4k3/8/8/8/8/3BB3/3K1Q2 b - - 0 1",
+                False,
+            ),
+        ],
+    )
     def test_et_query(self, test_name: str, fen: str, move_expected: bool):
         self._check_et_query_move_expected(test_name, fen, move_expected)
+
+    def test_2nd_probe(self):
+        board = chess.Board()
+        board.set_fen("8/4k3/8/8/8/8/3BB3/3K4 w - - 0 1")
+        et = EndgameTablebase(EndgameTablebaseConfig("data/endgame_tablebases"))
+        move = et.query(board)
+        board.push(move)
+        # Play black move
+        board.push(next(iter(board.legal_moves)))
+        # Check there is a move returned on second probe
+        # Cannot check dtz(move) > dtz(move2), this isn't public API unfortunately
+        move2 = et.query(board)
+        assert move2
 
 
 @pytest.mark.parametrize(
