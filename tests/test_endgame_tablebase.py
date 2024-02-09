@@ -14,9 +14,6 @@ def move_from_et_query(fen: str):
     return move
 
 
-import pytest
-
-
 @pytest.mark.parametrize(
     "test_name, fen, move_expected",
     [
