@@ -14,24 +14,33 @@ def move_from_et_query(fen: str):
     return move
 
 
+import pytest
+
+
 @pytest.mark.parametrize(
-    "fen, move_expected",
+    "test_name, fen, move_expected",
     [
-        ("8/4k3/8/8/8/8/3BB3/3K4 w - - 0 1", True),
-        ("8/4k3/8/8/8/8/3BB3/3K4 b - - 0 1", False),
-        ("8/4k3/8/8/8/8/3BB3/3K1Q2 b - - 0 1", False),
+        ("white_to_move_white_winning", "8/4k3/8/8/8/8/3BB3/3K4 w - - 0 1", True),
+        ("black_to_move_white_winning", "8/4k3/8/8/8/8/3BB3/3K4 b - - 0 1", False),
+        (
+            "black_to_move_white_winning_extra_queen",
+            "8/4k3/8/8/8/8/3BB3/3K1Q2 b - - 0 1",
+            False,
+        ),
     ],
 )
 class TestEndgameTablebase:
-    def _check_et_query_move_expected(self, fen: str, move_expected: bool):
+    def _check_et_query_move_expected(
+        self, test_name: str, fen: str, move_expected: bool
+    ):
         move = move_from_et_query(fen)
         if move_expected:
-            assert move, "Expected move but none returned."
+            assert move, f"{test_name}: Expected move but none returned."
         else:
-            assert not move, "Didn't expect move but returned valid move."
+            assert not move, f"{test_name}: Didn't expect move but returned valid move."
 
-    def test_et_query(self, fen, move_expected):
-        self._check_et_query_move_expected(fen, move_expected)
+    def test_et_query(self, test_name: str, fen: str, move_expected: bool):
+        self._check_et_query_move_expected(test_name, fen, move_expected)
 
 
 @pytest.mark.parametrize(
