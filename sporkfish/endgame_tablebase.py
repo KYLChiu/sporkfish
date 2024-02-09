@@ -143,7 +143,10 @@ class EndgameTablebase:
 
     def _compare_dtz(self, dtz: int, best_dtz: int, category: DTZCategory) -> int:
         """
-        Compares two DTZ (Distance-to-Zero) values based on their categories.
+        Compares two DTZ values based on their categories.
+        Returns the best resulting DTZ value, based on the condition of the category.
+        For example, for the CURSED_LOSS category, we want to save our loss as quickly as possible.
+        CURSED_LOSS values are negative, thus we want to pick the biggest one.
 
         :param dtz: The DTZ value to compare.
         :type dtz: int
