@@ -2,7 +2,7 @@ import logging
 import os
 import sys
 from enum import IntEnum, auto
-from typing import Optional
+from typing import Optional, Tuple
 
 import chess
 import chess.syzygy
@@ -175,6 +175,44 @@ class EndgameTablebase:
         else:
             raise TypeError(f"Invalid enum type '{category}' passed for DTZCategory")
 
+    def _pick_move(
+        self,
+        dtz: int,
+        move: chess.Move,
+        best_category: DTZCategory,
+        best_dtz: int,
+        best_move: chess.Move,
+    ) -> Tuple[DTZCategory, int, chess.Move]:
+        """
+        Picks the best move based on the category and DTZ score.
+
+        Moves are first compared by their category, then their DTZ score within that category.
+        If the category is more desirable than the rolling best category, then take the new move.
+        If the category is equally desirable as the rolling best category,
+        then pick the move based on the most desirable DTZ score (conditioned on the type of category).
+        If the new best DTZ score is different than the current score, then take the new move.
+
+        :param dtz: The DTZ (Distance to Zeroing) value of the move.
+        :type dtz: int
+        :param move: The move to consider.
+        :type move: chess.Move
+        :param best_category: The category of the best move so far.
+        :type best_category: DTZCategory
+        :param best_dtz: The DTZ value of the best move so far.
+        :type best_dtz: int
+        :param best_move: The best move so far.
+        :type best_move: chess.Move
+        :return: A tuple containing the category, DTZ value, and move to pick.
+        :rtype: Tuple[DTZCategory, int, chess.Move]
+        """
+        category = self._categorize_dtz(dtz)
+        if category > best_category:
+            return category, dtz, move
+        elif category == best_category:
+            if self._compare_dtz(dtz, best_dtz, best_category) != best_dtz:
+                return category, dtz, move
+        return best_category, best_dtz, best_move
+
     def query(self, board: Board) -> Optional[chess.Move]:
         """
         Query the endgame database for a given chess board position.
@@ -213,16 +251,8 @@ class EndgameTablebase:
                 if not dtz:
                     continue
 
-                # Moves are first compared by their category, then their DTZ score within that category
-                # If the category is more desirable than the rolling best category, then take the new move
-                category = self._categorize_dtz(dtz)
-                if category > best_category:
-                    best_category, best_dtz, best_move = category, dtz, move
-                # If the category is equally desriable than the rolling best category
-                # Then pick the move based on the most desirable DTZ score (conditioned on the type of category)
-                # If the new best dtz score is different than the current score then take the new move
-                elif category == best_category:
-                    if self._compare_dtz(dtz, best_dtz, best_category) != best_dtz:
-                        best_category, best_dtz, best_move = category, dtz, move
+                best_category, best_dtz, best_move = self._pick_move(
+                    dtz, move, best_category, best_dtz, best_move
+                )
 
             return best_move
