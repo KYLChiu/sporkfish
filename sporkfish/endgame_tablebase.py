@@ -50,13 +50,14 @@ class EndgameTablebase:
         :return: None
         """
         self._config = config
+        self._db = None
         if self._config.endgame_tablebase_path:
             self._db = self._load(
                 self._resource_path(self._config.endgame_tablebase_path)
             )
         else:
             logging.warning(
-                "Skip loading endgame tablebase as the endgame tablebase binary path is not passed in configuration."
+                "Skip loading endgame tablebase as the endgame tablebase directory path is not passed in configuration."
             )
 
     def _resource_path(self, relative_to_absolute_path: str) -> str:
@@ -120,7 +121,7 @@ class EndgameTablebase:
 
     def _categorize_dtz(self, dtz: int) -> "EndgameTablebase.DTZCategory":
         """
-        Categorizes the DTZ (Depth to Zeroing) value into different categories.
+        Categorizes the Distance to Zeroing (DTZ) value into different categories.
 
         :param dtz: The DTZ value to categorize, from our perspective.
         :type dtz: int
@@ -143,7 +144,7 @@ class EndgameTablebase:
 
     def _compare_dtz(self, dtz: int, best_dtz: int, category: DTZCategory) -> int:
         """
-        Compares two DTZ values based on their categories.
+        Compares two Distance to Zeroing (DTZ) values based on their categories.
         Returns the best resulting DTZ value, based on the condition of the category.
         For example, for the CURSED_LOSS category, we want to save our loss as quickly as possible.
         CURSED_LOSS values are negative, thus we want to pick the biggest one.
@@ -160,7 +161,7 @@ class EndgameTablebase:
         # We want to save our cursed loss as quickly as possible
         if category == EndgameTablebase.DTZCategory.CURSED_LOSS:
             return max(dtz, best_dtz)
-        # We want make the unconditional last as long as possible, in case they run out of time
+        # We want make the unconditional loss last as long as possible, in case they run out of time
         elif category == EndgameTablebase.DTZCategory.UNCONDITIONAL_LOSS:
             return min(dtz, best_dtz)
         elif category == EndgameTablebase.DTZCategory.UNCONDITIONAL_DRAW:
@@ -169,13 +170,15 @@ class EndgameTablebase:
         elif category == EndgameTablebase.DTZCategory.UNCONDITIONAL_WIN:
             return min(dtz, best_dtz)
         # We want to extend our cursed win as much as possible, in case they run out of time
-        else:
+        elif category == EndgameTablebase.DTZCategory.CURSED_WIN:
             return max(dtz, best_dtz)
+        else:
+            return
 
     def query(self, board: Board) -> Optional[chess.Move]:
         """
         Query the endgame database for a given chess board position.
-        It uses the Depth to Zero (DTZ) as metric.
+        It uses the Distance to Zeroing (DTZ) as metric.
 
         :param board: The current chess board position.
         :type board: Board
@@ -189,28 +192,36 @@ class EndgameTablebase:
             # This is a small performace hit but is miniscule compared to searching
             cboard = chess.Board()
             cboard.set_fen(board.fen())
-            best_move = None
-            best_dtz = -sys.maxsize
-            best_category = EndgameTablebase.DTZCategory.UNCONDITIONAL_LOSS
+            best_move, best_dtz, best_category = (
+                None,
+                -sys.maxsize,
+                EndgameTablebase.DTZCategory.UNCONDITIONAL_LOSS,
+            )
             for move in board.legal_moves:
                 cboard.push(move)
                 # Refer to https://python-chess.readthedocs.io/en/latest/syzygy.html
-                # Invert the dtz as we are looking from the perspective of the opponent
+                # Probe the opponents DTZ, after our legal move.
+                # Our DTZ is the inversion of that.
+                # TODO: check if this is true for rounded error
+                # Note that we have to check for None, because:
+                # a) we may not have the corresponding Syzygy tablebase file to our position,
+                # b) Moreover the position may not exist within the Syzygy tablebase, see e.g.
+                #    5k2/8/8/8/2B5/8/3B4/3K4 w - - 2 2, move=c4d8 doesn't exist in the tablebase.
                 dtz = -opp_dtz if (opp_dtz := self._db.get_dtz(cboard)) else None
                 cboard.pop()
 
                 if not dtz:
                     continue
 
+                # Moves are first compared by their category, then their DTZ score within that category
+                # If the category is more desirable than the rolling best category, then take the new move
                 category = self._categorize_dtz(dtz)
                 if category > best_category:
-                    best_dtz = dtz
-                    best_move = move
+                    best_category, best_dtz, best_move = category, dtz, move
+                # If the category is equally desriable than the rolling best category
+                # Then pick the move based on the most desirable DTZ score (conditioned on the type of category)
                 elif category == best_category:
                     if self._compare_dtz(dtz, best_dtz, best_category) != best_dtz:
-                        best_dtz = dtz
-                        best_move = move
+                        best_category, best_dtz, best_move = category, dtz, move
 
             return best_move
-
-        return None
