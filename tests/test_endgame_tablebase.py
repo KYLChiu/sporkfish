@@ -1,4 +1,3 @@
-import chess
 import pytest
 from init_board_helper import board_setup
 from perf_helper import run_perf_analytics
