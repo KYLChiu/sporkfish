@@ -3,11 +3,12 @@ import pytest
 from init_board_helper import board_setup
 from perf_helper import run_perf_analytics
 
+from sporkfish.board.board_factory import BoardPyChess
 from sporkfish.endgame_tablebase import EndgameTablebase, EndgameTablebaseConfig
 
 
 def move_from_et_query(fen: str):
-    board = chess.Board()
+    board = BoardPyChess()
     board.set_fen(fen)
     et = EndgameTablebase(EndgameTablebaseConfig("data/endgame_tablebases"))
     move = et.query(board)
@@ -23,6 +24,11 @@ class TestEndgameTablebase:
             assert move, f"{test_name}: Expected move but none returned."
         else:
             assert not move, f"{test_name}: Didn't expect move but returned valid move."
+
+    # Make sure an empty path doesn't crash
+    def test_empty_path_tablebase(self):
+        et = EndgameTablebase(EndgameTablebaseConfig())
+        et.query(BoardPyChess())
 
     @pytest.mark.parametrize(
         "test_name, fen, move_expected",
@@ -40,7 +46,7 @@ class TestEndgameTablebase:
         self._check_et_query_move_expected(test_name, fen, move_expected)
 
     def test_2nd_probe(self):
-        board = chess.Board()
+        board = BoardPyChess()
         board.set_fen("8/4k3/8/8/8/8/3BB3/3K4 w - - 0 1")
         et = EndgameTablebase(EndgameTablebaseConfig("data/endgame_tablebases"))
         move = et.query(board)
