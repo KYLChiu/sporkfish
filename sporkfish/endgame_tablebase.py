@@ -259,3 +259,5 @@ class EndgameTablebase:
                 )
 
             return best_move
+
+        return None
