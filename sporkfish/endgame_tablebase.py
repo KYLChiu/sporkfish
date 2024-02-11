@@ -201,9 +201,9 @@ class EndgameTablebase:
         :param best_dtz: The DTZ value of the best move so far.
         :type best_dtz: int
         :param best_move: The best move so far.
-        :type best_move: chess.Move
+        :type best_move: Optional[chess.Move]
         :return: A tuple containing the category, DTZ value, and move to pick.
-        :rtype: Tuple[DTZCategory, int, chess.Move]
+        :rtype: Tuple[DTZCategory, int, Optional[chess.Move]]
         """
         category = self._categorize_dtz(dtz)
         if category > best_category:
