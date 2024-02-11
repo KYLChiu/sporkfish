@@ -240,7 +240,7 @@ class EndgameTablebase:
                 # Refer to https://python-chess.readthedocs.io/en/latest/syzygy.html
                 # Probe the opponents DTZ, after our legal move.
                 # Our DTZ is the inversion of that.
-                # TODO: check if this is true for rounded error
+                # TODO: check if there any issues for rounding error
                 # Note that we have to check for None, because:
                 # a) we may not have the corresponding Syzygy tablebase file to our position,
                 # b) Moreover the position may not exist within the Syzygy tablebase, see e.g.
