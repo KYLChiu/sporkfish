@@ -95,15 +95,6 @@ Slow tests are not run on CI. Developers should run these before raising PRs by 
 python3 -m pytest -sv --runslow
 ```
 
-### Code formatting
-
-Before submitting your code, please run
-
-```
-isort --profile black .
-black .
-```
-
 - - - -
 
 ## Principles
