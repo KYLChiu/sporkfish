@@ -220,7 +220,7 @@ class EndgameTablebase:
                     best_category, best_dtz, best_move = category, dtz, move
                 # If the category is equally desriable than the rolling best category
                 # Then pick the move based on the most desirable DTZ score (conditioned on the type of category)
-                # If the DTZ score changed, that means the best dtz score is the new one, and so we update that value too
+                # If the new best dtz score is different than the current score then take the new move
                 elif category == best_category:
                     if self._compare_dtz(dtz, best_dtz, best_category) != best_dtz:
                         best_category, best_dtz, best_move = category, dtz, move
