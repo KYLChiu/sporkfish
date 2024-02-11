@@ -177,6 +177,7 @@ class EndgameTablebase:
 
     def _pick_move(
         self,
+        category: DTZCategory,
         dtz: int,
         move: chess.Move,
         best_category: DTZCategory,
@@ -192,7 +193,9 @@ class EndgameTablebase:
         then pick the move based on the most desirable DTZ score (conditioned on the type of category).
         If the new best DTZ score is different than the current score, then take the new move.
 
-        :param dtz: The DTZ (Distance to Zeroing) value of the move.
+        :param category: The category of the current move.
+        :type category: DTZCategory
+        :param dtz: The DTZ (Distance to Zeroing) value of the current move.
         :type dtz: int
         :param move: The move to consider.
         :type move: chess.Move
@@ -205,7 +208,6 @@ class EndgameTablebase:
         :return: A tuple containing the category, DTZ value, and move to pick.
         :rtype: Tuple[DTZCategory, int, Optional[chess.Move]]
         """
-        category = self._categorize_dtz(dtz)
         if category > best_category:
             return category, dtz, move
         elif category == best_category:
@@ -251,8 +253,9 @@ class EndgameTablebase:
                 if not dtz:
                     continue
 
+                category = self._categorize_dtz(dtz)
                 best_category, best_dtz, best_move = self._pick_move(
-                    dtz, move, best_category, best_dtz, best_move
+                    category, dtz, move, best_category, best_dtz, best_move
                 )
 
             return best_move
