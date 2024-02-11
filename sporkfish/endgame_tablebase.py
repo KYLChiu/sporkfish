@@ -182,7 +182,7 @@ class EndgameTablebase:
         best_category: DTZCategory,
         best_dtz: int,
         best_move: Optional[chess.Move],
-    ) -> Tuple[DTZCategory, int, chess.Move]:
+    ) -> Tuple[DTZCategory, int, Optional[chess.Move]]:
         """
         Picks the best move based on the category and DTZ score.
 
