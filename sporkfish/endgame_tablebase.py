@@ -181,7 +181,7 @@ class EndgameTablebase:
         move: chess.Move,
         best_category: DTZCategory,
         best_dtz: int,
-        best_move: chess.Move,
+        best_move: Optional[chess.Move],
     ) -> Tuple[DTZCategory, int, chess.Move]:
         """
         Picks the best move based on the category and DTZ score.
@@ -230,10 +230,10 @@ class EndgameTablebase:
             # This is a small performace hit but is miniscule compared to searching
             cboard = chess.Board()
             cboard.set_fen(board.fen())
-            best_move, best_dtz, best_category = (
-                None,
-                -sys.maxsize,
+            best_category, best_dtz, best_move = (
                 EndgameTablebase.DTZCategory.UNCONDITIONAL_LOSS,
+                -sys.maxsize,
+                None,
             )
             for move in board.legal_moves:
                 cboard.push(move)
