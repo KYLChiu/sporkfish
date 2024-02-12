@@ -40,6 +40,7 @@ class OpeningBook:
         :return: None
         """
         self._config = config
+        self._db = None
         if self._config.opening_book_path:
             self._db = self._load(self._resource_path(self._config.opening_book_path))
         else:
