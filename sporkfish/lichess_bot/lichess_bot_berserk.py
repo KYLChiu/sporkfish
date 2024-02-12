@@ -1,5 +1,6 @@
 import datetime
 import logging
+import time
 from typing import Any, Optional, Tuple
 
 import berserk
@@ -121,17 +122,13 @@ class LichessBotBerserk(LichessBot):
                 best_move = self._get_best_move(color, time, inc)
                 self.client.bots.make_move(game_id, best_move)
 
-        # function?? 
-        # get the full json object of gamestate, refer lichess api for full json payload
         states = self.client.bots.stream_game_state(game_id)
-        # why return the next iterable?
         game_full = next(states)
         logging.debug(f"Full game data: {game_full}")
         color = 0 if game_full["white"].get("id") == self._bot_id else 1
         prev_moves_start = game_full["state"]["moves"] or ""
         num_moves_start = len(prev_moves_start.split())
 
-        # why restart game when there are prev moves?
         if num_moves_start > 0:
             logging.info(f"Restarting game with id: {game_id}")
         else:
@@ -140,21 +137,28 @@ class LichessBotBerserk(LichessBot):
         # If white (and playing a new game), we need to play a move to get new states
         set_pos_and_play_move(
             num_moves_start, color, prev_moves_start, game_id, game_full
-        )  
-        # wrap this in a handle_gamestate_function?   
+        )
+
         for state in states:
             logging.debug(f"Game state: {state}")
             if state["type"] == "gameState":
                 num_moves = len(state["moves"].split())
                 prev_moves = state["moves"]
                 set_pos_and_play_move(num_moves, color, prev_moves, game_id, state)
+            elif state["type"] == "opponentGone" and state["gone"]:
+                time.sleep(8)
+                self.client.board.claim_victory(game_id)
 
-    def should_accept_challenge(event):
-        # need list of speed type that we accept
-        if event['challenge']['speed'] == 'rapid':
-            True()
+    def should_accept_challenge(self, event):
+        bool_challenge = True
+        if (
+            event["challenge"]["speed"] in {"rapid", "bullet", "blitz"}
+            and event["challenge"]["variant"]["key"] == "standard"
+        ):
+            bool_challenge
         else:
-            False
+            bool_challenge = False
+        return bool_challenge
 
     def run(self) -> None:
         """
@@ -162,24 +166,18 @@ class LichessBotBerserk(LichessBot):
         """
         events = self.client.bots.stream_incoming_events()
         for event in events:
-            if event['type'] == 'challenge':
+            if event.get("type") == "challenge":
                 if self.should_accept_challenge(event):
-                    self.client.bots.accept_challenge(event['challenge']['id'])
+                    self.client.bots.accept_challenge(event["challenge"]["id"])
                 else:
-                    self.client.bots.decline_challenge(event['challenge']['id'])
-            elif event['type'] == "gameStart":
+                    self.client.bots.decline_challenge(event["challenge"]["id"])
+            elif event.get("type") == "gameStart":
                 self._play_game(event["game"]["fullId"])
-            elif event['type'] == 'gameFinish':
-                self.client.post_message(event['game']['fullId'],'GGWP, Thanks for playing with Sporkfish!')
-                self.client.abort_game(event['game']['fullId'])
-                
+            elif event.get("type") == "gameFinish":
+                self.client.bots.post_message(
+                    event["game"]["fullId"],
+                    "GGWP, Hope you had fun playing with Sporkfish!",
+                )
 
-
-        
-
-        #TODO
-        #other scenarios such as decline/cancel challenges e.g. depend on what challenge it is
-        #checking game states e.g. opponent gone or if opponent resigns, how do i claim the win and exit
-        #how do i make POST requests to resign/abort a game
-        # redefine how to accept and handle different game states
-    
+        # TODO
+        # draw offer handling
