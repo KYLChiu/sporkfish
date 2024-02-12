@@ -34,7 +34,7 @@ class EndgameTablebase:
         """
 
         UNCONDITIONAL_LOSS = auto()
-        CURSED_LOSS = auto()
+        BLESSED_LOSS = auto()
         UNCONDITIONAL_DRAW = auto()
         CURSED_WIN = auto()
         UNCONDITIONAL_WIN = auto()
@@ -132,7 +132,7 @@ class EndgameTablebase:
             dtz, int
         ), f"Expected DTZ to be of type int but got {type(dtz).__name__}."
         if dtz < -100:
-            return EndgameTablebase.DTZCategory.CURSED_LOSS
+            return EndgameTablebase.DTZCategory.BLESSED_LOSS
         elif -100 <= dtz <= -1:
             return EndgameTablebase.DTZCategory.UNCONDITIONAL_LOSS
         elif dtz == 0:
@@ -146,8 +146,8 @@ class EndgameTablebase:
         """
         Compares two Distance to Zeroing (DTZ) values based on their categories.
         Returns the best resulting DTZ value, based on the condition of the category.
-        For example, for the CURSED_LOSS category, we want to save our loss as quickly as possible.
-        CURSED_LOSS values are negative, thus we want to pick the biggest one.
+        For example, for the BLESSED_LOSS category, we want to save our loss as quickly as possible.
+        BLESSED_LOSS values are negative, thus we want to pick the biggest one.
 
         :param dtz: The DTZ value to compare.
         :type dtz: int
@@ -158,8 +158,8 @@ class EndgameTablebase:
         :return: The best resulting DTZ value, based on condition of the category.
         :rtype: int
         """
-        # We want to save our cursed loss as quickly as possible
-        if category == EndgameTablebase.DTZCategory.CURSED_LOSS:
+        # We want to save our blessed loss as quickly as possible
+        if category == EndgameTablebase.DTZCategory.BLESSED_LOSS:
             return max(dtz, best_dtz)
         # We want make the unconditional loss last as long as possible, in case they run out of time
         elif category == EndgameTablebase.DTZCategory.UNCONDITIONAL_LOSS:
@@ -245,7 +245,7 @@ class EndgameTablebase:
                 # TODO: check if there any issues for rounding error
                 # Note that we have to check for None, because:
                 # a) we may not have the corresponding Syzygy tablebase file to our position,
-                # b) Moreover the position may not exist within the Syzygy tablebase, see e.g.
+                # b) moreover the position may not exist within the Syzygy tablebase, see e.g.
                 #    5k2/8/8/8/2B5/8/3B4/3K4 w - - 2 2, move=c4d8 doesn't exist in the tablebase.
                 dtz = -opp_dtz if (opp_dtz := self._db.get_dtz(cboard)) else None
                 cboard.pop()
