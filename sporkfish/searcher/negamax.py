@@ -74,9 +74,8 @@ class NegamaxSp(MiniMaxVariants):
             board.push(move)
 
             # futility pruning
-            if (
-                self._searcher_config.enable_futility_pruning
-                and self._futility_pruning(board, depth, capture, move, alpha)
+            if self._searcher_config.enable_futility_pruning and self._futility_pruning(
+                board, depth, capture, move, alpha
             ):
                 board.pop()
                 continue
