@@ -62,7 +62,7 @@ class Runner:
             lichess_client = LichessBotBerserk(token=f.read())
         lichess_client.run()
 
-    mode_actions = {RunMode.LICHESS: _run_lichess, RunMode.UCI: _run_uci}
+    _mode_actions = {RunMode.LICHESS: _run_lichess, RunMode.UCI: _run_uci}
 
     def run(self) -> None:
         """
@@ -70,7 +70,7 @@ class Runner:
 
         If the run mode is set to LICHESS, it runs the Lichess bot, otherwise, it runs the UCI client.
         """
-        action = self.mode_actions.get(self._run_config.mode)
+        action = self._mode_actions.get(self._run_config.mode)
         action_name = action.__name__  # type: ignore
         assert callable(action), f"Function '{action_name}' is not callable."
         assert (
