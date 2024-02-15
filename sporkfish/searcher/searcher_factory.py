@@ -1,6 +1,6 @@
 from sporkfish.evaluator import EvaluateMode, Evaluator
 
-from .move_ordering import MoveOrder, MvvLvaHeuristic
+from .move_ordering import MoveOrder, MvvLvaHeuristic, KillerMoveHeuristic
 from .negamax import NegamaxSp
 from .negamax_lazy_smp import NegaMaxLazySmp
 from .searcher import Searcher
@@ -13,7 +13,7 @@ class SearcherFactory:
     """
 
     @staticmethod
-    def _build_moveorder(order_type: MoveOrderMode) -> MoveOrder:
+    def _build_moveorder(searcher_cfg: SearcherConfig) -> MoveOrder:
         """
         Build and return an instance of MoveOrder based on the specified order type.
 
@@ -23,8 +23,12 @@ class SearcherFactory:
         :rtype: MoveOrder
         :raises TypeError: If the specified order type is not supported.
         """
+        order_type=searcher_cfg.move_order_mode
+        max_depth=searcher_cfg.max_depth
         if order_type is MoveOrderMode.MVV_LVA:
             return MvvLvaHeuristic()
+        elif order_type is MoveOrderMode.KILLER_MOVE:
+            return KillerMoveHeuristic(max_depth)
         else:
             raise TypeError(
                 f"SearcherFactory does not support the creation of MoveOrdering type: \
@@ -65,7 +69,7 @@ class SearcherFactory:
         :rtype: Searcher
         :raises TypeError: If the specified searcher type is not supported.
         """
-        order = SearcherFactory._build_moveorder(searcher_cfg.move_order_mode)
+        order = SearcherFactory._build_moveorder(searcher_cfg)
 
         if searcher_cfg.search_mode is SearchMode.SINGLE_PROCESS:
             evaluator = SearcherFactory._build_evaluator()

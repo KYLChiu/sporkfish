@@ -1,20 +1,22 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import List
+from typing import List, Optional
 
 import chess
 
 from ..board.board import Board
+from .searcher_config import SearcherConfig
 
 
 class MoveOrderMode(Enum):
     # can make a separate config for move ordering
     MVV_LVA = "MVV_LVA"
+    KILLER_MOVE="KILLER_MOVE"
 
 
 class MoveOrder(ABC):
     @abstractmethod
-    def evaluate(self, board: Board, move: chess.Move) -> float:
+    def evaluate(self, board: Board, move: chess.Move, depth:int) -> float:
         """
         Abstract method to evaluate the desirability of a move in a given board position.
         Higher values indicate more desirable moves.
@@ -46,7 +48,7 @@ class MvvLvaHeuristic(MoveOrder):
     def mvv_lva_matrix(self) -> List[List[int]]:
         return self._MVV_LVA
 
-    def evaluate(self, board: Board, move: chess.Move) -> float:
+    def evaluate(self, board: Board, move: chess.Move,depth:int) -> float:
         """
         Calculate the Most Valuable Victim - Least Valuable Aggressor heuristic value
         for a capturing move based on the value of the captured piece.
@@ -69,3 +71,36 @@ class MvvLvaHeuristic(MoveOrder):
             ]
         else:
             return 0
+
+class KillerMoveHeuristic(MoveOrder):
+    def __init__(self, max_depth: int) -> None:
+        # Initialize a list to store up to two killer moves for each depth
+        # Using a fixed size per depth for simplicity; could be dynamic based on actual usage
+        self.killer_moves: List[List[Optional[chess.Move]]] = [[None, None] for _ in range(max_depth)]
+
+
+    def add_killer_move(self, move: chess.Move, depth: int) -> None:
+        """
+        Add a move to the killer moves list for a given depth, ensuring it's not already present.
+        If the move is new, it replaces the oldest killer move.
+
+        Parameters:
+            move (chess.Move): The move to be added as a killer move.
+            depth (int): The depth at which the move proved to be a killer move.
+        """
+        killers = self.killer_moves[depth]
+        if move not in killers:
+            # Shift the existing killer moves down and add the new one at the front
+            killers.pop()
+            killers.insert(0, move)
+
+    def evaluate(self, board: Board, move: chess.Move, depth: int) -> float:
+        killers = self.killer_moves[depth]
+        if move in killers:
+            return 100
+        else:
+            return 0
+
+    @property
+    def killer_moves_matrix(self) -> List[List[Optional[chess.Move]]]:
+        return self.killer_moves
