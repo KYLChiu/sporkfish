@@ -82,7 +82,7 @@ class MiniMaxVariants(Searcher, ABC):
         """
         return sorted(
             legal_moves,
-            key=lambda move: (self._move_order.evaluate(board, move,depth),),
+            key=lambda move: (self._move_order.evaluate(board, move, depth),),
             reverse=True,
         )
 
@@ -166,7 +166,7 @@ class MiniMaxVariants(Searcher, ABC):
             alpha = stand_pat
 
         legal_moves = self._ordered_moves(
-            board, (move for move in board.legal_moves if board.is_capture(move)),depth
+            board, (move for move in board.legal_moves if board.is_capture(move)), depth
         )
 
         for move in legal_moves:

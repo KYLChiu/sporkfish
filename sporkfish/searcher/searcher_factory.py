@@ -23,8 +23,8 @@ class SearcherFactory:
         :rtype: MoveOrder
         :raises TypeError: If the specified order type is not supported.
         """
-        order_type=searcher_cfg.move_order_mode
-        max_depth=searcher_cfg.max_depth
+        order_type = searcher_cfg.move_order_mode
+        max_depth = searcher_cfg.max_depth
         if order_type is MoveOrderMode.MVV_LVA:
             return MvvLvaHeuristic()
         elif order_type is MoveOrderMode.KILLER_MOVE:
