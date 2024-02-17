@@ -19,7 +19,7 @@ class BerserkRetriable:
 
     # Retry configuration parameters
     num_retries = 2
-    time_to_wait = 60 * 1000  # 1 min, to adhere to lichess rate limiting
+    time_to_wait = 2 * 1000  # 2 seconds
 
     def __init__(self, token: str):
         """
