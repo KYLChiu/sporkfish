@@ -1,6 +1,6 @@
 import datetime
 import logging
-from typing import Any, Callable, Dict, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, Mapping, Optional, Sequence, Tuple, Union
 
 import berserk
 import berserk.exceptions
