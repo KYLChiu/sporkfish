@@ -9,46 +9,65 @@ from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fi
 from sporkfish.lichess_bot.lichess_bot import LichessBot
 
 
+class BerserkRetriable:
+    """
+    Interface to interact with Lichess API with retry logic.
+    Wraps the berserk.Client API.
+    """
+
+    # Retry configuration parameters
+    num_retries = 2
+    time_to_wait = 60 * 1000  # 1 min, to adhere to lichess rate limiting
+
+    def __init__(self, token: str):
+        """
+        Initialize the Berserk instance with the Lichess API token.
+
+        :param token: The Lichess API token.
+        :type token: str
+        """
+        self._client = berserk.Client(berserk.TokenSession(token))
+
+    @retry(
+        stop=stop_after_attempt(num_retries),
+        wait=wait_fixed(time_to_wait),
+        retry=retry_if_exception_type(berserk.exceptions.ResponseError),
+    )
+    def send(
+        self,
+        attribute_name: str,
+        *args: Sequence[Any],
+        **kwargs: Mapping[str, Any],
+    ) -> Any:
+        """
+        Execute a method on the Lichess API with retry logic.
+
+        :param attribute_name: The name of the method to execute, in the format "module.method".
+        :type attribute_name: str
+        :param args: Positional arguments to be passed to the method.
+        :type args: Sequence[Any]
+        :param kwargs: Keyword arguments to be passed to the method.
+        :type kwargs: Mapping[str, Any]
+        :return: The result of the method call.
+        :rtype: Any
+        :raises AssertionError: If the attribute name is not in the correct format.
+        """
+        cls_func_name = attribute_name.split(".")
+        assert (
+            len(cls_func_name) == 2
+        ), f"Expected to send module.func_name (i.e. attribute name of length 2), but got attribute name {attribute_name} of length {len(attribute_name)}."
+        cls_name, func_name = cls_func_name
+        cls = getattr(self._client, cls_name)
+        func = getattr(cls, func_name)
+        return func(*args, **kwargs)
+
+
 class LichessBotBerserk(LichessBot):
     """
     A class representing a Lichess bot powered by the Sporkfish chess engine.
     Powered by the synchronous berserk lichess API.
     Not thread-safe (do not use with multithreading, might exceed rate limit of Lichess).
     """
-
-    # TODO: I think we cannot wrap retries using a metaclass because the berserk.Client class
-    # doesn't have these attributes until AFTER init. At least I haven't got it to work.
-    # Todo to try to make it work.
-    class _Berserk:
-        # Retry config
-        num_retries = 2
-        time_to_wait = 60 * 1000  # 1 min, to adhere to lichess rate limiting
-
-        def __init__(self, token: str):
-            self._client = berserk.Client(berserk.TokenSession(token))
-
-        @retry(
-            stop=stop_after_attempt(num_retries),
-            wait=wait_fixed(time_to_wait),
-            retry=retry_if_exception_type(berserk.exceptions.ResponseError),
-        )
-        def send(
-            self,
-            attribute_name: str,
-            *args: Sequence[Any],
-            **kwargs: Mapping[str, Any],
-        ) -> Callable:
-            """
-            Wrap a function with retry logic.
-            """
-            cls_func_name = attribute_name.split(".")
-            assert (
-                len(cls_func_name) == 2
-            ), f"Expected to send module.func_name (i.e. attribute name of length 2), but got attribute name {attribute_name} of length {len(attribute_name)}."
-            cls_name, func_name = cls_func_name
-            cls = getattr(self._client, cls_name)
-            func = getattr(cls, func_name)
-            return func(*args, **kwargs)
 
     def __init__(self, token: str, bot_id: str = "sporkfish") -> None:
         """
@@ -60,10 +79,10 @@ class LichessBotBerserk(LichessBot):
         :type bot_id: str
         """
         super().__init__(bot_id)
-        self._berserk = LichessBotBerserk._Berserk(token)
+        self._berserk = BerserkRetriable(token)
 
     @property
-    def client(self):
+    def client(self) -> BerserkRetriable:
         return self._berserk
 
     def _get_time_and_inc(
