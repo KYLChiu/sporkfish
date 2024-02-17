@@ -44,7 +44,7 @@ class BerserkRetriable:
         """
         Execute a method on the Lichess API with retry logic.
 
-        :param attribute_name: The name of the method to execute, in the format "module.method".
+        :param attribute_name: The name of the method to execute, in the format "module.method", e.g. bots.make_move or bots.stream_incoming_events.
         :type attribute_name: str
         :param args: Positional arguments to be passed to the method.
         :type args: Sequence[Any]
