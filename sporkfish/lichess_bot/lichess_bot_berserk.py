@@ -60,8 +60,8 @@ class BerserkRetriable:
         ), f"Expected to send module.func_name (i.e. attribute name of length 2), but got attribute name {attribute_name} of length {len(attribute_name)}."
         module_name, func_name = module_func_name
         module = getattr(self._client, module_name)
-        func = getattr(module, func_name)
-        return func(*args, **kwargs)
+        fn = getattr(module, func_name)
+        return fn(*args, **kwargs)
 
 
 class LichessBotBerserk(LichessBot):
