@@ -11,7 +11,7 @@ error_queue = multiprocessing.Queue()
 
 @pytest.mark.skipif(
     sys.platform != "linux",
-    reason="Add ",
+    reason="Multiprocess error on other OSes. To be fixed.",
 )
 def test_lichess_bot_playing_ai_timed() -> None:
     time_limit = 30
