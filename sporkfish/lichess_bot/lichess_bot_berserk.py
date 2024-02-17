@@ -9,6 +9,8 @@ from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fi
 from sporkfish.lichess_bot.lichess_bot import LichessBot
 
 
+# TODO: I can't get this to work with metaclasses. Maybe in a future PR.
+# The goal is to automatically wrap all functions in berserk.Client so they are retriable.
 class BerserkRetriable:
     """
     Interface to interact with Lichess API with retry logic.
@@ -52,13 +54,13 @@ class BerserkRetriable:
         :rtype: Any
         :raises AssertionError: If the attribute name is not in the correct format.
         """
-        cls_func_name = attribute_name.split(".")
+        module_func_name = attribute_name.split(".")
         assert (
-            len(cls_func_name) == 2
+            len(module_func_name) == 2
         ), f"Expected to send module.func_name (i.e. attribute name of length 2), but got attribute name {attribute_name} of length {len(attribute_name)}."
-        cls_name, func_name = cls_func_name
-        cls = getattr(self._client, cls_name)
-        func = getattr(cls, func_name)
+        module_name, func_name = module_func_name
+        module = getattr(self._client, module_name)
+        func = getattr(module, func_name)
         return func(*args, **kwargs)
 
 
