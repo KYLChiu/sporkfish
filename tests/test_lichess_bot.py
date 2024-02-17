@@ -11,7 +11,7 @@ error_queue = multiprocessing.Queue()
 
 @pytest.mark.skipif(
     sys.platform != "linux",
-    reason="Don't create multiple challenges to exceed rate limit of Lichess",
+    reason="Add ",
 )
 def test_lichess_bot_playing_ai_timed() -> None:
     time_limit = 30
@@ -21,7 +21,8 @@ def test_lichess_bot_playing_ai_timed() -> None:
             api_token_file = "api_token.txt"
             with open(api_token_file) as f:
                 bot = lichess_bot_berserk.LichessBotBerserk(f.read())
-                bot.client.challenges.create(
+                bot.client.send(
+                    "challenges.create",
                     username="maia9",
                     color="white",
                     rated=False,
@@ -38,9 +39,8 @@ def test_lichess_bot_playing_ai_timed() -> None:
     time.sleep(time_limit * 2)
 
     if not error_queue.empty():
-        raise RuntimeError(
-            f"Caught exception when running LichessBot: {error_queue.get()}"
-        )
+        e = error_queue.get()
+        raise e
     else:
         proc.terminate()
 
