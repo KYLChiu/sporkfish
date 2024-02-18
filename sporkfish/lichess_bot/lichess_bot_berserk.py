@@ -1,6 +1,8 @@
 import datetime
+import functools
+import inspect
 import logging
-from typing import Any, Dict, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Dict, Mapping, Optional, Sequence, Tuple, Union
 
 import berserk
 import berserk.exceptions
@@ -18,8 +20,8 @@ class BerserkRetriable:
     """
 
     # Retry configuration parameters
-    num_retries = 2
-    time_to_wait_seconds = 1
+    _num_retries = 2
+    _time_to_wait_seconds = 1
 
     def __init__(self, token: str):
         """
@@ -29,39 +31,47 @@ class BerserkRetriable:
         :type token: str
         """
         self._client = berserk.Client(berserk.TokenSession(token))
+        self._set_retries()
 
-    @retry(
-        stop=stop_after_attempt(num_retries),
-        wait=wait_fixed(time_to_wait_seconds),
-        retry=retry_if_exception_type(berserk.exceptions.ResponseError),
-    )
-    def send(
+    def _set_retries(self) -> None:
+        """
+        Patches all public callable functions from modules in the berserk.Client with retry logic.
+        """
+        for module in (
+            getattr(self._client, name)
+            for name in dir(self._client)
+            if not name.startswith("_")
+        ):
+            for attr_name, attr in inspect.getmembers(module):
+                if not attr_name.startswith("_") and callable(attr):
+                    setattr(module, attr_name, self._retry_decorator(attr))
+
+    def _retry_decorator(
         self,
-        attribute_name: str,
-        *args: Sequence[Any],
-        **kwargs: Mapping[str, Any],
-    ) -> Any:
+        func: Callable,
+    ) -> Callable:
         """
-        Execute a method on the Lichess API with retry logic.
+        Wraps a method on the Lichess API with retry logic.
 
-        :param attribute_name: The name of the method to execute, in the format "module.method", e.g. bots.make_move or bots.stream_incoming_events.
-        :type attribute_name: str
-        :param args: Positional arguments to be passed to the method.
-        :type args: Sequence[Any]
-        :param kwargs: Keyword arguments to be passed to the method.
-        :type kwargs: Mapping[str, Any]
-        :return: The result of the method call.
-        :rtype: Any
-        :raises AssertionError: If the attribute name is not in the correct format.
+        :param func: The berserk API.
+        :type func: Callable
+        :return: The API wrapped in retry logic.
+        :rtype: Callable
         """
-        module_func_name = attribute_name.split(".")
-        assert (
-            len(module_func_name) == 2
-        ), f"Expected to send module.func_name (i.e. attribute name of length 2), but got attribute name {attribute_name} of length {len(attribute_name)}."
-        module_name, func_name = module_func_name
-        module = getattr(self._client, module_name)
-        fn = getattr(module, func_name)
-        return fn(*args, **kwargs)
+
+        @functools.wraps(func)
+        @retry(
+            stop=stop_after_attempt(BerserkRetriable._num_retries),
+            wait=wait_fixed(BerserkRetriable._time_to_wait_seconds),
+            retry=retry_if_exception_type(berserk.exceptions.ResponseError),
+        )
+        def wrapper(
+            *args: Sequence[Any],
+            **kwargs: Mapping[str, Any],
+        ) -> Any:
+            return func(*args, **kwargs)
+
+        return wrapper
 
 
 class LichessBotBerserk(LichessBot):
@@ -84,8 +94,8 @@ class LichessBotBerserk(LichessBot):
         self._berserk = BerserkRetriable(token)
 
     @property
-    def client(self) -> BerserkRetriable:
-        return self._berserk
+    def client(self) -> berserk.Client:
+        return self._berserk._client
 
     def _get_time_and_inc(
         self, color: int, state: Dict[str, Any]
@@ -142,7 +152,7 @@ class LichessBotBerserk(LichessBot):
             self._set_position(prev_moves)
             time, inc = self._get_time_and_inc(color, state)
             best_move = self._get_best_move(color, time, inc)
-            self._berserk.send("bots.make_move", game_id, best_move)
+            self.client.bots.make_move(game_id, best_move)
 
     def _play_game(self, game_id: str) -> None:
         """
@@ -152,7 +162,7 @@ class LichessBotBerserk(LichessBot):
         :type game_id: str
         """
         # Get game states and process initial state
-        states = self._berserk.send("bots.stream_game_state", game_id)
+        states = self.client.bots.stream_game_state(game_id)
         game_full = next(states)
         logging.debug(f"Full game data: {game_full}")
 
@@ -180,7 +190,7 @@ class LichessBotBerserk(LichessBot):
         """
         Start the Lichess bot, listening to incoming events sequentially and playing games accordingly.
         """
-        events = self._berserk.send("bots.stream_incoming_events")
+        events = self.client.bots.stream_incoming_events()
         for event in events:
             if event.get("type") == "gameStart":
                 self._play_game(event["game"]["fullId"])

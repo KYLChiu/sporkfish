@@ -21,8 +21,7 @@ def test_lichess_bot_playing_ai_timed() -> None:
             api_token_file = "api_token.txt"
             with open(api_token_file) as f:
                 bot = lichess_bot_berserk.LichessBotBerserk(f.read())
-                bot.client.send(
-                    "challenges.create",
+                bot.client.challenges.create(
                     username="maia9",
                     color="white",
                     rated=False,
@@ -39,6 +38,7 @@ def test_lichess_bot_playing_ai_timed() -> None:
     time.sleep(time_limit * 2)
 
     if not error_queue.empty():
+        proc.terminate()
         e = error_queue.get()
         raise e
     else:
