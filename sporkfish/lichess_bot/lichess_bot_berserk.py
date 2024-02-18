@@ -19,7 +19,7 @@ class BerserkRetriable:
 
     # Retry configuration parameters
     num_retries = 2
-    time_to_wait = 2 * 1000  # 2 seconds
+    time_to_wait_seconds = 1
 
     def __init__(self, token: str):
         """
@@ -32,7 +32,7 @@ class BerserkRetriable:
 
     @retry(
         stop=stop_after_attempt(num_retries),
-        wait=wait_fixed(time_to_wait),
+        wait=wait_fixed(time_to_wait_seconds),
         retry=retry_if_exception_type(berserk.exceptions.ResponseError),
     )
     def send(
