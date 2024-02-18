@@ -103,11 +103,10 @@ class LichessBotBerserk(LichessBot):
         """
         Extracts the time and increment given the color and game state.
 
-        :param color: The color of the player (0 for white, 1 for black), defaults to None
-        :type color: int, optional
+        :param color: The color of the player (0 for white, 1 for black)
+        :type color: int
         :param state: The game state containing time and increment information
         :type state: Any
-
         :return: A tuple containing the time and increment for the specified color, or None if the game is correspondence
         :rtype: Tuple[Optional[float], Optional[float]]
         """
