@@ -1,13 +1,16 @@
 import datetime
 import logging
 import time
-from typing import Any, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import berserk
 import berserk.exceptions
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
 
 from sporkfish.lichess_bot.lichess_bot import LichessBot
+
+# TODO
+# draw offer handling
 
 
 class LichessBotBerserk(LichessBot):
@@ -149,16 +152,46 @@ class LichessBotBerserk(LichessBot):
                 time.sleep(8)
                 self.client.board.claim_victory(game_id)
 
-    def should_accept_challenge(self, event):
-        bool_challenge = True
-        if (
-            event["challenge"]["speed"] in {"rapid", "bullet", "blitz"}
-            and event["challenge"]["variant"]["key"] == "standard"
-        ):
-            bool_challenge
-        else:
-            bool_challenge = False
-        return bool_challenge
+    @classmethod
+    def _should_accept_challenge(cls, event: Dict[str, Any]) -> bool:
+        """
+        Determines whether the challenge should be accepted based on the event data.
+
+        Args:
+            event (Dict[str, Any]): The event data containing challenge information.
+
+        Returns:
+            bool: True if the challenge should be accepted, False otherwise.
+        """
+        return (
+            True
+            if event["challenge"]["variant"]["key"]
+            == LichessBot._accept_challenge_variant_type
+            and event["challenge"]["speed"] in LichessBot._accept_challenge_speed_type
+            else False
+        )
+
+    def _event_action_accept_challenge(self, event: Dict[str, Any]) -> bool:
+        return (
+            self.client.bots.accept_challenge(event["challenge"]["id"])
+            if self._should_accept_challenge(event)
+            else self.client.bots.decline_challenge(event["challenge"]["id"])
+        )
+
+    def _event_action_play_game(self, event: Dict[str, Any]) -> None:
+        self._play_game(event["game"]["fullId"])
+
+    def _event_action_game_finish(self, event: Dict[str, Any]) -> bool:
+        return self.client.bots.post_message(
+            event["game"]["fullId"],
+            LichessBot._chatline_message_string,
+        )
+
+    _event_actions = {
+        "challenge": _event_action_accept_challenge,
+        "gameStart": _event_action_play_game,
+        "gameFinish": _event_action_game_finish,
+    }
 
     def run(self) -> None:
         """
@@ -166,18 +199,5 @@ class LichessBotBerserk(LichessBot):
         """
         events = self.client.bots.stream_incoming_events()
         for event in events:
-            if event.get("type") == "challenge":
-                if self.should_accept_challenge(event):
-                    self.client.bots.accept_challenge(event["challenge"]["id"])
-                else:
-                    self.client.bots.decline_challenge(event["challenge"]["id"])
-            elif event.get("type") == "gameStart":
-                self._play_game(event["game"]["fullId"])
-            elif event.get("type") == "gameFinish":
-                self.client.bots.post_message(
-                    event["game"]["fullId"],
-                    "GGWP, Hope you had fun playing with Sporkfish!",
-                )
-
-        # TODO
-        # draw offer handling
+            action = self._event_actions.get(event.get("type"))
+            action(self, event)
