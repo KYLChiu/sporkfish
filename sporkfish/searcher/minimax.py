@@ -77,6 +77,8 @@ class MiniMaxVariants(Searcher, ABC):
         :type board: chess.Board
         :param legal_moves: The legal moves to be ordered.
         :type legal_moves: Any
+        :param depth: The depth of the search.
+        :type depth: int
         :return: The ordered legal moves.
         :rtype: Any
         """
