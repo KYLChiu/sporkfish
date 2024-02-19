@@ -84,6 +84,10 @@ class MiniMaxVariants(Searcher, ABC):
         """
         Build and return an instance of MoveOrderHeuristic based on the specified order type.
 
+        :param board: The current state of the chess board.
+        :type board: Board
+        :param depth: The depth of the search.
+        :type depth: int
         :return: An instance of MoveOrderHeuristic.
         :rtype: MoveOrderHeuristic
         :raises TypeError: If the specified order type is not supported.
@@ -100,6 +104,22 @@ class MiniMaxVariants(Searcher, ABC):
                 f"MoveOrderingHeuristic does not support the creation of MoveOrdering type: \
                 {type(order_type).__name__}."
             )
+
+    def _update_killer_moves(self, move: chess.Move, depth: int) -> None:
+        """
+        Updates the killer move table.
+        To be used inside a beta cutoff.
+
+        :param move: The beta cutoff move.
+        :type move: chess.Move
+        :param depth: The depth of the search.
+        :type depth: int
+
+        """
+        # TODO: do we need to check if captures here too?
+        if self._killer_moves:
+            self._killer_moves[depth].pop()
+            self._killer_moves[depth].insert(0, move)
 
     def _aspiration_windows_search(
         self,

@@ -87,11 +87,7 @@ class NegamaxSp(MiniMaxVariants):
             alpha = max(alpha, value)
 
             if alpha >= beta:
-                # TODO: one function?
-                # Update killer moves table
-                if self._killer_moves:
-                    self._killer_moves[depth].pop()
-                    self._killer_moves[depth].insert(0, move)
+                self._update_killer_moves(move, depth)
                 break
 
         if self._searcher_config.enable_transposition_table:
@@ -159,6 +155,7 @@ class NegamaxSp(MiniMaxVariants):
 
         mo_heuristic = self._build_move_order_heuristic(board, depth)
         legal_moves = MoveOrderer.order_moves(mo_heuristic, board.legal_moves)
+
         for move in legal_moves:
             board.push(move)
             child_value = -self._negamax(board, depth - 1, -beta, -alpha)
