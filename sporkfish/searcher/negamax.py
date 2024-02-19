@@ -5,8 +5,7 @@ import chess
 from ..board.board import Board
 from ..evaluator import Evaluator
 from .minimax import MiniMaxVariants
-from .move_ordering.killer_move_heuristic import KillerMoveHeuristic
-from .move_ordering.move_order_heuristic import MoveOrderHeuristic
+from .move_ordering.move_orderer import MoveOrderer
 from .searcher_config import SearcherConfig
 
 
@@ -14,10 +13,9 @@ class NegamaxSp(MiniMaxVariants):
     def __init__(
         self,
         evaluator: Evaluator,
-        move_order: MoveOrderHeuristic,
         searcher_config: SearcherConfig = SearcherConfig(),
     ) -> None:
-        super().__init__(evaluator, move_order, searcher_config)
+        super().__init__(evaluator, searcher_config)
 
     def _negamax(
         self,
@@ -62,7 +60,8 @@ class NegamaxSp(MiniMaxVariants):
                 return beta
 
         # Move ordering
-        legal_moves = self._ordered_moves(board, board.legal_moves, depth)
+        mo_heuristic = self._build_move_order_heuristic(board, depth)
+        legal_moves = MoveOrderer.order_moves(mo_heuristic, board.legal_moves)
 
         # recursive search with alpha-beta pruning
         for move in legal_moves:
@@ -88,8 +87,11 @@ class NegamaxSp(MiniMaxVariants):
             alpha = max(alpha, value)
 
             if alpha >= beta:
-                if isinstance(self._move_order, KillerMoveHeuristic):
-                    self._move_order.add_killer_move(move, depth)
+                # TODO: one function?
+                # Update killer moves table
+                if self._killer_moves:
+                    self._killer_moves[depth].pop()
+                    self._killer_moves[depth].insert(0, move)
                 break
 
         if self._searcher_config.enable_transposition_table:
@@ -155,7 +157,8 @@ class NegamaxSp(MiniMaxVariants):
         best_move = chess.Move.null()
         self._statistics.increment()
 
-        legal_moves = self._ordered_moves(board, board.legal_moves, depth)
+        mo_heuristic = self._build_move_order_heuristic(board, depth)
+        legal_moves = MoveOrderer.order_moves(mo_heuristic, board.legal_moves)
         for move in legal_moves:
             board.push(move)
             child_value = -self._negamax(board, depth - 1, -beta, -alpha)
