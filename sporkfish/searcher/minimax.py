@@ -96,7 +96,7 @@ class MiniMaxVariants(Searcher, ABC):
         if order_type is MoveOrderMode.MVV_LVA:
             return MvvLvaHeuristic(board)
         elif order_type is MoveOrderMode.KILLER_MOVE:
-            return KillerMoveHeuristic(self._killer_moves, depth)  # type: ignore
+            return KillerMoveHeuristic(board, self._killer_moves, depth)  # type: ignore
         elif order_type is MoveOrderMode.COMPOSITE:
             return CompositeHeuristic(board, self._killer_moves, depth)  # type: ignore
         else:
