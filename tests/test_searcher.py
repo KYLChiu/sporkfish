@@ -426,7 +426,7 @@ class TestNegamax:
 )
 class TestMvvLvaHeuristic:
     def test_ordered_moves_end_game(
-        self, _init_searcher: Searcher, fen_string: str, move_scores: list[int]
+        self, fen_string: str, move_scores: list[int]
     ) -> None:
         board = init_board(fen_string)
 
@@ -439,11 +439,8 @@ class TestMvvLvaHeuristic:
             score = mo.evaluate(move)
             assert score == move_scores[i]
 
-    def test_sorting_legal_moves(
-        self, _init_searcher: Searcher, fen_string: str, move_scores: list[int]
-    ) -> None:
+    def test_sorting_legal_moves(self, fen_string: str, move_scores: list[int]) -> None:
         board = init_board(fen_string)
-        s = _init_searcher
 
         mo_heuristic = MvvLvaHeuristic(board)
         legal_moves = MoveOrderer.order_moves(mo_heuristic, board.legal_moves)
