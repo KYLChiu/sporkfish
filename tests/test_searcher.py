@@ -429,9 +429,6 @@ class TestMvvLvaHeuristic:
     def test_ordered_moves_end_game(
         self, _init_searcher: Searcher, fen_string: str, move_scores: list[int]
     ) -> None:
-        """
-        Test mvv lva heuistic on an end game board
-        """
         board = init_board(fen_string)
 
         all_moves = board.legal_moves
@@ -446,9 +443,6 @@ class TestMvvLvaHeuristic:
     def test_sorting_legal_moves(
         self, _init_searcher: Searcher, fen_string: str, move_scores: list[int]
     ) -> None:
-        """
-        Test sorting of legal moves by mvv_lva_heuristic
-        """
         board = init_board(fen_string)
         s = _init_searcher
 
@@ -464,6 +458,7 @@ class TestMvvLvaHeuristic:
 @pytest.mark.parametrize(
     ("fen_string", "move_scores"),
     [
+        # King/queen fork
         ("k7/3q4/8/K7/2N5/8/8/8 w - - 1 34", [0, 0, 0, 0, 1, 0, 0, 0, 0, 0]),
     ],
 )
@@ -471,9 +466,6 @@ class TestKillerMoveHeuristic:
     def test_ordered_moves_end_game(
         self, fen_string: str, move_scores: list[int]
     ) -> None:
-        """
-        Test mvv lva heuistic on an end game board
-        """
         board = init_board(fen_string)
 
         all_moves = board.legal_moves
@@ -488,9 +480,6 @@ class TestKillerMoveHeuristic:
             assert score == move_scores[i]
 
     def test_sorting_legal_moves(self, fen_string: str, move_scores: list[int]) -> None:
-        """
-        Test sorting of legal moves by mvv_lva_heuristic
-        """
         board = init_board(fen_string)
         s: MiniMaxVariants = SearcherFactory.create(
             SearcherConfig(move_order_mode=MoveOrderMode.KILLER_MOVE)
