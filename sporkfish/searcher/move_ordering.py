@@ -97,7 +97,6 @@ class KillerMoveHeuristic(MoveOrder):
             # Shift the existing killer moves down and add the new one at the front
             self._killer_moves[depth].pop()
             self._killer_moves[depth].insert(0, move)
-        print(self._killer_moves)
 
     def evaluate(self, board: Board, move: chess.Move, depth: int) -> float:
         """
@@ -114,8 +113,7 @@ class KillerMoveHeuristic(MoveOrder):
         :return: A floating-point value representing the killer evaluation of the move.
         :rtype: float
         """
-        score = 1 if move in self._killer_moves[depth] else 0
-        return score
+        return 1 if move in self._killer_moves[depth] else 0
 
     @property
     def killer_moves_matrix(self) -> List[List[Optional[chess.Move]]]:
