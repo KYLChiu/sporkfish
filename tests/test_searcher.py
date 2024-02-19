@@ -458,6 +458,7 @@ class TestMvvLvaHeuristic:
 @pytest.mark.parametrize(
     ("fen_string", "move_scores"),
     [
+        # King/queen fork
         ("k7/3q4/8/K7/2N5/8/8/8 w - - 1 34", [0, 0, 0, 0, 1, 0, 0, 0, 0, 0]),
     ],
 )
