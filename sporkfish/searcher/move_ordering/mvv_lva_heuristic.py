@@ -1,5 +1,3 @@
-from typing import List
-
 import chess
 
 from ...board.board import Board

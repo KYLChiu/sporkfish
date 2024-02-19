@@ -2,7 +2,7 @@ import copy
 import logging
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Optional, Tuple
+from typing import Optional, Tuple
 
 import chess
 import stopit
@@ -91,7 +91,7 @@ class MiniMaxVariants(Searcher, ABC):
         if order_type is MoveOrderMode.MVV_LVA:
             return MvvLvaHeuristic(board)
         elif order_type is MoveOrderMode.KILLER_MOVE:
-            return KillerMoveHeuristic(self._killer_moves, depth)
+            return KillerMoveHeuristic(self._killer_moves, depth)  # type: ignore
         else:
             raise TypeError(
                 f"MoveOrderingHeuristic does not support the creation of MoveOrdering type: \
