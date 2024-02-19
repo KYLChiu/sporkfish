@@ -1,9 +1,15 @@
+import chess
 import pytest
 from init_board_helper import board_setup, init_board, score_fen
 
 from sporkfish.board.board_factory import BoardFactory, BoardPyChess
 from sporkfish.evaluator import Evaluator
-from sporkfish.searcher.move_ordering import MvvLvaHeuristic
+from sporkfish.searcher.minimax import MiniMaxVariants
+from sporkfish.searcher.move_ordering import (
+    KillerMoveHeuristic,
+    MoveOrderMode,
+    MvvLvaHeuristic,
+)
 from sporkfish.searcher.searcher import Searcher
 from sporkfish.searcher.searcher_config import SearcherConfig
 from sporkfish.searcher.searcher_factory import SearcherFactory
@@ -339,9 +345,13 @@ class TestQuiescence:
 
 
 @pytest.fixture
-def _init_searcher(max_depth: int = 4) -> Searcher:
+def _init_searcher(
+    max_depth: int = 4, move_order_mode: MoveOrderMode = MoveOrderMode.MVV_LVA
+) -> Searcher:
     """Initialise searcher"""
-    return SearcherFactory.create(SearcherConfig(max_depth))
+    return SearcherFactory.create(
+        SearcherConfig(max_depth, move_order_mode=move_order_mode)
+    )
 
 
 @pytest.mark.parametrize(
@@ -449,3 +459,47 @@ class TestMvvLvvHeuristic:
             mo = MvvLvaHeuristic()
             score = mo.evaluate(board, move)
             assert score == move_scores[num_moves - i - 1]
+
+
+@pytest.mark.parametrize(
+    ("fen_string", "move_scores"),
+    [
+        ("k7/3q4/8/K7/2N5/8/8/8 w - - 1 34", [0, 0, 0, 0, 1, 0, 0, 0, 0, 0]),
+    ],
+)
+class TestKillerMoveHeuristic:
+    def test_ordered_moves_end_game(
+        self, fen_string: str, move_scores: list[int]
+    ) -> None:
+        """
+        Test mvv lva heuistic on an end game board
+        """
+        board = init_board(fen_string)
+
+        all_moves = board.legal_moves
+        print(board.legal_moves)
+        num_moves = len(move_scores)
+        assert len(list(all_moves)) == num_moves
+        mo = KillerMoveHeuristic(1)
+        mo.add_killer_move(chess.Move.from_uci("c4b6"), 1)
+
+        for i, move in enumerate(all_moves):
+            score = mo.evaluate(board, move, 1)
+            assert score == move_scores[i]
+
+    def test_sorting_legal_moves(self, fen_string: str, move_scores: list[int]) -> None:
+        """
+        Test sorting of legal moves by mvv_lva_heuristic
+        """
+        board = init_board(fen_string)
+        s: MiniMaxVariants = SearcherFactory.create(
+            SearcherConfig(move_order_mode=MoveOrderMode.KILLER_MOVE)
+        )
+
+        mo: KillerMoveHeuristic = s._move_order
+        mo.add_killer_move(chess.Move.from_uci("c4b6"), 1)
+        legal_moves = s._ordered_moves(board, board.legal_moves, 1)
+
+        for i, move in enumerate(legal_moves):
+            score = mo.evaluate(board, move, 1)
+            assert score == (1 if i == 0 else 0)

@@ -24,7 +24,8 @@ class MoveOrder(ABC):
         :type board: Board
         :param move: The move to be evaluated.
         :type move: chess.Move
-
+        :param depth: The current depth at which the move ordering is considered.
+        :type depth: int
         :return: A floating-point value representing the evaluation of the move.
         :rtype: float
         """
@@ -52,12 +53,14 @@ class MvvLvaHeuristic(MoveOrder):
         Calculate the Most Valuable Victim - Least Valuable Aggressor heuristic value
         for a capturing move based on the value of the captured piece.
 
-        Parameters:
-            board (Board): The chess board.
-            move (chess.Move): The capturing move.
-
-        Returns:
-            int: The heuristic value of the capturing move based on the value of the captured piece.
+        :param board: The current state of the chess board.
+        :type board: Board
+        :param move: The move to be evaluated.
+        :type move: chess.Move
+        :param depth: The current depth at which the move ordering is considered.
+        :type depth: int
+        :return: A floating-point value representing the MVV-LVA evaluation of the move.
+        :rtype: float
         """
 
         if (
@@ -74,10 +77,10 @@ class MvvLvaHeuristic(MoveOrder):
 
 class KillerMoveHeuristic(MoveOrder):
     def __init__(self, max_depth: int) -> None:
-        # Initialize a list to store up to two killer moves for each depth
+        # Store up to two killer moves for each depth
         # Using a fixed size per depth for simplicity; could be dynamic based on actual usage
-        self.killer_moves: List[List[Optional[chess.Move]]] = [
-            [None, None] for _ in range(max_depth)
+        self._killer_moves: List[List[Optional[chess.Move]]] = [
+            [None, None] for _ in range(max_depth + 1)
         ]
 
     def add_killer_move(self, move: chess.Move, depth: int) -> None:
@@ -85,23 +88,35 @@ class KillerMoveHeuristic(MoveOrder):
         Add a move to the killer moves list for a given depth, ensuring it's not already present.
         If the move is new, it replaces the oldest killer move.
 
-        Parameters:
-            move (chess.Move): The move to be added as a killer move.
-            depth (int): The depth at which the move proved to be a killer move.
+        :param move: The move to be evaluated.
+        :type move: chess.Move
+        :param depth: The current depth at which the move ordering is considered.
+        :type depth: int
         """
-        killers = self.killer_moves[depth]
-        if move not in killers:
+        if move not in self._killer_moves[depth]:
             # Shift the existing killer moves down and add the new one at the front
-            killers.pop()
-            killers.insert(0, move)
+            self._killer_moves[depth].pop()
+            self._killer_moves[depth].insert(0, move)
+        print(self._killer_moves)
 
     def evaluate(self, board: Board, move: chess.Move, depth: int) -> float:
-        killers = self.killer_moves[depth]
-        if move in killers:
-            return 100
-        else:
-            return 0
+        """
+        Calculate the killer move heursitic, i.e. if a move caused a beta cutoff
+        in previous runs, it is stored and given a higher score on future move
+        ordering evaluations.
+
+        :param board: The current state of the chess board.
+        :type board: Board
+        :param move: The move to be evaluated.
+        :type move: chess.Move
+        :param depth: The current depth at which the move ordering is considered.
+        :type depth: int
+        :return: A floating-point value representing the killer evaluation of the move.
+        :rtype: float
+        """
+        score = 1 if move in self._killer_moves[depth] else 0
+        return score
 
     @property
     def killer_moves_matrix(self) -> List[List[Optional[chess.Move]]]:
-        return self.killer_moves
+        return self._killer_moves

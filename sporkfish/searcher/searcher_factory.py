@@ -1,6 +1,6 @@
 from sporkfish.evaluator import EvaluateMode, Evaluator
 
-from .move_ordering import MoveOrder, MvvLvaHeuristic, KillerMoveHeuristic
+from .move_ordering import KillerMoveHeuristic, MoveOrder, MvvLvaHeuristic
 from .negamax import NegamaxSp
 from .negamax_lazy_smp import NegaMaxLazySmp
 from .searcher import Searcher
@@ -17,17 +17,18 @@ class SearcherFactory:
         """
         Build and return an instance of MoveOrder based on the specified order type.
 
-        :param order_type: The type of move ordering heuristic to use.
-        :type order_type: MoveOrderMode
+        :param searcher_cfg: The searcher config.
+        :type searcher_cfg: SearcherConfig
         :return: An instance of MoveOrder.
         :rtype: MoveOrder
         :raises TypeError: If the specified order type is not supported.
         """
         order_type = searcher_cfg.move_order_mode
-        max_depth = searcher_cfg.max_depth
+
         if order_type is MoveOrderMode.MVV_LVA:
             return MvvLvaHeuristic()
         elif order_type is MoveOrderMode.KILLER_MOVE:
+            max_depth = searcher_cfg.max_depth
             return KillerMoveHeuristic(max_depth)
         else:
             raise TypeError(
