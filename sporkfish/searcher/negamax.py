@@ -5,7 +5,7 @@ import chess
 from ..board.board import Board
 from ..evaluator import Evaluator
 from .minimax import MiniMaxVariants
-from .move_ordering import MoveOrder
+from .move_ordering import MoveOrder, KillerMoveHeuristic
 from .searcher_config import SearcherConfig
 
 
@@ -61,7 +61,7 @@ class NegamaxSp(MiniMaxVariants):
                 return beta
 
         # Move ordering
-        legal_moves = self._ordered_moves(board, board.legal_moves)
+        legal_moves = self._ordered_moves(board, board.legal_moves, depth)
 
         # recursive search with alpha-beta pruning
         for move in legal_moves:
@@ -74,9 +74,8 @@ class NegamaxSp(MiniMaxVariants):
             board.push(move)
 
             # futility pruning
-            if (
-                self._searcher_config.enable_futility_pruning
-                and self._futility_pruning(board, depth, capture, move, alpha)
+            if self._searcher_config.enable_futility_pruning and self._futility_pruning(
+                board, depth, capture, move, alpha
             ):
                 board.pop()
                 continue
@@ -88,6 +87,8 @@ class NegamaxSp(MiniMaxVariants):
             alpha = max(alpha, value)
 
             if alpha >= beta:
+                if isinstance(self._move_order, KillerMoveHeuristic):
+                    self._move_order.add_killer_move(move, depth)
                 break
 
         if self._searcher_config.enable_transposition_table:
@@ -153,7 +154,7 @@ class NegamaxSp(MiniMaxVariants):
         best_move = chess.Move.null()
         self._statistics.increment()
 
-        legal_moves = self._ordered_moves(board, board.legal_moves)
+        legal_moves = self._ordered_moves(board, board.legal_moves, depth)
         for move in legal_moves:
             board.push(move)
             child_value = -self._negamax(board, depth - 1, -beta, -alpha)

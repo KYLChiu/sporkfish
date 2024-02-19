@@ -65,7 +65,7 @@ class MiniMaxVariants(Searcher, ABC):
     def evaluator(self) -> Evaluator:
         return self._evaluator
 
-    def _ordered_moves(self, board: Board, legal_moves: Any) -> Any:
+    def _ordered_moves(self, board: Board, legal_moves: Any, depth: int) -> Any:
         """
         Order the given legal moves from best to worst based on a move ordering heuristic.
 
@@ -77,12 +77,14 @@ class MiniMaxVariants(Searcher, ABC):
         :type board: chess.Board
         :param legal_moves: The legal moves to be ordered.
         :type legal_moves: Any
+        :param depth: The depth of the search.
+        :type depth: int
         :return: The ordered legal moves.
         :rtype: Any
         """
         return sorted(
             legal_moves,
-            key=lambda move: (self._move_order.evaluate(board, move),),
+            key=lambda move: (self._move_order.evaluate(board, move, depth),),
             reverse=True,
         )
 
@@ -166,7 +168,7 @@ class MiniMaxVariants(Searcher, ABC):
             alpha = stand_pat
 
         legal_moves = self._ordered_moves(
-            board, (move for move in board.legal_moves if board.is_capture(move))
+            board, (move for move in board.legal_moves if board.is_capture(move)), depth
         )
 
         for move in legal_moves:
