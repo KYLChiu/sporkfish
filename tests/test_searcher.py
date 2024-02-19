@@ -5,7 +5,7 @@ from init_board_helper import board_setup, init_board, score_fen
 from sporkfish.board.board_factory import BoardFactory, BoardPyChess
 from sporkfish.evaluator import Evaluator
 from sporkfish.searcher.minimax import MiniMaxVariants
-from sporkfish.searcher.move_ordering.move_ordering import (
+from sporkfish.searcher.move_ordering.move_order_heuristic import (
     KillerMoveHeuristic,
     MoveOrderMode,
     MvvLvaHeuristic,

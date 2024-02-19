@@ -11,7 +11,7 @@ from ..board.board import Board
 from ..evaluator import Evaluator
 from ..transposition_table import TranspositionTable
 from ..zobrist_hasher import ZobristHasher
-from .move_ordering.move_ordering import MoveOrderHeuristic
+from .move_ordering.move_order_heuristic import MoveOrderHeuristic
 from .searcher import Searcher
 from .searcher_config import SearcherConfig
 

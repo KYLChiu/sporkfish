@@ -1,6 +1,6 @@
 from sporkfish.evaluator import EvaluateMode, Evaluator
 
-from .move_ordering.move_ordering import (
+from .move_ordering.move_order_heuristic import (
     KillerMoveHeuristic,
     MoveOrderHeuristic,
     MvvLvaHeuristic,

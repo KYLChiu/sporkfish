@@ -5,7 +5,7 @@ import chess
 from ..board.board import Board
 from ..evaluator import Evaluator
 from .minimax import MiniMaxVariants
-from .move_ordering.move_ordering import KillerMoveHeuristic, MoveOrderHeuristic
+from .move_ordering.move_order_heuristic import KillerMoveHeuristic, MoveOrderHeuristic
 from .searcher_config import SearcherConfig
 
 
