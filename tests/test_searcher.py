@@ -331,7 +331,7 @@ class TestQuiescence:
         result = s._quiescence(board, 1, alpha, beta)
 
         legal_moves = (move for move in board.legal_moves if board.is_capture(move))
-        legal_moves = s._ordered_moves(board, legal_moves)
+        legal_moves = s._ordered_moves(board, legal_moves, 0)
         e = Evaluator()
         for move in legal_moves:
             board.push(move)
@@ -403,7 +403,7 @@ class TestNegamax:
         result = s._negamax(board, 1, alpha, beta)
 
         legal_moves = board.legal_moves
-        legal_moves = s._ordered_moves(board, legal_moves)
+        legal_moves = s._ordered_moves(board, legal_moves, 0)
 
         value = -float("inf")
 
@@ -425,7 +425,7 @@ class TestNegamax:
         ("k7/8/8/8/8/8/7K/6qR w - - 1 34", [0, 50, 52]),
     ],
 )
-class TestMvvLvvHeuristic:
+class TestMvvLvaHeuristic:
     def test_ordered_moves_end_game(
         self, _init_searcher: Searcher, fen_string: str, move_scores: list[int]
     ) -> None:
@@ -440,7 +440,7 @@ class TestMvvLvvHeuristic:
 
         for i, move in enumerate(all_moves):
             mo = MvvLvaHeuristic()
-            score = mo.evaluate(board, move)
+            score = mo.evaluate(board, move, 0)
             assert score == move_scores[i]
 
     def test_sorting_legal_moves(
@@ -452,12 +452,12 @@ class TestMvvLvvHeuristic:
         board = init_board(fen_string)
         s = _init_searcher
 
-        legal_moves = s._ordered_moves(board, board.legal_moves)
+        legal_moves = s._ordered_moves(board, board.legal_moves, 0)
 
         num_moves = len(move_scores)
         for i, move in enumerate(legal_moves):
             mo = MvvLvaHeuristic()
-            score = mo.evaluate(board, move)
+            score = mo.evaluate(board, move, 0)
             assert score == move_scores[num_moves - i - 1]
 
 

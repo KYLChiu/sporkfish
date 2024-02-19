@@ -84,7 +84,7 @@ python3 -m pytest -v
 You may also run a specific test class or function, e.g.:
 
 ```
-python3 -m pytest tests/test_searcher.py::TestMvvLvvHeuristic -sv
+python3 -m pytest tests/test_searcher.py::TestMvvLvaHeuristic -sv
 ```
 
 Slow tests are not run on CI. Developers should run these before raising PRs by doing (this can be very slow, so please be patient):
