@@ -24,8 +24,8 @@ class CompositeHeuristic(MvvLvaHeuristic, KillerMoveHeuristic):
         killer_moves: List[List[chess.Move]],
         depth: int,
     ) -> None:
-        super(MvvLvaHeuristic).__init__(board)
-        super(KillerMoveHeuristic).__init__(board, killer_moves, depth)
+        MvvLvaHeuristic.__init__(self, board)
+        KillerMoveHeuristic.__init__(self, board, killer_moves, depth)
 
     def evaluate(self, move: chess.Move) -> float:
         """

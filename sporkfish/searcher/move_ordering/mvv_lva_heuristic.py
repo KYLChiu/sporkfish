@@ -16,7 +16,7 @@ class MvvLvaHeuristic(MoveOrderHeuristic):
     ]
 
     def __init__(self, board: Board) -> None:
-        super().__init__()
+        MoveOrderHeuristic.__init__(self)
         self._board = board
 
     def evaluate(self, move: chess.Move) -> float:
