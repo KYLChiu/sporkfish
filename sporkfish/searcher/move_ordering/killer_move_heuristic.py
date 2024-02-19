@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List
 
 import chess
 
@@ -9,9 +9,10 @@ from .move_order_heuristic import MoveOrderHeuristic
 class KillerMoveHeuristic(MoveOrderHeuristic):
     def __init__(self, max_depth: int) -> None:
         # Store up to two killer moves for each depth
-        # Using a fixed size per depth for simplicity; could be dynamic based on actual usage
-        self._killer_moves: List[List[Optional[chess.Move]]] = [
-            [None, None] for _ in range(max_depth + 1)
+        # Null moves are never legal so will never compare equal to any legal move
+        # Better to use inbuilt "null" move over None
+        self._killer_moves: List[List[chess.Move]] = [
+            [chess.Move.null(), chess.Move.null()] for _ in range(max_depth + 1)
         ]
 
     def add_killer_move(self, move: chess.Move, depth: int) -> None:
@@ -47,5 +48,5 @@ class KillerMoveHeuristic(MoveOrderHeuristic):
         return 1 if move in self._killer_moves[depth] else 0
 
     @property
-    def killer_moves_matrix(self) -> List[List[Optional[chess.Move]]]:
+    def killer_moves_matrix(self) -> List[List[chess.Move]]:
         return self._killer_moves
