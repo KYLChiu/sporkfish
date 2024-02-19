@@ -460,7 +460,7 @@ class TestKillerMoveHeuristic:
             [chess.Move.null(), chess.Move.null()],
             [chess.Move.from_uci("c4b6"), chess.Move.null()],
         ]
-        mo_heuristic = KillerMoveHeuristic(killer_moves, 1)
+        mo_heuristic = KillerMoveHeuristic(board, killer_moves, 1)
 
         for move in enumerate(all_moves):
             score = mo_heuristic.evaluate(move)
@@ -472,7 +472,7 @@ class TestKillerMoveHeuristic:
             [chess.Move.null(), chess.Move.null()],
             [chess.Move.from_uci("c4b6"), chess.Move.null()],
         ]
-        mo_heuristic = KillerMoveHeuristic(killer_moves, 1)
+        mo_heuristic = KillerMoveHeuristic(board, killer_moves, 1)
         legal_moves = MoveOrderer.order_moves(mo_heuristic, board.legal_moves)
 
         for i, move in enumerate(legal_moves):

@@ -11,6 +11,7 @@ from ..board.board import Board
 from ..evaluator import Evaluator
 from ..transposition_table import TranspositionTable
 from ..zobrist_hasher import ZobristHasher
+from .move_ordering.composite_heuristic import CompositeHeuristic
 from .move_ordering.killer_move_heuristic import KillerMoveHeuristic
 from .move_ordering.move_order_heuristic import MoveOrderHeuristic, MoveOrderMode
 from .move_ordering.move_orderer import MoveOrderer
@@ -62,7 +63,6 @@ class MiniMaxVariants(Searcher, ABC):
 
         self._evaluator = evaluator
 
-        # TODO: what about for composite case?
         # Killer move table - storing quiet beta-cut off moves
         self._killer_moves = (
             [
@@ -70,6 +70,7 @@ class MiniMaxVariants(Searcher, ABC):
                 for _ in range(self._searcher_config.max_depth + 1)
             ]
             if self._searcher_config.move_order_mode == MoveOrderMode.KILLER_MOVE
+            or self._searcher_config.move_order_mode == MoveOrderMode.COMPOSITE
             else None
         )
 
@@ -92,6 +93,8 @@ class MiniMaxVariants(Searcher, ABC):
             return MvvLvaHeuristic(board)
         elif order_type is MoveOrderMode.KILLER_MOVE:
             return KillerMoveHeuristic(self._killer_moves, depth)  # type: ignore
+        elif order_type is MoveOrderMode.COMPOSITE:
+            return CompositeHeuristic(board, self._killer_moves, depth)  # type: ignore
         else:
             raise TypeError(
                 f"MoveOrderingHeuristic does not support the creation of MoveOrdering type: \

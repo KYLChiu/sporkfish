@@ -2,15 +2,19 @@ from typing import List
 
 import chess
 
+from ...board.board import Board
 from .move_order_heuristic import MoveOrderHeuristic
 
 
 class KillerMoveHeuristic(MoveOrderHeuristic):
     def __init__(
         self,
+        board: Board,
         killer_moves: List[List[chess.Move]],
         depth: int,
     ) -> None:
+        super().__init__()
+        self._board = board
         self._killer_moves = killer_moves
         self._depth = depth
 
@@ -25,4 +29,9 @@ class KillerMoveHeuristic(MoveOrderHeuristic):
         :return: A floating-point value representing the killer evaluation of the move.
         :rtype: float
         """
-        return 1 if move in self._killer_moves[self._depth] else 0
+        return (
+            1
+            if move in self._killer_moves[self._depth]
+            and not self._board.is_capture(move)
+            else 0
+        )
