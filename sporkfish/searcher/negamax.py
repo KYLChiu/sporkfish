@@ -5,7 +5,7 @@ import chess
 from ..board.board import Board
 from ..evaluator import Evaluator
 from .minimax import MiniMaxVariants
-from .move_ordering.move_ordering import MoveOrder, KillerMoveHeuristic
+from .move_ordering.move_ordering import KillerMoveHeuristic, MoveOrderHeuristic
 from .searcher_config import SearcherConfig
 
 
@@ -13,7 +13,7 @@ class NegamaxSp(MiniMaxVariants):
     def __init__(
         self,
         evaluator: Evaluator,
-        move_order: MoveOrder,
+        move_order: MoveOrderHeuristic,
         searcher_config: SearcherConfig = SearcherConfig(),
     ) -> None:
         super().__init__(evaluator, move_order, searcher_config)

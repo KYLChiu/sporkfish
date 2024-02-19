@@ -1,6 +1,10 @@
 from sporkfish.evaluator import EvaluateMode, Evaluator
 
-from .move_ordering.move_ordering import KillerMoveHeuristic, MoveOrder, MvvLvaHeuristic
+from .move_ordering.move_ordering import (
+    KillerMoveHeuristic,
+    MoveOrderHeuristic,
+    MvvLvaHeuristic,
+)
 from .negamax import NegamaxSp
 from .negamax_lazy_smp import NegaMaxLazySmp
 from .searcher import Searcher
@@ -13,7 +17,7 @@ class SearcherFactory:
     """
 
     @staticmethod
-    def _build_moveorder(searcher_cfg: SearcherConfig) -> MoveOrder:
+    def _build_moveorder(searcher_cfg: SearcherConfig) -> MoveOrderHeuristic:
         """
         Build and return an instance of MoveOrder based on the specified order type.
 

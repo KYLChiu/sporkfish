@@ -11,7 +11,7 @@ from ..board.board import Board
 from ..evaluator import Evaluator
 from ..transposition_table import TranspositionTable
 from ..zobrist_hasher import ZobristHasher
-from .move_ordering.move_ordering import MoveOrder
+from .move_ordering.move_ordering import MoveOrderHeuristic
 from .searcher import Searcher
 from .searcher_config import SearcherConfig
 
@@ -46,7 +46,7 @@ class MiniMaxVariants(Searcher, ABC):
     def __init__(
         self,
         evaluator: Evaluator,
-        move_order: MoveOrder,
+        move_order: MoveOrderHeuristic,
         searcher_config: SearcherConfig = SearcherConfig(),
     ) -> None:
         super().__init__(searcher_config)

@@ -6,7 +6,7 @@ from pathos.multiprocessing import ProcessPool
 
 from ..board.board import Board
 from ..evaluator import Evaluator
-from .move_ordering.move_ordering import MoveOrder
+from .move_ordering.move_ordering import MoveOrderHeuristic
 from .negamax import NegamaxSp
 from .searcher_config import SearcherConfig
 
@@ -16,7 +16,7 @@ class NegaMaxLazySmp(NegamaxSp):
     def __init__(
         self,
         evaluator: Evaluator,
-        order: MoveOrder,
+        order: MoveOrderHeuristic,
         searcher_config: SearcherConfig = SearcherConfig(),
     ) -> None:
         super().__init__(evaluator, order, searcher_config)

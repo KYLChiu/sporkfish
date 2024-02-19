@@ -8,12 +8,11 @@ from ...board.board import Board
 
 
 class MoveOrderMode(Enum):
-    # can make a separate config for move ordering
     MVV_LVA = "MVV_LVA"
     KILLER_MOVE = "KILLER_MOVE"
 
 
-class MoveOrder(ABC):
+class MoveOrderHeuristic(ABC):
     @abstractmethod
     def evaluate(self, board: Board, move: chess.Move, depth: int) -> float:
         """
@@ -32,7 +31,7 @@ class MoveOrder(ABC):
         pass
 
 
-class MvvLvaHeuristic(MoveOrder):
+class MvvLvaHeuristic(MoveOrderHeuristic):
     def __init__(self) -> None:
         # Columns: attacker P, N, B, R, Q, K
         self._MVV_LVA = [
@@ -75,7 +74,7 @@ class MvvLvaHeuristic(MoveOrder):
             return 0
 
 
-class KillerMoveHeuristic(MoveOrder):
+class KillerMoveHeuristic(MoveOrderHeuristic):
     def __init__(self, max_depth: int) -> None:
         # Store up to two killer moves for each depth
         # Using a fixed size per depth for simplicity; could be dynamic based on actual usage
