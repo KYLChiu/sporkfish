@@ -1,10 +1,8 @@
 from sporkfish.evaluator import EvaluateMode, Evaluator
 
-from .move_ordering.move_order_heuristic import (
-    KillerMoveHeuristic,
-    MoveOrderHeuristic,
-    MvvLvaHeuristic,
-)
+from .move_ordering.killer_move_heuristic import KillerMoveHeuristic
+from .move_ordering.move_order_heuristic import MoveOrderHeuristic
+from .move_ordering.mvv_lva_heuristic import MvvLvaHeuristic
 from .negamax import NegamaxSp
 from .negamax_lazy_smp import NegaMaxLazySmp
 from .searcher import Searcher
