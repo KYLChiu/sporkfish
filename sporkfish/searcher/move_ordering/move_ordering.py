@@ -4,7 +4,7 @@ from typing import List, Optional
 
 import chess
 
-from ..board.board import Board
+from ...board.board import Board
 
 
 class MoveOrderMode(Enum):

@@ -6,7 +6,7 @@ from pathos.multiprocessing import ProcessPool
 
 from ..board.board import Board
 from ..evaluator import Evaluator
-from .move_ordering import MoveOrder
+from .move_ordering.move_ordering import MoveOrder
 from .negamax import NegamaxSp
 from .searcher_config import SearcherConfig
 

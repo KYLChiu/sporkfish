@@ -1,6 +1,6 @@
 from enum import Enum
 
-from sporkfish.searcher.move_ordering import MoveOrderMode
+from sporkfish.searcher.move_ordering.move_ordering import MoveOrderMode
 
 from ..configurable import Configurable
 
