@@ -4,10 +4,8 @@ from init_board_helper import board_setup, init_board
 
 from sporkfish.searcher.move_ordering.composite_heuristic import (
     CompositeHeuristic,
-    CompositeHeuristicScore,
 )
 from sporkfish.searcher.move_ordering.killer_move_heuristic import KillerMoveHeuristic
-from sporkfish.searcher.move_ordering.move_order_heuristic import MoveOrderMode
 from sporkfish.searcher.move_ordering.move_orderer import MoveOrderer
 from sporkfish.searcher.move_ordering.mvv_lva_heuristic import MvvLvaHeuristic
 

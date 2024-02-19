@@ -1,10 +1,8 @@
-import chess
 import pytest
 from init_board_helper import board_setup, init_board, score_fen
 
 from sporkfish.board.board_factory import BoardFactory, BoardPyChess
 from sporkfish.evaluator import Evaluator
-from sporkfish.searcher.move_ordering.killer_move_heuristic import KillerMoveHeuristic
 from sporkfish.searcher.move_ordering.move_order_heuristic import MoveOrderMode
 from sporkfish.searcher.move_ordering.move_orderer import MoveOrderer
 from sporkfish.searcher.move_ordering.mvv_lva_heuristic import MvvLvaHeuristic
@@ -416,5 +414,3 @@ class TestNegamax:
             alpha = max(alpha, value)
 
         assert result == value
-
-
