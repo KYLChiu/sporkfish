@@ -1,23 +1,21 @@
-from enum import IntEnum
 from typing import List
 
 import chess
 
 from ...board.board import Board
 from .killer_move_heuristic import KillerMoveHeuristic
+from .move_order_heuristic import MoveOrderMode
 from .mvv_lva_heuristic import MvvLvaHeuristic
 
 
-# TODO: To be tuned later
-# I'm personally not very big fan of letting thisbe configurable from config
-# People can input whatever nonsensical values
-# But perhaps it could be useful for testing when we first start out. TBD.
-class CompositeHeuristicScore(IntEnum):
-    KILLER_MOVE = 1
-    MVV_LVA = 2
-
-
 class CompositeHeuristic(MvvLvaHeuristic, KillerMoveHeuristic):
+    # TODO: To be tuned later
+    # TODO: to be configured later on, issue #120
+    _MOVE_ORDER_WEIGHTS = {
+        MoveOrderMode.MVV_LVA: 2.0,
+        MoveOrderMode.KILLER_MOVE: 1.0,
+    }
+
     def __init__(
         self,
         board: Board,
@@ -30,7 +28,6 @@ class CompositeHeuristic(MvvLvaHeuristic, KillerMoveHeuristic):
     def evaluate(self, move: chess.Move) -> float:
         """
         Calculate composite heuristic, combining multiple move ordering strategies at once.
-        Simple aggregation for now, to be improved.
 
         :param move: The move to be evaluated.
         :type move: chess.Move
@@ -38,9 +35,11 @@ class CompositeHeuristic(MvvLvaHeuristic, KillerMoveHeuristic):
         :rtype: float
         """
         # TODO: this is using is_capture twice but lets leave that for later
-        mvv_lva = CompositeHeuristicScore.MVV_LVA * MvvLvaHeuristic.evaluate(self, move)
-        killer_move = (
-            CompositeHeuristicScore.KILLER_MOVE
-            * KillerMoveHeuristic.evaluate(self, move)
-        )
+        # Simple aggregation for now, to be improved.
+        mvv_lva = CompositeHeuristic._MOVE_ORDER_WEIGHTS[
+            MoveOrderMode.MVV_LVA
+        ] * MvvLvaHeuristic.evaluate(self, move)
+        killer_move = CompositeHeuristic._MOVE_ORDER_WEIGHTS[
+            MoveOrderMode.KILLER_MOVE
+        ] * KillerMoveHeuristic.evaluate(self, move)
         return mvv_lva + killer_move
