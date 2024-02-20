@@ -24,12 +24,8 @@ class MvvLvaHeuristic(MoveOrderHeuristic):
         Calculate the Most Valuable Victim - Least Valuable Aggressor heuristic value
         for a capturing move based on the value of the captured piece.
 
-        :param board: The current state of the chess board.
-        :type board: Board
         :param move: The move to be evaluated.
         :type move: chess.Move
-        :param depth: The current depth at which the move ordering is considered.
-        :type depth: int
         :return: A floating-point value representing the MVV-LVA evaluation of the move.
         :rtype: float
         """

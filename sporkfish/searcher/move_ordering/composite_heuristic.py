@@ -4,11 +4,11 @@ import chess
 
 from ...board.board import Board
 from .killer_move_heuristic import KillerMoveHeuristic
-from .move_order_heuristic import MoveOrderMode
+from .move_order_heuristic import MoveOrderHeuristic, MoveOrderMode
 from .mvv_lva_heuristic import MvvLvaHeuristic
 
 
-class CompositeHeuristic(MvvLvaHeuristic, KillerMoveHeuristic):
+class CompositeHeuristic(MvvLvaHeuristic, KillerMoveHeuristic, MoveOrderHeuristic):
     # TODO: To be tuned later
     # TODO: to be configured later on, issue #120
     _MOVE_ORDER_WEIGHTS = {
@@ -24,6 +24,7 @@ class CompositeHeuristic(MvvLvaHeuristic, KillerMoveHeuristic):
     ) -> None:
         MvvLvaHeuristic.__init__(self, board)
         KillerMoveHeuristic.__init__(self, board, killer_moves, depth)
+        MoveOrderHeuristic.__init__(self)
 
     def evaluate(self, move: chess.Move) -> float:
         """
