@@ -1,15 +1,11 @@
-import chess
 import pytest
 from init_board_helper import board_setup, init_board, score_fen
 
 from sporkfish.board.board_factory import BoardFactory, BoardPyChess
 from sporkfish.evaluator import Evaluator
-from sporkfish.searcher.minimax import MiniMaxVariants
-from sporkfish.searcher.move_ordering import (
-    KillerMoveHeuristic,
-    MoveOrderMode,
-    MvvLvaHeuristic,
-)
+from sporkfish.searcher.move_ordering.move_order_heuristic import MoveOrderMode
+from sporkfish.searcher.move_ordering.move_orderer import MoveOrderer
+from sporkfish.searcher.move_ordering.mvv_lva_heuristic import MvvLvaHeuristic
 from sporkfish.searcher.searcher import Searcher
 from sporkfish.searcher.searcher_config import SearcherConfig
 from sporkfish.searcher.searcher_factory import SearcherFactory
@@ -331,7 +327,8 @@ class TestQuiescence:
         result = s._quiescence(board, 1, alpha, beta)
 
         legal_moves = (move for move in board.legal_moves if board.is_capture(move))
-        legal_moves = s._ordered_moves(board, legal_moves, 0)
+        mo_heuristic = MvvLvaHeuristic(board)
+        legal_moves = MoveOrderer.order_moves(mo_heuristic, board.legal_moves)
         e = Evaluator()
         for move in legal_moves:
             board.push(move)
@@ -402,8 +399,8 @@ class TestNegamax:
         alpha, beta = param[0], param[1]
         result = s._negamax(board, 1, alpha, beta)
 
-        legal_moves = board.legal_moves
-        legal_moves = s._ordered_moves(board, legal_moves, 0)
+        mo_heuristic = MvvLvaHeuristic(board)
+        legal_moves = MoveOrderer.order_moves(mo_heuristic, board.legal_moves)
 
         value = -float("inf")
 
@@ -417,78 +414,3 @@ class TestNegamax:
             alpha = max(alpha, value)
 
         assert result == value
-
-
-@pytest.mark.parametrize(
-    ("fen_string", "move_scores"),
-    [
-        ("k7/8/8/8/8/8/7K/6qR w - - 1 34", [0, 50, 52]),
-    ],
-)
-class TestMvvLvaHeuristic:
-    def test_ordered_moves_end_game(
-        self, _init_searcher: Searcher, fen_string: str, move_scores: list[int]
-    ) -> None:
-        board = init_board(fen_string)
-
-        all_moves = board.legal_moves
-        num_moves = len(move_scores)
-        assert len(list(all_moves)) == num_moves
-
-        for i, move in enumerate(all_moves):
-            mo = MvvLvaHeuristic()
-            score = mo.evaluate(board, move, 0)
-            assert score == move_scores[i]
-
-    def test_sorting_legal_moves(
-        self, _init_searcher: Searcher, fen_string: str, move_scores: list[int]
-    ) -> None:
-        board = init_board(fen_string)
-        s = _init_searcher
-
-        legal_moves = s._ordered_moves(board, board.legal_moves, 0)
-
-        num_moves = len(move_scores)
-        for i, move in enumerate(legal_moves):
-            mo = MvvLvaHeuristic()
-            score = mo.evaluate(board, move, 0)
-            assert score == move_scores[num_moves - i - 1]
-
-
-@pytest.mark.parametrize(
-    ("fen_string", "move_scores"),
-    [
-        # King/queen fork
-        ("k7/3q4/8/K7/2N5/8/8/8 w - - 1 34", [0, 0, 0, 0, 1, 0, 0, 0, 0, 0]),
-    ],
-)
-class TestKillerMoveHeuristic:
-    def test_ordered_moves_end_game(
-        self, fen_string: str, move_scores: list[int]
-    ) -> None:
-        board = init_board(fen_string)
-
-        all_moves = board.legal_moves
-        print(board.legal_moves)
-        num_moves = len(move_scores)
-        assert len(list(all_moves)) == num_moves
-        mo = KillerMoveHeuristic(1)
-        mo.add_killer_move(chess.Move.from_uci("c4b6"), 1)
-
-        for i, move in enumerate(all_moves):
-            score = mo.evaluate(board, move, 1)
-            assert score == move_scores[i]
-
-    def test_sorting_legal_moves(self, fen_string: str, move_scores: list[int]) -> None:
-        board = init_board(fen_string)
-        s: MiniMaxVariants = SearcherFactory.create(
-            SearcherConfig(move_order_mode=MoveOrderMode.KILLER_MOVE)
-        )
-
-        mo: KillerMoveHeuristic = s._move_order
-        mo.add_killer_move(chess.Move.from_uci("c4b6"), 1)
-        legal_moves = s._ordered_moves(board, board.legal_moves, 1)
-
-        for i, move in enumerate(legal_moves):
-            score = mo.evaluate(board, move, 1)
-            assert score == (1 if i == 0 else 0)

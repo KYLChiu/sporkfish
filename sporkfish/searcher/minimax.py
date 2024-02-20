@@ -2,7 +2,7 @@ import copy
 import logging
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Optional, Tuple
+from typing import Optional, Tuple
 
 import chess
 import stopit
@@ -11,7 +11,11 @@ from ..board.board import Board
 from ..evaluator import Evaluator
 from ..transposition_table import TranspositionTable
 from ..zobrist_hasher import ZobristHasher
-from .move_ordering import MoveOrder
+from .move_ordering.composite_heuristic import CompositeHeuristic
+from .move_ordering.killer_move_heuristic import KillerMoveHeuristic
+from .move_ordering.move_order_heuristic import MoveOrderHeuristic, MoveOrderMode
+from .move_ordering.move_orderer import MoveOrderer
+from .move_ordering.mvv_lva_heuristic import MvvLvaHeuristic
 from .searcher import Searcher
 from .searcher_config import SearcherConfig
 
@@ -46,7 +50,6 @@ class MiniMaxVariants(Searcher, ABC):
     def __init__(
         self,
         evaluator: Evaluator,
-        move_order: MoveOrder,
         searcher_config: SearcherConfig = SearcherConfig(),
     ) -> None:
         super().__init__(searcher_config)
@@ -59,34 +62,64 @@ class MiniMaxVariants(Searcher, ABC):
             logging.info("Disabled transposition table in search.")
 
         self._evaluator = evaluator
-        self._move_order = move_order
+
+        # Killer move table - storing quiet beta-cut off moves
+        self._killer_moves = (
+            [
+                [chess.Move.null(), chess.Move.null()]
+                for _ in range(self._searcher_config.max_depth + 1)
+            ]
+            if self._searcher_config.move_order_mode == MoveOrderMode.KILLER_MOVE
+            or self._searcher_config.move_order_mode == MoveOrderMode.COMPOSITE
+            else None
+        )
 
     @property
     def evaluator(self) -> Evaluator:
         return self._evaluator
 
-    def _ordered_moves(self, board: Board, legal_moves: Any, depth: int) -> Any:
+    def _build_move_order_heuristic(
+        self, board: Board, depth: int
+    ) -> MoveOrderHeuristic:
         """
-        Order the given legal moves from best to worst based on a move ordering heuristic.
-
-        This method sorts the legal moves based on a move ordering heuristic, which aims to prioritize
-        moves that are likely to lead to better positions or outcomes. The ordering can help improve
-        the efficiency of the search algorithm by considering more promising moves first.
+        Build and return an instance of MoveOrderHeuristic based on the specified order type.
 
         :param board: The current state of the chess board.
-        :type board: chess.Board
-        :param legal_moves: The legal moves to be ordered.
-        :type legal_moves: Any
+        :type board: Board
         :param depth: The depth of the search.
         :type depth: int
-        :return: The ordered legal moves.
-        :rtype: Any
+        :return: An instance of MoveOrderHeuristic.
+        :rtype: MoveOrderHeuristic
+        :raises TypeError: If the specified order type is not supported.
         """
-        return sorted(
-            legal_moves,
-            key=lambda move: (self._move_order.evaluate(board, move, depth),),
-            reverse=True,
-        )
+        order_type = self._searcher_config.move_order_mode
+        if order_type is MoveOrderMode.MVV_LVA:
+            return MvvLvaHeuristic(board)
+        elif order_type is MoveOrderMode.KILLER_MOVE:
+            return KillerMoveHeuristic(board, self._killer_moves, depth)  # type: ignore
+        elif order_type is MoveOrderMode.COMPOSITE:
+            return CompositeHeuristic(board, self._killer_moves, depth)  # type: ignore
+        else:
+            raise TypeError(
+                f"MoveOrderingHeuristic does not support the creation of MoveOrdering type: \
+                {type(order_type).__name__}."
+            )
+
+    def _update_killer_moves(self, move: chess.Move, depth: int) -> None:
+        """
+        Updates the killer move table.
+        To be used inside a beta cutoff.
+
+        :param move: The beta cutoff move.
+        :type move: chess.Move
+        :param depth: The depth of the search.
+        :type depth: int
+
+        """
+        # TODO: do we need to check if captures here too?
+        if self._killer_moves:
+            self._killer_moves[depth].pop()
+            self._killer_moves[depth].insert(0, move)
 
     def _aspiration_windows_search(
         self,
@@ -167,8 +200,9 @@ class MiniMaxVariants(Searcher, ABC):
         if alpha < stand_pat:
             alpha = stand_pat
 
-        legal_moves = self._ordered_moves(
-            board, (move for move in board.legal_moves if board.is_capture(move)), depth
+        mo_heuristic = self._build_move_order_heuristic(board, depth)
+        legal_moves = MoveOrderer.order_moves(
+            mo_heuristic, (move for move in board.legal_moves if board.is_capture(move))
         )
 
         for move in legal_moves:

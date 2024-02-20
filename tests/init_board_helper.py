@@ -7,6 +7,8 @@ white_move = {
     "end": "3k4/5ppp/2q5/3p2r1/8/1Q3P2/P4P1P/3R3K w - - 0 1",
     "two_kings": "8/8/4K3/8/2k5/8/8/8 w - - 1 34",
     "two_kings_one_pawn": "8/8/4K3/2k5/2p5/8/8/8 w - - 1 34",  # black winning
+    "can_capture_queen": "k7/8/8/8/8/8/7K/6qR w - - 1 34",
+    "king_queen_fork": "k7/3q4/8/K7/2N5/8/8/8 w - - 1 34",
 }
 
 black_move = {

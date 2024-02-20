@@ -1,5 +1,5 @@
 from config import load_config
-from sporkfish.searcher.move_ordering import MoveOrderMode
+from sporkfish.searcher.move_ordering.move_order_heuristic import MoveOrderMode
 from sporkfish.searcher.searcher_config import SearcherConfig, SearchMode
 
 
