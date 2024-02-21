@@ -28,7 +28,9 @@
                 "ms-vscode-remote.remote-containers",
                 "donjayamanne.githistory",
                 "KevinRose.vsc-python-indent",
-                "charliermarsh.ruff"
+                "charliermarsh.ruff",
+                "GitHub.copilot",
+                "njpwerner.autodocstring"
                 // "ms-python.mypy-type-checker" // next PR, does not comply with our mypy.ini file
             ]
         }
