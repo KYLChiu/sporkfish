@@ -161,7 +161,7 @@ Slow tests are not run on CI. Developers should run these before raising PRs by 
 python3 -m pytest -sv --runslow
 ```
 
-### Quick Sphinx auto docstring generation tips (with Github Copilot and devcontainer)
+### Sphinx auto docstring generation (with Github Copilot and devcontainer)
 
 This may or may not work depending if Copilot is happy on that day. ***Simply ask Copilot to generate your class with Sphinx docstrings.*** If that does not work, you could try:
 1. Implement your class or function with type hints.
