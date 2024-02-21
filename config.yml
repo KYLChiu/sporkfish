@@ -4,7 +4,7 @@ RunConfig:
 SearcherConfig:
   max_depth: 6 # maximum depth for negamax search
   search_mode: SINGLE_PROCESS # mode of search, choice of: SINGLE_PROCESS, LAZY_SMP
-  move_order_mode: MVV_LVA # mode of move ordering, choice of: MVV_LVA (only)
+  move_order_mode: COMPOSITE # mode of move ordering, choice of: MVV_LVA, KILLER_MOVE, COMPOSITE
   enable_null_move_pruning: True # flag to enable null move pruning, i.e. checking for a beta-cutoff by passing our turn
   enable_futility_pruning: False # flag to enable futility_pruning, i.e. prune quiet moves that do not raise alpha in negamax search.
   enable_delta_pruning: True # flag to enable delta pruning, i.e. prune capturing moves that do not raise alpha in quiescence search.

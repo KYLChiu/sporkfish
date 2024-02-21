@@ -5,7 +5,7 @@ import chess
 from ..board.board import Board
 from ..evaluator import Evaluator
 from .minimax import MiniMaxVariants
-from .move_ordering import MoveOrder
+from .move_ordering.move_orderer import MoveOrderer
 from .searcher_config import SearcherConfig
 
 
@@ -13,10 +13,9 @@ class NegamaxSp(MiniMaxVariants):
     def __init__(
         self,
         evaluator: Evaluator,
-        move_order: MoveOrder,
         searcher_config: SearcherConfig = SearcherConfig(),
     ) -> None:
-        super().__init__(evaluator, move_order, searcher_config)
+        super().__init__(evaluator, searcher_config)
 
     def _negamax(
         self,
@@ -61,7 +60,8 @@ class NegamaxSp(MiniMaxVariants):
                 return beta
 
         # Move ordering
-        legal_moves = self._ordered_moves(board, board.legal_moves)
+        mo_heuristic = self._build_move_order_heuristic(board, depth)
+        legal_moves = MoveOrderer.order_moves(mo_heuristic, board.legal_moves)
 
         # recursive search with alpha-beta pruning
         for move in legal_moves:
@@ -74,9 +74,8 @@ class NegamaxSp(MiniMaxVariants):
             board.push(move)
 
             # futility pruning
-            if (
-                self._searcher_config.enable_futility_pruning
-                and self._futility_pruning(board, depth, capture, move, alpha)
+            if self._searcher_config.enable_futility_pruning and self._futility_pruning(
+                board, depth, capture, move, alpha
             ):
                 board.pop()
                 continue
@@ -88,6 +87,7 @@ class NegamaxSp(MiniMaxVariants):
             alpha = max(alpha, value)
 
             if alpha >= beta:
+                self._update_killer_moves(move, depth)
                 break
 
         if self._searcher_config.enable_transposition_table:
@@ -153,7 +153,9 @@ class NegamaxSp(MiniMaxVariants):
         best_move = chess.Move.null()
         self._statistics.increment()
 
-        legal_moves = self._ordered_moves(board, board.legal_moves)
+        mo_heuristic = self._build_move_order_heuristic(board, depth)
+        legal_moves = MoveOrderer.order_moves(mo_heuristic, board.legal_moves)
+
         for move in legal_moves:
             board.push(move)
             child_value = -self._negamax(board, depth - 1, -beta, -alpha)
@@ -165,6 +167,7 @@ class NegamaxSp(MiniMaxVariants):
 
             alpha = max(alpha, value)
             if alpha >= beta:
+                self._update_killer_moves(move, depth)
                 break
 
         if self._searcher_config.enable_transposition_table:

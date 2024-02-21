@@ -3,7 +3,9 @@ from init_board_helper import board_setup, init_board, score_fen
 
 from sporkfish.board.board_factory import BoardFactory, BoardPyChess
 from sporkfish.evaluator import Evaluator
-from sporkfish.searcher.move_ordering import MvvLvaHeuristic
+from sporkfish.searcher.move_ordering.move_order_heuristic import MoveOrderMode
+from sporkfish.searcher.move_ordering.move_orderer import MoveOrderer
+from sporkfish.searcher.move_ordering.mvv_lva_heuristic import MvvLvaHeuristic
 from sporkfish.searcher.searcher import Searcher
 from sporkfish.searcher.searcher_config import SearcherConfig
 from sporkfish.searcher.searcher_factory import SearcherFactory
@@ -325,7 +327,8 @@ class TestQuiescence:
         result = s._quiescence(board, 1, alpha, beta)
 
         legal_moves = (move for move in board.legal_moves if board.is_capture(move))
-        legal_moves = s._ordered_moves(board, legal_moves)
+        mo_heuristic = MvvLvaHeuristic(board)
+        legal_moves = MoveOrderer.order_moves(mo_heuristic, board.legal_moves)
         e = Evaluator()
         for move in legal_moves:
             board.push(move)
@@ -339,9 +342,13 @@ class TestQuiescence:
 
 
 @pytest.fixture
-def _init_searcher(max_depth: int = 4) -> Searcher:
+def _init_searcher(
+    max_depth: int = 4, move_order_mode: MoveOrderMode = MoveOrderMode.MVV_LVA
+) -> Searcher:
     """Initialise searcher"""
-    return SearcherFactory.create(SearcherConfig(max_depth))
+    return SearcherFactory.create(
+        SearcherConfig(max_depth, move_order_mode=move_order_mode)
+    )
 
 
 @pytest.mark.parametrize(
@@ -392,8 +399,8 @@ class TestNegamax:
         alpha, beta = param[0], param[1]
         result = s._negamax(board, 1, alpha, beta)
 
-        legal_moves = board.legal_moves
-        legal_moves = s._ordered_moves(board, legal_moves)
+        mo_heuristic = MvvLvaHeuristic(board)
+        legal_moves = MoveOrderer.order_moves(mo_heuristic, board.legal_moves)
 
         value = -float("inf")
 
@@ -407,45 +414,3 @@ class TestNegamax:
             alpha = max(alpha, value)
 
         assert result == value
-
-
-@pytest.mark.parametrize(
-    ("fen_string", "move_scores"),
-    [
-        ("k7/8/8/8/8/8/7K/6qR w - - 1 34", [0, 50, 52]),
-    ],
-)
-class TestMvvLvvHeuristic:
-    def test_ordered_moves_end_game(
-        self, _init_searcher: Searcher, fen_string: str, move_scores: list[int]
-    ) -> None:
-        """
-        Test mvv lva heuistic on an end game board
-        """
-        board = init_board(fen_string)
-
-        all_moves = board.legal_moves
-        num_moves = len(move_scores)
-        assert len(list(all_moves)) == num_moves
-
-        for i, move in enumerate(all_moves):
-            mo = MvvLvaHeuristic()
-            score = mo.evaluate(board, move)
-            assert score == move_scores[i]
-
-    def test_sorting_legal_moves(
-        self, _init_searcher: Searcher, fen_string: str, move_scores: list[int]
-    ) -> None:
-        """
-        Test sorting of legal moves by mvv_lva_heuristic
-        """
-        board = init_board(fen_string)
-        s = _init_searcher
-
-        legal_moves = s._ordered_moves(board, board.legal_moves)
-
-        num_moves = len(move_scores)
-        for i, move in enumerate(legal_moves):
-            mo = MvvLvaHeuristic()
-            score = mo.evaluate(board, move)
-            assert score == move_scores[num_moves - i - 1]
