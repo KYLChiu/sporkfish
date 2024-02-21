@@ -4,7 +4,6 @@
         "editor.defaultFormatter": "charliermarsh.ruff",
         "editor.codeActionsOnSave": {
             "source.organizeImports": "explicit"
-        },
-    },
-    "autoDocstring.docstringFormat": "sphinx"
+        }
+    }
 }
