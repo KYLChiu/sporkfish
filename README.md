@@ -165,7 +165,7 @@ python3 -m pytest -sv --runslow
 
 This may or may not work depending if Copilot is happy on that day. ***Simply ask Copilot to generate your class with Sphinx docstrings.*** If that does not work, you could try:
 1. Implement your class or function with type hints.
-2. Add a template Sphinx docstring at the class level, i.e. above __init__ function. This can be done using `Ctrl + Shift + 2` (Windows, Linux) or `Command + Shift + 2` (Mac). Add ":param: in your string" if it isn't auto generated.
+2. Add a template Sphinx docstring at the class level, i.e. above `__init__` function. This can be done using `Ctrl + Shift + 2` (Windows, Linux) or `Command + Shift + 2` (Mac). Add ":param: in your string" if it isn't auto generated.
 3. Using the Command Pallete, select "Github Copilot: Generate Docs" while your text cursor is inside the template Sphinx docstring= ***It should auto generate Sphinx docs for the entire class/function. ***
 
 - - - -
