@@ -17,11 +17,12 @@ jobs:
       # -- Setup --
       - name: Checkout code
         uses: actions/checkout@v2
-      - name: Write API_TOKEN to file
-        run: echo -n "$API_TOKEN" >> api_token.txt
+      - name: Write API_TOKENs to file
+        run: echo -n "$API_TOKEN" >> api_token.txt | echo -n "$TEST_BOT_API_TOKEN" >> test_bot_api_token.txt
         shell: bash
         env:
           API_TOKEN: ${{ secrets.API_TOKEN }}
+          TEST_BOT_API_TOKEN: ${{ secrets.TEST_BOT_API_TOKEN }}
       # -- Docker build and run --
       - name: Build Docker image
         run: docker build -t sporkfish-image .
