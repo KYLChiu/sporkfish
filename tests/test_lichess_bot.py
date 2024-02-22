@@ -10,10 +10,14 @@ from sporkfish.lichess_bot import lichess_bot_berserk
 error_queue = multiprocessing.Queue()
 
 
-# Write all of the tests belows in a class
 class TestLichessBot:
-    _api_token_file = "api_token.txt"
+    _sporkfish_api_token_file = "api_token.txt"
     _test_bot_api_token_file = "test_bot_api_token.txt"
+
+    @staticmethod
+    def _create_bot(api_token_file: str) -> lichess_bot_berserk.LichessBotBerserk:
+        with open(api_token_file) as f:
+            return lichess_bot_berserk.LichessBotBerserk(f.read())
 
     @pytest.mark.skipif(
         sys.platform != "linux",
@@ -25,16 +29,18 @@ class TestLichessBot:
         # If no exceptions, we pass the test.
         def run_game():
             try:
-                with open(TestLichessBot._api_token_file) as f:
-                    bot = lichess_bot_berserk.LichessBotBerserk(f.read())
-                    bot.client.challenges.create(
-                        username="maia9",
-                        color="white",
-                        rated=False,
-                        clock_limit=time_limit,
-                        clock_increment=0,
-                    )
-                    bot.run()
+                bot = TestLichessBot._create_bot(
+                    TestLichessBot._sporkfish_api_token_file
+                )
+                bot = lichess_bot_berserk.LichessBotBerserk(f.read())
+                bot.client.challenges.create(
+                    username="maia9",
+                    color="white",
+                    rated=False,
+                    clock_limit=time_limit,
+                    clock_increment=0,
+                )
+                bot.run()
             except Exception as e:
                 error_queue.put(e)
 
@@ -52,46 +58,44 @@ class TestLichessBot:
 
     @pytest.mark.ci
     def test_accept_challenge(self):
-        with open(TestLichessBot._api_token_file) as f:
-            sporkfish = lichess_bot_berserk.LichessBotBerserk(f.read())
-
-        with open(TestLichessBot._test_bot_api_token_file) as f:
-            bot = lichess_bot_berserk.LichessBotBerserk(f.read())
-            challenge_event = bot.client.challenges.create(
-                username="Sporkfish",
-                color="white",
-                variant="standard",
-                rated=False,
-                clock_limit=30,
-                clock_increment=0,
-            )
+        sporkfish = TestLichessBot._create_bot(TestLichessBot._sporkfish_api_token_file)
+        test_bot = TestLichessBot._create_bot(TestLichessBot._test_bot_api_token_file)
 
         assert sporkfish
-        assert bot
+        assert test_bot
+
+        challenge_event = test_bot.client.challenges.create(
+            username="Sporkfish",
+            color="white",
+            variant="standard",
+            rated=False,
+            clock_limit=30,
+            clock_increment=0,
+        )
 
         assert challenge_event
-        accepted = sporkfish._event_action_accept_challenge(challenge_event)
-        assert accepted
+        assert sporkfish._event_action_accept_challenge(challenge_event)
+
+        # This should crash if no game is found, thereby verifying there is a game
         sporkfish.client.bots.abort_game(challenge_event["challenge"]["id"])
 
     @pytest.mark.ci
     def test_decline_challenge(self):
-        with open(TestLichessBot._api_token_file) as f:
-            sporkfish = lichess_bot_berserk.LichessBotBerserk(f.read())
-
-        with open(TestLichessBot._test_bot_api_token_file) as f:
-            bot = lichess_bot_berserk.LichessBotBerserk(f.read())
-            challenge_event = bot.client.challenges.create(
-                username="Sporkfish",
-                color="white",
-                variant="atomic",
-                rated=False,
-                clock_limit=30,
-                clock_increment=0,
-            )
+        sporkfish = TestLichessBot._create_bot(TestLichessBot._sporkfish_api_token_file)
+        test_bot = TestLichessBot._create_bot(TestLichessBot._test_bot_api_token_file)
 
         assert sporkfish
-        assert bot
+        assert test_bot
+
+        # Faulty challenge as atomic variant is not supported
+        challenge_event = test_bot.client.challenges.create(
+            username="Sporkfish",
+            color="white",
+            variant="atomic",
+            rated=False,
+            clock_limit=30,
+            clock_increment=0,
+        )
 
         assert challenge_event
         accepted = sporkfish._event_action_accept_challenge(challenge_event)
