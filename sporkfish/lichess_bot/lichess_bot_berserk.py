@@ -1,6 +1,6 @@
 import datetime
 import logging
-from typing import Any, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import berserk
 import berserk.exceptions
@@ -14,29 +14,6 @@ class LichessBotBerserk(LichessBot):
     A class representing a Lichess bot powered by the Sporkfish chess engine.
     Powered by the synchronous berserk lichess API.
     Not thread-safe (do not use with multithreading, might exceed rate limit of Lichess).
-
-    Attributes:
-    - _session (berserk.TokenSession): The session object for interacting with the Lichess API.
-    - _berserk (berserk.Client): The client for making requests to the Lichess API.
-    - _bot_id (str): The identifier for the bot on Lichess.
-    - _sporkfish (uci_berserk.UCIClient): The UCI client using the Sporkfish chess engine.
-
-    Methods:
-    - __init__(token: str, bot_id: str = "sporkfish", max_concurrent_games: int = 4):
-        Initialize the LichessBot with a Lichess API token and a bot identifier.
-
-    - _make_bot_move(game_id: str) -> None:
-        Make a move for the bot using the Sporkfish engine.
-
-    - _set_position(moves: str) -> None:
-        Set the chess position based on a sequence of UCI moves (space delimited).
-
-    - _play_game(game_id: str, test: bool = False) -> None:
-        Play a game on Lichess by streaming game states, setting positions, and making moves.
-
-    - run() -> None:
-        Start the Lichess bot, listening to incoming events sequentially and playing games accordingly.
-
     """
 
     class Berserk:
@@ -72,6 +49,7 @@ class LichessBotBerserk(LichessBot):
         """
         return self._berserk._client
 
+    # TODO: draw offer handling
     @retry(
         stop=stop_after_attempt(2),
         wait=wait_fixed(60 * 1000),  # 1 min, to adhere to lichess rate limiting
@@ -145,12 +123,74 @@ class LichessBotBerserk(LichessBot):
                 prev_moves = state["moves"]
                 set_pos_and_play_move(num_moves, color, prev_moves, game_id, state)
 
+    @classmethod
+    def _should_accept_challenge(cls, event: Dict[str, Any]) -> bool:
+        """
+        Determines whether the bot should accept a challenge based on the event details.
+
+        :param event: The event details containing the challenge information.
+        :type event: Dict[str, Any]
+        :return: True if the bot should accept the challenge, False otherwise.
+        :rtype: bool
+        """
+        return (
+            True
+            if event["challenge"]["variant"]["key"]
+            == LichessBot._accept_challenge_variant_type
+            and event["challenge"]["speed"] in LichessBot._accept_challenge_speed_type
+            else False
+        )
+
+    def _event_action_accept_challenge(self, event: Dict[str, Any]) -> bool:
+        """
+        Accepts or declines a challenge based on certain conditions.
+
+        :param event: The event containing information about the challenge.
+        :type event: Dict[str, Any]
+        :return: True if the challenge is accepted, False if it is declined.
+        :rtype: bool
+        """
+        if self._should_accept_challenge(event):
+            self.client.bots.accept_challenge(event["challenge"]["id"])
+            return True
+        else:
+            self.client.bots.decline_challenge(event["challenge"]["id"])
+            return False
+
+    def _event_action_play_game(self, event: Dict[str, Any]) -> None:
+        """
+        Initiates gameplay for the specified game.
+
+        :param event: The event containing information about the game.
+        :type event: Dict[str, Any]
+        """
+        self._play_game(event["game"]["fullId"])
+
+    def _event_action_game_finish(self, event: Dict[str, Any]) -> None:
+        """
+        Posts a chat message in response to a game event.
+
+        :param event: The event containing information about the game.
+        :type event: Dict[str, Any]
+        """
+        self.client.bots.post_message(
+            event["game"]["fullId"],
+            LichessBot._chatline_message_string,
+        )
+
+    _event_actions = {
+        "challenge": _event_action_accept_challenge,
+        "gameStart": _event_action_play_game,
+        "gameFinish": _event_action_game_finish,
+    }
+
     def run(self) -> None:
         """
         Start the Lichess bot, listening to incoming events sequentially and playing games accordingly.
         """
-
         events = self.client.bots.stream_incoming_events()
         for event in events:
-            if event.get("type") == "gameStart":
-                self._play_game(event["game"]["fullId"])
+            # Certain events may have unregistered type
+            # We need to check if the type is in the dictionary
+            if action := self._event_actions.get(event.get("type", "")):
+                action(self, event)
