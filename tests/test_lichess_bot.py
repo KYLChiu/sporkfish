@@ -32,7 +32,6 @@ class TestLichessBot:
                 bot = TestLichessBot._create_bot(
                     TestLichessBot._sporkfish_api_token_file
                 )
-                bot = lichess_bot_berserk.LichessBotBerserk(f.read())
                 bot.client.challenges.create(
                     username="maia9",
                     color="white",
