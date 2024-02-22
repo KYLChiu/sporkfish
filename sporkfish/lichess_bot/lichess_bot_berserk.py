@@ -1,6 +1,5 @@
 import datetime
 import logging
-import time
 from typing import Any, Dict, Optional, Tuple
 
 import berserk
@@ -148,9 +147,6 @@ class LichessBotBerserk(LichessBot):
                 num_moves = len(state["moves"].split())
                 prev_moves = state["moves"]
                 set_pos_and_play_move(num_moves, color, prev_moves, game_id, state)
-            elif state["type"] == "opponentGone" and state["gone"]:
-                time.sleep(8)
-                self.client.board.claim_victory(game_id)
 
     @classmethod
     def _should_accept_challenge(cls, event: Dict[str, Any]) -> bool:
@@ -172,6 +168,15 @@ class LichessBotBerserk(LichessBot):
         )
 
     def _event_action_accept_challenge(self, event: Dict[str, Any]) -> bool:
+        """
+        Accepts or declines a challenge based on certain conditions.
+
+        Args:
+        event (Dict[str, Any]): The event data containing challenge information.
+
+        Returns:
+        bool: True if the challenge is accepted, False if declined.
+        """
         return (
             self.client.bots.accept_challenge(event["challenge"]["id"])
             if self._should_accept_challenge(event)
@@ -179,10 +184,22 @@ class LichessBotBerserk(LichessBot):
         )
 
     def _event_action_play_game(self, event: Dict[str, Any]) -> None:
+        """
+        Initiates gameplay for the specified game.
+
+        Args:
+            event (Dict[str, Any]): The event data containing game information.
+        """
         self._play_game(event["game"]["fullId"])
 
     def _event_action_game_finish(self, event: Dict[str, Any]) -> bool:
-        return self.client.bots.post_message(
+        """
+        Posts a chat message in response to a game event.
+
+        Args:
+        event (Dict[str, Any]): The event data containing game information.
+        """
+        self.client.bots.post_message(
             event["game"]["fullId"],
             LichessBot._chatline_message_string,
         )
@@ -199,5 +216,5 @@ class LichessBotBerserk(LichessBot):
         """
         events = self.client.bots.stream_incoming_events()
         for event in events:
-            action = self._event_actions.get(event.get("type"))
-            action(self, event)
+            if (action := self._event_actions.get(event.get("type"))) is not None:
+                action(self, event)

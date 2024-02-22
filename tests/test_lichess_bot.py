@@ -45,3 +45,18 @@ def test_lichess_bot_playing_ai_timed() -> None:
         proc.terminate()
 
     # If no exceptions, we pass the test.
+
+
+def run_test_challenge():
+    # run bot, listen to challenge, return accept challenge boolean value then abort the game
+    api_token_file = "api_token.txt"
+    with open(api_token_file) as f:
+        sporkfish = lichess_bot_berserk.LichessBotBerserk(f.read())
+        sporkfish.run()
+
+    test_bot_api_token_file = "test_bot_api_token.txt"
+    with open(test_bot_api_token_file) as f:
+        bot = lichess_bot_berserk.LichessBotBerserk(f.read())
+        bot.client.challenges.create(
+            username="Sporkfish", color="white", variant="standard"
+        )
