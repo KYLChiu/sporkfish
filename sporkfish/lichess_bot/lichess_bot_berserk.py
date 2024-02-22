@@ -33,6 +33,8 @@ class BerserkRetriable:
         self._client = berserk.Client(berserk.TokenSession(token))
         self._set_retries()
 
+    # This is a bit dodgy, but it's the only way to patch the berserk.Client API for now.
+    # The issue is that berserk only contains all its API once initialized, so we can't patch it before.
     def _set_retries(self) -> None:
         """
         Patches all public callable functions from modules in the berserk.Client with retry logic.
@@ -185,11 +187,74 @@ class LichessBotBerserk(LichessBot):
             if state["type"] == "gameState":
                 self._set_pos_and_play_move(color, state["moves"], game_id, state)
 
+    @classmethod
+    def _should_accept_challenge(cls, event: Dict[str, Any]) -> bool:
+        """
+        Determines whether the bot should accept a challenge based on the event details.
+
+        :param event: The event details containing the challenge information.
+        :type event: Dict[str, Any]
+        :return: True if the bot should accept the challenge, False otherwise.
+        :rtype: bool
+        """
+        return (
+            True
+            if event["challenge"]["variant"]["key"]
+            == LichessBot._accept_challenge_variant_type
+            and event["challenge"]["speed"] in LichessBot._accept_challenge_speed_type
+            else False
+        )
+
+    def _event_action_accept_challenge(self, event: Dict[str, Any]) -> bool:
+        """
+        Accepts or declines a challenge based on certain conditions.
+
+        :param event: The event containing information about the challenge.
+        :type event: Dict[str, Any]
+        :return: True if the challenge is accepted, False if it is declined.
+        :rtype: bool
+        """
+        if self._should_accept_challenge(event):
+            self.client.bots.accept_challenge(event["challenge"]["id"])
+            return True
+        else:
+            self.client.bots.decline_challenge(event["challenge"]["id"])
+            return False
+
+    def _event_action_play_game(self, event: Dict[str, Any]) -> None:
+        """
+        Initiates gameplay for the specified game.
+
+        :param event: The event containing information about the game.
+        :type event: Dict[str, Any]
+        """
+        self._play_game(event["game"]["fullId"])
+
+    def _event_action_game_finish(self, event: Dict[str, Any]) -> None:
+        """
+        Posts a chat message in response to a game event.
+
+        :param event: The event containing information about the game.
+        :type event: Dict[str, Any]
+        """
+        self.client.bots.post_message(
+            event["game"]["fullId"],
+            LichessBot._chatline_message_string,
+        )
+
+    _event_actions = {
+        "challenge": _event_action_accept_challenge,
+        "gameStart": _event_action_play_game,
+        "gameFinish": _event_action_game_finish,
+    }
+
     def run(self) -> None:
         """
         Start the Lichess bot, listening to incoming events sequentially and playing games accordingly.
         """
         events = self.client.bots.stream_incoming_events()
         for event in events:
-            if event.get("type") == "gameStart":
-                self._play_game(event["game"]["fullId"])
+            # Certain events may have unregistered type
+            # We need to check if the type is in the dictionary
+            if action := self._event_actions.get(event.get("type", "")):
+                action(self, event)
