@@ -75,26 +75,6 @@ python3 -O main.py
 
 Once you create a game via your bot account, the bot will automatically play. We currently do not support simultaneous games.
 
-### Run Tests
-
-To run all tests (excluding slow tests):
-
-```
-python3 -m pytest -v
-```
-
-You may also run a specific test class or function, e.g.:
-
-```
-python3 -m pytest tests/test_searcher.py::TestMvvLvvHeuristic -sv
-```
-
-Slow tests are not run on CI. Developers should run these before raising PRs by doing (this can be very slow, so please be patient):
-
-```
-python3 -m pytest -sv --runslow
-```
-
 - - - -
 
 ## Principles
@@ -158,3 +138,36 @@ Communication:
 * Iterative Deepening Search:
   * by [John Levine](https://www.youtube.com/watch?v=Y85ECk_H3h4) - in context of DFS
   * by [Chess Programming](https://www.youtube.com/watch?v=awZxXMJ-h0Y) - in the context of chess programming
+
+- - - -
+
+## For developers
+
+### Run Tests
+
+To run all tests (excluding slow tests):
+
+```
+python3 -m pytest -v
+```
+
+You may also run a specific test class or function, e.g.:
+
+```
+python3 -m pytest tests/test_searcher.py::TestMvvLvaHeuristic -sv
+```
+
+Slow tests are not run on CI. Developers should run these before raising PRs by doing (this can be very slow, so please be patient):
+
+```
+python3 -m pytest -sv --runslow
+```
+
+### Sphinx auto docstring generation (with Github Copilot and devcontainer)
+
+This may or may not work depending if Copilot is happy on that day. ***Simply ask Copilot to generate your class with Sphinx docstrings.*** If that does not work, you could try:
+1. Implement your class or function with type hints.
+2. Add a template Sphinx docstring at the class level, i.e. above `__init__` function. This can be done using `Ctrl + Shift + 2` (Windows, Linux) or `Command + Shift + 2` (Mac). Add ":param:" in your string if it isn't auto generated.
+3. Using the Command Pallete, select "Github Copilot: Generate Docs" while your text cursor is inside the template Sphinx docstring. ***It should auto generate Sphinx docs for the entire class/function.***
+
+- - - -

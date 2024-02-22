@@ -6,7 +6,7 @@ from ..board.board import Board
 from ..evaluator import Evaluator
 from ..zobrist_hasher import ZobristStateInfo
 from .minimax import MiniMaxVariants
-from .move_ordering import MoveOrder
+from .move_ordering.move_orderer import MoveOrderer
 from .searcher_config import SearcherConfig
 
 
@@ -14,10 +14,9 @@ class NegamaxSp(MiniMaxVariants):
     def __init__(
         self,
         evaluator: Evaluator,
-        move_order: MoveOrder,
         searcher_config: SearcherConfig = SearcherConfig(),
     ) -> None:
-        super().__init__(evaluator, move_order, searcher_config)
+        super().__init__(evaluator, searcher_config)
 
     def _negamax(
         self,
@@ -65,7 +64,8 @@ class NegamaxSp(MiniMaxVariants):
             return beta
 
         # Move ordering
-        legal_moves = self._ordered_moves(board, board.legal_moves)
+        mo_heuristic = self._build_move_order_heuristic(board, depth)
+        legal_moves = MoveOrderer.order_moves(mo_heuristic, board.legal_moves)
 
         # Recursive search with alpha-beta pruning
         for move in legal_moves:
@@ -116,6 +116,7 @@ class NegamaxSp(MiniMaxVariants):
             alpha = max(alpha, value)
 
             if alpha >= beta:
+                self._update_killer_moves(move, depth)
                 break
 
         if zobrist_state:
@@ -187,8 +188,9 @@ class NegamaxSp(MiniMaxVariants):
             if self._searcher_config.enable_transposition_table
             else None
         )
+        mo_heuristic = self._build_move_order_heuristic(board, depth)
+        legal_moves = MoveOrderer.order_moves(mo_heuristic, board.legal_moves)
 
-        legal_moves = self._ordered_moves(board, board.legal_moves)
         for move in legal_moves:
             # Get piece at from_square and captures for transposition table
             # This needs to be done prior to changing the board state
@@ -227,6 +229,7 @@ class NegamaxSp(MiniMaxVariants):
 
             alpha = max(alpha, value)
             if alpha >= beta:
+                self._update_killer_moves(move, depth)
                 break
 
         if zobrist_state:
