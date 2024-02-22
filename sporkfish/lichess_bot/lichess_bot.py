@@ -16,7 +16,7 @@ class LichessBot(ABC):
 
     _accept_challenge_variant_type = "standard"
     _accept_challenge_speed_type = {"rapid", "bullet", "blitz"}
-    _chatline_message_string = "GGWP, Hope you had fun playing with Sporkfish!"
+    _chatline_message_string = "GGWP, hope you had fun playing with Sporkfish!"
 
     def __init__(self, bot_id: str) -> None:
         """
