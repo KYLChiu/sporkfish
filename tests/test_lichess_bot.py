@@ -2,8 +2,8 @@ import multiprocessing
 import sys
 import time
 
-import berserk.exceptions
 import pytest
+from tenacity import RetryError
 
 from sporkfish.lichess_bot import lichess_bot_berserk
 
@@ -102,6 +102,6 @@ class TestLichessBot:
         try:
             sporkfish.client.bots.abort_game(challenge_event["challenge"]["id"])
             assert False, "Expected to fail to abort game, as challenge was declined"
-        except berserk.exceptions.ResponseError:
+        except RetryError:
             # This is a success
             pass
