@@ -25,14 +25,12 @@ def pytest_configure(config):
 
 
 def pytest_collection_modifyitems(config, items):
-    if config.getoption("--runslow") or config.getoption("--ci"):
-        # --runslow or --ci given in cli: do not skip tests
-        return
-
+    config_runslow = config.getoption("--runslow")
+    config_ci = config.getoption("--ci")
     for item in items:
-        if "slow" in item.keywords:
+        if not config_runslow and "slow" in item.keywords:
             skip_slow = pytest.mark.skip(reason="need --runslow option to run")
             item.add_marker(skip_slow)
-        elif "ci" in item.keywords:
+        elif not config_ci and "ci" in item.keywords:
             skip_ci = pytest.mark.skip(reason="need --ci option to run")
             item.add_marker(skip_ci)

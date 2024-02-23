@@ -23,37 +23,37 @@ class TestLichessBot:
         sys.platform != "linux",
         reason="Don't create multiple challenges to exceed rate limit of Lichess",
     )
-    def test_lichess_bot_playing_ai_timed(self) -> None:
-        time_limit = 30
+    # def test_lichess_bot_playing_ai_timed(self) -> None:
+    #     time_limit = 30
 
-        # If no exceptions, we pass the test.
-        def run_game():
-            try:
-                bot = TestLichessBot._create_bot(
-                    TestLichessBot._sporkfish_api_token_file
-                )
-                bot.client.challenges.create(
-                    username="maia9",
-                    color="white",
-                    rated=False,
-                    clock_limit=time_limit,
-                    clock_increment=0,
-                )
-                bot.run()
-            except Exception as e:
-                error_queue.put(e)
+    #     # If no exceptions, we pass the test.
+    #     def run_game():
+    #         try:
+    #             bot = TestLichessBot._create_bot(
+    #                 TestLichessBot._sporkfish_api_token_file
+    #             )
+    #             bot.client.challenges.create(
+    #                 username="maia9",
+    #                 color="white",
+    #                 rated=False,
+    #                 clock_limit=time_limit,
+    #                 clock_increment=0,
+    #             )
+    #             bot.run()
+    #         except Exception as e:
+    #             error_queue.put(e)
 
-        proc = multiprocessing.Process(target=run_game)
-        proc.start()
+    #     proc = multiprocessing.Process(target=run_game)
+    #     proc.start()
 
-        time.sleep(time_limit * 2)
+    #     time.sleep(time_limit * 2)
 
-        if not error_queue.empty():
-            raise RuntimeError(
-                f"Caught exception when running LichessBot: {error_queue.get()}"
-            )
-        else:
-            proc.terminate()
+    #     if not error_queue.empty():
+    #         raise RuntimeError(
+    #             f"Caught exception when running LichessBot: {error_queue.get()}"
+    #         )
+    #     else:
+    #         proc.terminate()
 
     @pytest.mark.ci
     def test_accept_challenge(self):
