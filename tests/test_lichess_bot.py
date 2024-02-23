@@ -2,7 +2,6 @@ import multiprocessing
 import sys
 import time
 
-import berserk.exceptions
 import pytest
 
 from sporkfish.lichess_bot import lichess_bot_berserk
