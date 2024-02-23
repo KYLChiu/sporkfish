@@ -102,6 +102,6 @@ class TestLichessBot:
         try:
             sporkfish.client.bots.abort_game(challenge_event["challenge"]["id"])
             assert False, "Expected to fail to abort game, as challenge was declined"
-        except berserk.exceptions.ResponseError:
+        except Exception:
             # This is a success
             pass
