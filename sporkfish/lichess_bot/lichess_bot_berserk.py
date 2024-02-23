@@ -31,6 +31,26 @@ class LichessBotBerserk(LichessBot):
     def client(self) -> berserk.Client:
         return self._berserk._client
 
+    # Extracts the second from a datetime object or converts milliseconds to seconds
+    def _extract_second(
+        self, obj: Union[datetime.datetime, int, Any]
+    ) -> Optional[float]:
+        """
+        Extracts the second from the given object.
+
+        :param obj: The object from which to extract the second.
+        :type obj: Union[datetime.datetime, int, Any]
+        :return: The second extracted from the object, or None if the object is not of the expected types.
+        :rtype: Optional[float]
+        """
+        return (
+            obj.timestamp()
+            if isinstance(obj, datetime.datetime)
+            else obj / 1000.0
+            if isinstance(obj, int)
+            else None
+        )
+
     def _get_time(
         self, color: int, state: Dict[str, Any]
     ) -> Tuple[Optional[float], Optional[float]]:
@@ -49,20 +69,10 @@ class LichessBotBerserk(LichessBot):
 
         game_state: Dict[str, Any] = state.get("state", state)
 
-        # Extracts the second from a datetime object or converts milliseconds to seconds
-        def _extract_second(obj: Union[datetime.datetime, int, Any]) -> Optional[float]:
-            return (
-                obj.timestamp()
-                if isinstance(obj, datetime.datetime)
-                else obj / 1000.0
-                if isinstance(obj, int)
-                else None
-            )
-
         color_str = "w" if not color else "b"
         time_obj = game_state.get(f"{color_str}time")
         inc_obj = game_state.get(f"{color_str}inc")
-        return _extract_second(time_obj), _extract_second(inc_obj)
+        return self._extract_second(time_obj), self._extract_second(inc_obj)
 
     def _play_move(self, color: int, prev_moves: str, game_id: str, state: Any) -> None:
         """
@@ -116,7 +126,8 @@ class LichessBotBerserk(LichessBot):
             logging.debug(f"Game state: {state}")
             if state["type"] == "gameState":
                 self._play_move(color, state["moves"], game_id, state)
-
+            elif state["type"] == "gameStateResign":
+                return
 
     @classmethod
     def _should_accept_challenge(cls, event: Dict[str, Any]) -> bool:
@@ -135,6 +146,7 @@ class LichessBotBerserk(LichessBot):
             else False
         )
 
+    # --- Event handlers ---
     def _event_action_accept_challenge(self, event: Dict[str, Any]) -> bool:
         """
         Accepts or declines a challenge based on certain conditions.
