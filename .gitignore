@@ -161,6 +161,7 @@ cython_debug/
 
 # API token
 api_token.txt
+test_bot_api_token.txt
 
 # vscode - but not the settings.json file
 .vscode/*
