@@ -97,11 +97,10 @@ class TestLichessBot:
         )
 
         assert challenge_event
-        accepted = sporkfish._event_action_accept_challenge(challenge_event)
-        assert not accepted
+        assert not sporkfish._event_action_accept_challenge(challenge_event)
         try:
             sporkfish.client.bots.abort_game(challenge_event["challenge"]["id"])
-            assert False, "Expected to fail to abort game, as challenge was declined"
+            assert False, "Expected to fail to abort game as challenge was declined."
         except RetryError:
             # This is a success
             pass
