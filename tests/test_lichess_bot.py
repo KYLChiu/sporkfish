@@ -1,6 +1,5 @@
 import multiprocessing
 import sys
-import time
 
 import berserk.exceptions
 import pytest
