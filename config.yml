@@ -36,3 +36,7 @@ LoggingConfig:
     level: DEBUG
     handlers: ['console']
 
+MoveOrderingConfig:
+  mvv_lva: 2.0
+  killer_move: 1.0
+
