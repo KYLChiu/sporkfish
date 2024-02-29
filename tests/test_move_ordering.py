@@ -119,3 +119,7 @@ class TestCompositeHeuristic:
             1 for move in board.legal_moves if composite_heuristic.evaluate(move) > 0
         )
         assert pos_scores == 3, "There should be 3 positive scores"
+
+    def test_config(self):
+        for value in CompositeHeuristic._MOVE_ORDER_WEIGHTS.values():
+            assert isinstance(value, float)
