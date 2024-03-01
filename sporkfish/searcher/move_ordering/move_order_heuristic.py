@@ -1,9 +1,6 @@
 from abc import ABC, abstractmethod
-from enum import Enum
 
 import chess
-
-from ...configurable import Configurable
 
 
 class MoveOrderHeuristic(ABC):

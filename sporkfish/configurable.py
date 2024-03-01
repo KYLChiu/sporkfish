@@ -1,7 +1,6 @@
 from typing import Any, Dict
 
 import yaml
-import inspect
 
 
 class Configurable:

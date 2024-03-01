@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Union, Dict
 
 from sporkfish.searcher.move_ordering.move_order_config import MoveOrderConfig
 
@@ -52,7 +53,7 @@ class SearcherConfig(Configurable):
         self,
         max_depth: int = 5,
         search_mode: SearchMode = SearchMode.SINGLE_PROCESS,
-        move_order_config: MoveOrderConfig = MoveOrderConfig(),
+        move_order_config: Union[MoveOrderConfig, Dict] = MoveOrderConfig(),
         enable_null_move_pruning: bool = True,
         enable_futility_pruning: bool = False,
         enable_delta_pruning: bool = True,
