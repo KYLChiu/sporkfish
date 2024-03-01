@@ -31,7 +31,6 @@ class LichessBotBerserk(LichessBot):
     def client(self) -> berserk.Client:
         return self._berserk._client
 
-    # Extracts the second from a datetime object or converts milliseconds to seconds
     def _extract_second(
         self, obj: Union[datetime.datetime, int, Any]
     ) -> Optional[float]:
