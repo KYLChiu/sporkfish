@@ -121,5 +121,12 @@ class TestCompositeHeuristic:
         assert pos_scores == 3, "There should be 3 positive scores"
 
     def test_config(self):
-        for value in CompositeHeuristic._MOVE_ORDER_WEIGHTS.values():
+        board = init_board(board_setup["white"]["can_capture_queen"])
+        killer_moves = [
+            [chess.Move.null(), chess.Move.null()],
+            [chess.Move.null(), chess.Move.null()],
+        ]
+        composite_heuristic = CompositeHeuristic(board, killer_moves, 1)
+
+        for value in composite_heuristic._move_order_weights.values():
             assert isinstance(value, float)

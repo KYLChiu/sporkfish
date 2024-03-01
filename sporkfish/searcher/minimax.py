@@ -7,11 +7,13 @@ from typing import Optional, Tuple
 import chess
 import stopit
 
+from config import load_config
+
 from ..board.board import Board
 from ..evaluator import Evaluator
 from ..transposition_table import TranspositionTable
 from ..zobrist_hasher import ZobristHasher
-from .move_ordering.composite_heuristic import CompositeHeuristic
+from .move_ordering.composite_heuristic import MoveOrderConfig, CompositeHeuristic
 from .move_ordering.killer_move_heuristic import KillerMoveHeuristic
 from .move_ordering.move_order_heuristic import MoveOrderHeuristic, MoveOrderMode
 from .move_ordering.move_orderer import MoveOrderer
@@ -98,7 +100,15 @@ class MiniMaxVariants(Searcher, ABC):
         elif order_type is MoveOrderMode.KILLER_MOVE:
             return KillerMoveHeuristic(board, self._killer_moves, depth)  # type: ignore
         elif order_type is MoveOrderMode.COMPOSITE:
-            return CompositeHeuristic(board, self._killer_moves, depth)  # type: ignore
+            move_order_config = MoveOrderConfig.from_dict(
+                load_config().get("SearcherConfig").get("MoveOrderConfig")  # type: ignore
+            )
+            return CompositeHeuristic(
+                board,
+                self._killer_moves,  # type: ignore
+                depth,
+                move_order_config, 
+            )
         else:
             raise TypeError(
                 f"MoveOrderingHeuristic does not support the creation of MoveOrdering type: \

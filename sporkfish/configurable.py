@@ -1,7 +1,7 @@
 from typing import Any, Dict
 
 import yaml
-
+import inspect
 
 class Configurable:
     """Base class for objects that can be configured and serialized to/from YAML.
@@ -49,5 +49,8 @@ class Configurable:
         Returns:
             Any: Created parent object.
         """
-        c = cls(**d)
-        return c
+        d = d or {}
+        return cls(**{
+            k: v for k, v in d.items() 
+            if k in inspect.signature(cls).parameters
+        })
