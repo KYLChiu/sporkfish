@@ -2,18 +2,12 @@ from typing import List
 
 import chess
 
-from ...configurable import Configurable
 
 from ...board.board import Board
 from .killer_move_heuristic import KillerMoveHeuristic
-from .move_order_heuristic import MoveOrderHeuristic, MoveOrderMode
+from .move_order_heuristic import MoveOrderHeuristic
+from .move_order_config import MoveOrderMode, MoveOrderConfig
 from .mvv_lva_heuristic import MvvLvaHeuristic
-
-
-class MoveOrderConfig(Configurable):
-    def __init__(self, mvv_lva_weight: float = 2.0, killer_move_weight: float = 1.0):
-        self.mvv_lva_weight = mvv_lva_weight
-        self.killer_move_weight = killer_move_weight
 
 
 class CompositeHeuristic(MvvLvaHeuristic, KillerMoveHeuristic, MoveOrderHeuristic):
@@ -33,7 +27,7 @@ class CompositeHeuristic(MvvLvaHeuristic, KillerMoveHeuristic, MoveOrderHeuristi
         self._move_order_config = move_order_config
         self._move_order_weights = {
             MoveOrderMode.MVV_LVA: self._move_order_config.mvv_lva_weight,
-            MoveOrderMode.KILLER_MOVE: self._move_order_config.killer_move_weight,
+            MoveOrderMode.KILLER_MOVE: self._move_order_config.killer_moves_weight,
         }
 
     def evaluate(

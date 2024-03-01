@@ -1,6 +1,6 @@
 from enum import Enum
 
-from sporkfish.searcher.move_ordering.move_order_heuristic import MoveOrderMode
+from sporkfish.searcher.move_ordering.move_order_config import MoveOrderConfig
 
 from ..configurable import Configurable
 
@@ -20,9 +20,9 @@ class SearcherConfig(Configurable):
     :param search_mode: Search mode (default: SearchMode.SINGLE_PROCESS).
                         Determines the search mode used by the searcher.
     :type search_mode: SearchMode
-    :param move_order_mode: Move order mode (default: MoveOrderMode.MVV_LVA).
-                            Specifies the move order mode used by the searcher.
-    :type move_order_mode: MoveOrderMode
+    :param move_order_config: Move order config.
+                            Specifies the move order type and weights used by the searcher.
+    :type move_order_config: MoveOrderMode
     :param enable_null_move_pruning: Enable null-move pruning (default: True).
                                      Enables or disables null-move pruning, a technique used
                                      in game tree search algorithms to improve efficiency by
@@ -52,7 +52,7 @@ class SearcherConfig(Configurable):
         self,
         max_depth: int = 5,
         search_mode: SearchMode = SearchMode.SINGLE_PROCESS,
-        move_order_mode: MoveOrderMode = MoveOrderMode.MVV_LVA,
+        move_order_config: MoveOrderConfig = MoveOrderConfig(),
         enable_null_move_pruning: bool = True,
         enable_futility_pruning: bool = False,
         enable_delta_pruning: bool = True,
@@ -66,10 +66,11 @@ class SearcherConfig(Configurable):
             if isinstance(search_mode, SearchMode)
             else SearchMode(search_mode)
         )
-        self.move_order_mode = (
-            move_order_mode
-            if isinstance(move_order_mode, MoveOrderMode)
-            else MoveOrderMode(move_order_mode)
+        # TODO: same here
+        self.move_order_config = (
+            move_order_config
+            if isinstance(move_order_config, MoveOrderConfig)
+            else MoveOrderConfig(**move_order_config)
         )
         self.enable_null_move_pruning = enable_null_move_pruning
         self.enable_futility_pruning = enable_futility_pruning
