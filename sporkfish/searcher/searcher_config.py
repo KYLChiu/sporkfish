@@ -23,7 +23,7 @@ class SearcherConfig(Configurable):
     :type search_mode: SearchMode
     :param move_order_config: Move order config.
                             Specifies the move order type and weights used by the searcher.
-    :type move_order_config: MoveOrderMode
+    :type move_order_config: Union[MoveOrderConfig, Dict]
     :param enable_null_move_pruning: Enable null-move pruning (default: True).
                                      Enables or disables null-move pruning, a technique used
                                      in game tree search algorithms to improve efficiency by
