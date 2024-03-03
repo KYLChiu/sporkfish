@@ -1,16 +1,10 @@
-from enum import Enum
-
 import chess
 
-from .board.board import Board
+from ..board.board import Board
+from .evaluator import Evaluator
 
 
-class EvaluateMode(Enum):
-    # Piece-Square Table Only (PeSTO) evaluation
-    PESTO = "PESTO"
-
-
-class Evaluator:
+class Pesto(Evaluator):
     """
     A class responsible for evaluating the chess position.
     Using Piece-Square Table Only (PeSTO) evaluation at the moment, see:

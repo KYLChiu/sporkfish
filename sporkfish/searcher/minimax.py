@@ -8,7 +8,7 @@ import chess
 import stopit
 
 from ..board.board import Board
-from ..evaluator import Evaluator
+from ..evaluator.evaluator import Evaluator
 from ..transposition_table import TranspositionTable
 from ..zobrist_hasher import ZobristHasher
 from .move_ordering.composite_heuristic import CompositeHeuristic

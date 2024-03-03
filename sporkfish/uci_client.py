@@ -8,6 +8,8 @@ from .board.board import Board
 from .board.board_factory import BoardFactory, BoardPyChess
 from .endgame_tablebase import EndgameTablebase, EndgameTablebaseConfig
 from .engine import Engine
+from .evaluator.evaluator_config import EvaluatorConfig
+from .evaluator.evaluator_factory import EvaluatorFactory
 from .opening_book import OpeningBook, OpeningBookConfig
 from .searcher.searcher_config import SearcherConfig
 from .searcher.searcher_factory import SearcherFactory
@@ -225,8 +227,12 @@ class UCIClient:
         """
 
         config = load_config()
+        evaluator = EvaluatorFactory.create(
+            EvaluatorConfig.from_dict(config.get("EvaluatorConfig"))  # type: ignore
+        )
         search = SearcherFactory.create(
-            SearcherConfig.from_dict(config.get("SearcherConfig"))  # type: ignore
+            SearcherConfig.from_dict(config.get("SearcherConfig")),  # type: ignore
+            evaluator,
         )
         ob = OpeningBook(
             OpeningBookConfig.from_dict(config.get("OpeningBookConfig"))  # type: ignore
