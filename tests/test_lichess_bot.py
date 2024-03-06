@@ -127,11 +127,11 @@ class TestLichessBot:
         assert challenge_event
         assert sporkfish._event_action_accept_challenge(challenge_event)
 
-        def sporkfish_play() -> None:
-            sporkfish._play_game(challenge_event["challenge"]["id"])
+        def sporkfish_play() -> GameTerminationReason:
+            return sporkfish._play_game(challenge_event["challenge"]["id"])
 
-        def test_bot_resign() -> GameTerminationReason:
-            return test_bot.client.bots.resign_game(challenge_event["challenge"]["id"])
+        def test_bot_resign() -> None:
+            test_bot.client.bots.resign_game(challenge_event["challenge"]["id"])
 
         with pathos.multiprocessing.ProcessingPool(nodes=2) as pool:
             play = pool.apipe(sporkfish_play)
