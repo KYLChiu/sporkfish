@@ -133,7 +133,7 @@ class TestLichessBot:
                     lambda: sporkfish._play_game(challenge_event["challenge"]["id"])
                 ),
                 executor.submit(
-                    lambda: sporkfish.client.bots.resign_game(
+                    lambda: test_bot.client.bots.resign_game(
                         challenge_event["challenge"]["id"]
                     )
                 ),
