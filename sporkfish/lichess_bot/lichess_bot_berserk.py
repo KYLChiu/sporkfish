@@ -5,8 +5,8 @@ from typing import Any, Dict, Optional, Tuple, Union
 import berserk
 
 from sporkfish.lichess_bot.berserk_retriable import BerserkRetriable
+from sporkfish.lichess_bot.game_termination_reason import GameTerminationReason
 from sporkfish.lichess_bot.lichess_bot import LichessBot
-from sporkfish.lichess_bot.termination_reason import TerminationReason
 
 
 class LichessBotBerserk(LichessBot):
@@ -95,14 +95,14 @@ class LichessBotBerserk(LichessBot):
             best_move = self._get_best_move(color, time, inc)
             self.client.bots.make_move(game_id, best_move)
 
-    def _play_game(self, game_id: str) -> TerminationReason:
+    def _play_game(self, game_id: str) -> GameTerminationReason:
         """
         Play a game on Lichess by streaming game states, setting positions, and making moves.
 
         :param game_id: The ID of the game on Lichess.
         :type game_id: str
         :return: The reason for the game termination.
-        :rtype: TerminationReason
+        :rtype: GameTerminationReason
         """
         # Get game states and process initial state
         states = self.client.bots.stream_game_state(game_id)
@@ -129,7 +129,7 @@ class LichessBotBerserk(LichessBot):
             if state["type"] == "gameState":
                 self._play_move(color, state["moves"], game_id, state)
             elif state["type"] == "gameStateResign":
-                return TerminationReason.RESIGNATION
+                return GameTerminationReason.RESIGNATION
 
     @classmethod
     def _should_accept_challenge(cls, event: Dict[str, Any]) -> bool:
@@ -165,14 +165,14 @@ class LichessBotBerserk(LichessBot):
             self.client.bots.decline_challenge(event["challenge"]["id"])
             return False
 
-    def _event_action_play_game(self, event: Dict[str, Any]) -> TerminationReason:
+    def _event_action_play_game(self, event: Dict[str, Any]) -> GameTerminationReason:
         """
         Initiates gameplay for the specified game.
 
         :param event: The event containing information about the game.
         :type event: Dict[str, Any]
         :return: The reason for the game termination.
-        :rtype: TerminationReason
+        :rtype: GameTerminationReason
         """
         return self._play_game(event["game"]["fullId"])
 

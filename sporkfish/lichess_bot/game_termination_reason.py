@@ -1,7 +1,7 @@
 from enum import Enum, auto
 
 
-class TerminationReason(Enum):
+class GameTerminationReason(Enum):
     """
     Enumeration of termination reasons.
     """

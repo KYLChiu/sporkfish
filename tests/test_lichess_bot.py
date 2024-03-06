@@ -7,6 +7,7 @@ import pytest
 from tenacity import RetryError
 
 from sporkfish.lichess_bot import lichess_bot_berserk
+from sporkfish.lichess_bot.game_termination_reason import GameTerminationReason
 
 error_queue = multiprocessing.Queue()
 
@@ -126,7 +127,7 @@ class TestLichessBot:
         assert challenge_event
         assert sporkfish._event_action_accept_challenge(challenge_event)
 
-        with concurrent.futures.ProcessPoolExecutor() as executor:
+        with concurrent.futures.ProcessPoolExecutor(max_workers=2) as executor:
             futures = [
                 executor.submit(
                     lambda: sporkfish._play_game(challenge_event["challenge"]["id"])
@@ -139,4 +140,4 @@ class TestLichessBot:
             ]
 
         concurrent.futures.wait(futures)
-        assert futures[0].result() == lichess_bot_berserk.TerminationReason.RESIGNATION
+        assert futures[0].result() == GameTerminationReason.RESIGNATION
