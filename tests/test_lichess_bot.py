@@ -1,8 +1,8 @@
+import concurrent.futures
 import multiprocessing
 import sys
 import time
 
-import pathos.multiprocessing
 import pytest
 from tenacity import RetryError
 
@@ -134,9 +134,9 @@ class TestLichessBot:
             test_bot.client.bots.resign_game(challenge_event["challenge"]["id"])
             return True
 
-        with pathos.multiprocessing.ProcessingPool(nodes=2) as pool:
-            play = pool.apipe(sporkfish_play)
-            resign = pool.apipe(test_bot_resign)
+        with concurrent.futures.ThreadPoolExecutor(nodes=2) as pool:
+            play = pool.submit(sporkfish_play)
+            resign = pool.submit(test_bot_resign)
 
-        resign.get()
-        assert play.get() == GameTerminationReason.RESIGNATION
+        resign.result()
+        assert play.result() == GameTerminationReason.RESIGNATION
