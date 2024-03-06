@@ -117,7 +117,7 @@ class TestLichessBot:
 
         challenge_event = test_bot.client.challenges.create(
             username="Sporkfish",
-            color="black",
+            color="white",
             variant="standard",
             rated=False,
             clock_limit=30,
