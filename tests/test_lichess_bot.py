@@ -130,8 +130,9 @@ class TestLichessBot:
         def sporkfish_play() -> GameTerminationReason:
             return sporkfish._play_game(challenge_event["challenge"]["id"])
 
-        def test_bot_resign() -> None:
+        def test_bot_resign() -> bool:
             test_bot.client.bots.resign_game(challenge_event["challenge"]["id"])
+            return True
 
         with pathos.multiprocessing.ProcessingPool(nodes=2) as pool:
             play = pool.apipe(sporkfish_play)
