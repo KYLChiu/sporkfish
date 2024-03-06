@@ -127,16 +127,16 @@ class TestLichessBot:
         assert challenge_event
         assert sporkfish._event_action_accept_challenge(challenge_event)
 
+        def sporkfish_play() -> None:
+            sporkfish._play_game(challenge_event["challenge"]["id"])
+
+        def test_bot_resign() -> GameTerminationReason:
+            return test_bot.client.bots.resign_game(challenge_event["challenge"]["id"])
+
         with concurrent.futures.ProcessPoolExecutor(max_workers=2) as executor:
             futures = [
-                executor.submit(
-                    lambda: sporkfish._play_game(challenge_event["challenge"]["id"])
-                ),
-                executor.submit(
-                    lambda: test_bot.client.bots.resign_game(
-                        challenge_event["challenge"]["id"]
-                    )
-                ),
+                executor.submit(sporkfish_play),
+                executor.submit(test_bot_resign),
             ]
 
         concurrent.futures.wait(futures)
