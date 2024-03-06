@@ -117,7 +117,7 @@ class TestLichessBot:
 
         challenge_event = test_bot.client.challenges.create(
             username="Sporkfish",
-            color="white",
+            color="black",
             variant="standard",
             rated=False,
             clock_limit=30,
@@ -126,12 +126,14 @@ class TestLichessBot:
 
         assert challenge_event
         assert sporkfish._event_action_accept_challenge(challenge_event)
+        game_id = challenge_event["challenge"]["id"]
 
         def sporkfish_play() -> GameTerminationReason:
-            return sporkfish._play_game(challenge_event["challenge"]["id"])
+            return sporkfish._play_game(game_id)
 
         def test_bot_resign() -> bool:
-            test_bot.client.bots.resign_game(challenge_event["challenge"]["id"])
+            test_bot.client.bots.make_move(game_id, "d2d4")
+            test_bot.client.bots.resign_game()
             return True
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:

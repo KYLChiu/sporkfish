@@ -131,6 +131,8 @@ class LichessBotBerserk(LichessBot):
             elif state["type"] == "gameStateResign":
                 return GameTerminationReason.RESIGNATION
 
+        return GameTerminationReason.UNKNOWN
+
     @classmethod
     def _should_accept_challenge(cls, event: Dict[str, Any]) -> bool:
         """
