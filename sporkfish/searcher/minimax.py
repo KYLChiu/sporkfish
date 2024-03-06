@@ -65,7 +65,7 @@ class MiniMaxVariants(Searcher, ABC):
             logging.info("Disabled transposition table in search.")
 
         self._evaluator = evaluator
-        self.max_depth=searcher_config.max_depth
+        self.max_depth = searcher_config.max_depth
 
         # Killer move table - storing quiet beta-cut off moves
         self._killer_moves = (
@@ -79,8 +79,13 @@ class MiniMaxVariants(Searcher, ABC):
             == MoveOrderMode.COMPOSITE
             else None
         )
-        if self._searcher_config.move_order_config.move_order_mode == MoveOrderMode.KILLER_MOVE or self._searcher_config.move_order_config.move_order_mode == MoveOrderMode.COMPOSITE:
-            self._history_table: Dict[chess.Move, int]= dict()
+        if (
+            self._searcher_config.move_order_config.move_order_mode
+            == MoveOrderMode.HISTORY
+            or self._searcher_config.move_order_config.move_order_mode
+            == MoveOrderMode.COMPOSITE
+        ):
+            self._history_table: Dict[chess.Move, int] = dict()
 
     @property
     def evaluator(self) -> Evaluator:
@@ -147,12 +152,13 @@ class MiniMaxVariants(Searcher, ABC):
         :param depth: The depth at which the move caused the cutoff
         :type depth: int
         """
-        increment=(self.max_depth-depth)*(self.max_depth-depth)
+        increment = (self.max_depth - depth) * (self.max_depth - depth)
         if move in self._history_table:
-            self._history_table[move] += increment  # Increment score for moves that cause cutoff
+            self._history_table[
+                move
+            ] += increment  # Increment score for moves that cause cutoff
         else:
             self._history_table[move] = increment  # Initialize score for new moves
-
 
     def _aspiration_windows_search(
         self,

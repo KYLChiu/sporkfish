@@ -11,7 +11,9 @@ from .mvv_lva_heuristic import MvvLvaHeuristic
 from .history_heuristic import HistoryHeuristic
 
 
-class CompositeHeuristic(MvvLvaHeuristic, KillerMoveHeuristic, HistoryHeuristic, MoveOrderHeuristic):
+class CompositeHeuristic(
+    MvvLvaHeuristic, KillerMoveHeuristic, HistoryHeuristic, MoveOrderHeuristic
+):
     def __init__(
         self,
         board: Board,
@@ -23,7 +25,7 @@ class CompositeHeuristic(MvvLvaHeuristic, KillerMoveHeuristic, HistoryHeuristic,
         MvvLvaHeuristic.__init__(self, board)
         KillerMoveHeuristic.__init__(self, board, killer_moves, depth)
         MoveOrderHeuristic.__init__(self)
-        HistoryHeuristic.__init__(self,board, history_table)
+        HistoryHeuristic.__init__(self, board, history_table)
 
         # TODO: this design may be slow, no need to reinitialize these weights for every instance
         # Recall this can be created for every node if not sidetracked by other components, like TT.
@@ -57,4 +59,4 @@ class CompositeHeuristic(MvvLvaHeuristic, KillerMoveHeuristic, HistoryHeuristic,
         history = self._move_order_weights[
             MoveOrderMode.HISTORY
         ] * HistoryHeuristic.evaluate(self, move)
-        return mvv_lva + killer_move+history
+        return mvv_lva + killer_move + history

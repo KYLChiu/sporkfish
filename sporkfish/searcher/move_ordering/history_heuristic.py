@@ -5,6 +5,7 @@ import chess
 from ...board.board import Board
 from .move_order_heuristic import MoveOrderHeuristic
 
+
 class HistoryHeuristic(MoveOrderHeuristic):
     def __init__(self, board: Board, history_table: Dict[chess.Move, int]) -> None:
         MoveOrderHeuristic.__init__(self)
@@ -23,7 +24,5 @@ class HistoryHeuristic(MoveOrderHeuristic):
         :rtype: int
         """
         return (
-            self._history_table.get(move, 0)
-            if not self._board.is_capture(move)
-            else 0
+            self._history_table.get(move, 0) if not self._board.is_capture(move) else 0
         )
