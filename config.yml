@@ -4,12 +4,16 @@ RunConfig:
 SearcherConfig:
   max_depth: 6 # maximum depth for negamax search
   search_mode: SINGLE_PROCESS # mode of search, choice of: SINGLE_PROCESS, LAZY_SMP
-  move_order_mode: COMPOSITE # mode of move ordering, choice of: MVV_LVA, KILLER_MOVE, COMPOSITE
   enable_null_move_pruning: True # flag to enable null move pruning, i.e. checking for a beta-cutoff by passing our turn
   enable_futility_pruning: False # flag to enable futility_pruning, i.e. prune quiet moves that do not raise alpha in negamax search.
   enable_delta_pruning: True # flag to enable delta pruning, i.e. prune capturing moves that do not raise alpha in quiescence search.
   enable_transposition_table: True # flag to enable position cache, so positions are not evaluated twice
   enable_aspiration_windows: True # flag to enable aspiration windows, i.e. doing a smaller window search around the score from previous iteration of iterative deepening.
+  # TODO: I'd like to make these capital to match class vs variable, but for later.
+  move_order_config: #  Move order config. Weights are only for composite move ordering, setting to 0 disables the underlying sigular move ordering.
+      move_order_mode: COMPOSITE # mode of move ordering, choice of: MVV_LVA, KILLER_MOVE, COMPOSITE
+      mvv_lva_weight: 2.0 # weight for Most Valuable Victim - Least Valuable Aggressor
+      killer_moves_weight: 1.0 # weight for killer moves (quiet beta cutoff moves)
 
 # Current time management strategy is alloted_move_time = time_weight * current_time + increment_weight * increment
 TimeManagerConfig:
@@ -35,4 +39,3 @@ LoggingConfig:
   root:
     level: DEBUG
     handlers: ['console']
-

@@ -49,5 +49,4 @@ class Configurable:
         Returns:
             Any: Created parent object.
         """
-        c = cls(**d)
-        return c
+        return cls(**d)
