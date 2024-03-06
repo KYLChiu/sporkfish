@@ -1,4 +1,3 @@
-import concurrent.futures
 import multiprocessing
 import sys
 import time
@@ -10,6 +9,7 @@ from sporkfish.lichess_bot import lichess_bot_berserk
 from sporkfish.lichess_bot.game_termination_reason import GameTerminationReason
 
 error_queue = multiprocessing.Queue()
+result_queue = multiprocessing.Queue()
 
 
 class TestLichessBot:
@@ -129,16 +129,13 @@ class TestLichessBot:
         game_id = challenge_event["challenge"]["id"]
 
         def sporkfish_play() -> GameTerminationReason:
-            return sporkfish._play_game(game_id)
+            termination = sporkfish._play_game(game_id)
+            result_queue.put(termination)
 
-        def test_bot_resign() -> bool:
-            test_bot.client.bots.make_move(game_id, "d2d4")
-            test_bot.client.bots.resign_game()
-            return True
+        proc = multiprocessing.Process(target=sporkfish_play)
+        proc.start()
 
-        with concurrent.futures.ProcessPoolExecutor(max_workers=2) as pool:
-            play = pool.submit(sporkfish_play)
-            resign = pool.submit(test_bot_resign)
+        test_bot.client.bots.make_move(game_id, "d2d4")
+        test_bot.client.bots.resign_game()
 
-        resign.result()
-        assert play.result() == GameTerminationReason.RESIGNATION
+        assert result_queue.get() == GameTerminationReason.RESIGNATION
