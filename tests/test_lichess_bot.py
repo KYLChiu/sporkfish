@@ -136,7 +136,7 @@ class TestLichessBot:
             test_bot.client.bots.resign_game()
             return True
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+        with concurrent.futures.ProcessPoolExecutor(max_workers=2) as pool:
             play = pool.submit(sporkfish_play)
             resign = pool.submit(test_bot_resign)
 
