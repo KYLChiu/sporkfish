@@ -1,3 +1,4 @@
+import concurrent.futures
 import multiprocessing
 import sys
 import time
@@ -104,3 +105,39 @@ class TestLichessBot:
         except RetryError:
             # This is a success
             pass
+
+    @pytest.mark.ci
+    def test_opponent_resigned(self):
+        sporkfish = TestLichessBot._create_bot(TestLichessBot._sporkfish_api_token_file)
+        test_bot = TestLichessBot._create_bot(TestLichessBot._test_bot_api_token_file)
+
+        assert sporkfish
+        assert test_bot
+
+        challenge_event = test_bot.client.challenges.create(
+            username="Sporkfish",
+            color="white",
+            variant="standard",
+            rated=False,
+            clock_limit=30,
+            clock_increment=0,
+        )
+
+        assert challenge_event
+        assert sporkfish._event_action_accept_challenge(challenge_event)
+
+        with concurrent.futures.ProcessPoolExecutor() as executor:
+            futures = [
+                executor.submit(
+                    lambda: sporkfish._play_game(challenge_event["challenge"]["id"])
+                ),
+                executor.submit(
+                    lambda: sporkfish.client.bots.resign_game(
+                        challenge_event["challenge"]["id"]
+                    )
+                ),
+            ]
+
+        concurrent.futures.wait(futures)
+
+        assert futures[0].result() == lichess_bot_berserk.TerminationReason.RESIGNATION
