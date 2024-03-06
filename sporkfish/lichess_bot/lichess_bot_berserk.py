@@ -165,14 +165,16 @@ class LichessBotBerserk(LichessBot):
             self.client.bots.decline_challenge(event["challenge"]["id"])
             return False
 
-    def _event_action_play_game(self, event: Dict[str, Any]) -> None:
+    def _event_action_play_game(self, event: Dict[str, Any]) -> TerminationReason:
         """
         Initiates gameplay for the specified game.
 
         :param event: The event containing information about the game.
         :type event: Dict[str, Any]
+        :return: The reason for the game termination.
+        :rtype: TerminationReason
         """
-        self._play_game(event["game"]["fullId"])
+        return self._play_game(event["game"]["fullId"])
 
     def _event_action_game_finish(self, event: Dict[str, Any]) -> None:
         """

@@ -139,5 +139,4 @@ class TestLichessBot:
             ]
 
         concurrent.futures.wait(futures)
-
         assert futures[0].result() == lichess_bot_berserk.TerminationReason.RESIGNATION
