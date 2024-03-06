@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Dict
 
 import chess
 
@@ -8,19 +8,22 @@ from .killer_move_heuristic import KillerMoveHeuristic
 from .move_order_heuristic import MoveOrderHeuristic
 from .move_order_config import MoveOrderMode, MoveOrderConfig
 from .mvv_lva_heuristic import MvvLvaHeuristic
+from .history_heuristic import HistoryHeuristic
 
 
-class CompositeHeuristic(MvvLvaHeuristic, KillerMoveHeuristic, MoveOrderHeuristic):
+class CompositeHeuristic(MvvLvaHeuristic, KillerMoveHeuristic, HistoryHeuristic, MoveOrderHeuristic):
     def __init__(
         self,
         board: Board,
         killer_moves: List[List[chess.Move]],
+        history_table: Dict[chess.Move, int],
         depth: int,
         move_order_config: MoveOrderConfig = MoveOrderConfig(),
     ) -> None:
         MvvLvaHeuristic.__init__(self, board)
         KillerMoveHeuristic.__init__(self, board, killer_moves, depth)
         MoveOrderHeuristic.__init__(self)
+        HistoryHeuristic.__init__(self,board, history_table)
 
         # TODO: this design may be slow, no need to reinitialize these weights for every instance
         # Recall this can be created for every node if not sidetracked by other components, like TT.
@@ -28,6 +31,7 @@ class CompositeHeuristic(MvvLvaHeuristic, KillerMoveHeuristic, MoveOrderHeuristi
         self._move_order_weights = {
             MoveOrderMode.MVV_LVA: self._move_order_config.mvv_lva_weight,
             MoveOrderMode.KILLER_MOVE: self._move_order_config.killer_moves_weight,
+            MoveOrderMode.HISTORY: self._move_order_config.history_weight,
         }
 
     def evaluate(
@@ -50,4 +54,7 @@ class CompositeHeuristic(MvvLvaHeuristic, KillerMoveHeuristic, MoveOrderHeuristi
         killer_move = self._move_order_weights[
             MoveOrderMode.KILLER_MOVE
         ] * KillerMoveHeuristic.evaluate(self, move)
-        return mvv_lva + killer_move
+        history = self._move_order_weights[
+            MoveOrderMode.HISTORY
+        ] * HistoryHeuristic.evaluate(self, move)
+        return mvv_lva + killer_move+history

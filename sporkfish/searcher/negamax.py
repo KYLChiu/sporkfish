@@ -88,6 +88,7 @@ class NegamaxSp(MiniMaxVariants):
 
             if alpha >= beta:
                 self._update_killer_moves(move, depth)
+                self._update_history_table(move, depth)
                 break
 
         if self._searcher_config.enable_transposition_table:

@@ -6,6 +6,7 @@ from enum import Enum
 class MoveOrderMode(Enum):
     MVV_LVA = "MVV_LVA"
     KILLER_MOVE = "KILLER_MOVE"
+    HISTORY="HISTORY"
     COMPOSITE = "COMPOSITE"
 
 
@@ -17,8 +18,9 @@ class MoveOrderConfig(Configurable):
     def __init__(
         self,
         move_order_mode: MoveOrderMode = MoveOrderMode.COMPOSITE,
-        mvv_lva_weight: float = 2.0,
-        killer_moves_weight: float = 1.0,
+        mvv_lva_weight: float = 3.0,
+        killer_moves_weight: float = 2.0,
+        history_weight: float=1.0
     ):
         """
         Initializes MoveOrderConfig with specified parameters.
@@ -37,3 +39,4 @@ class MoveOrderConfig(Configurable):
         )
         self.mvv_lva_weight = mvv_lva_weight
         self.killer_moves_weight = killer_moves_weight
+        self.history_weight = history_weight
