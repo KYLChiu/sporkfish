@@ -129,12 +129,9 @@ class TestLichessBot:
 
         states = sporkfish.client.bots.stream_game_state(game_id)
         game_full = next(states)
+        mocked_states = iter((game_full, {"type": "gameStateResign"}))
 
-        def states_gen():
-            yield game_full
-            yield {"type": "gameStateResign"}
-
-        term = sporkfish._handle_states(game_id, states_gen)
+        term = sporkfish._handle_states(game_id, mocked_states)
         assert term == GameTerminationReason.RESIGNATION
 
         try:
