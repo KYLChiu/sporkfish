@@ -138,6 +138,11 @@ class TestLichessBot:
         proc = multiprocessing.Process(target=sporkfish_play)
         proc.start()
 
+        # Not the most reliable way to test, but I am not keen to pass the states to be mocked
+        time.sleep(5)
+
+        test_bot.client.bots.resign_game(game_id)
+
         assert result_queue.get() == GameTerminationReason.RESIGNATION
 
         proc.terminate()
