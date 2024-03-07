@@ -316,12 +316,10 @@ class TestQuiescence:
         Test for quiescence base case (depth 0)
         """
         board = init_board(fen_string)
-        zh = ZobristHasher()
-        hash = zh.hash(board)
         s = _init_searcher
 
         alpha, beta = 1.1, 2.3
-        result = s._quiescence(board, 0, alpha, beta)
+        result = s._quiescence(board, 0, alpha, beta, None)
         assert result == score_fen(fen_string)
 
     def test_quiescence_depth_2_beta(
@@ -334,7 +332,7 @@ class TestQuiescence:
         board = init_board(fen_string)
         s = _init_searcher
         alpha, beta = 0, -1e8
-        result = s._quiescence(board, -2, alpha, beta)
+        result = s._quiescence(board, -2, alpha, beta, None)
         assert result == beta
 
     def test_quiescence_depth_1_alpha(
@@ -347,7 +345,7 @@ class TestQuiescence:
         board = init_board(fen_string)
         s = _init_searcher
         alpha, beta = 1e8, 1e9
-        result = s._quiescence(board, -1, alpha, beta)
+        result = s._quiescence(board, -1, alpha, beta, None)
 
         legal_moves = (move for move in board.legal_moves if board.is_capture(move))
         mo_heuristic = MvvLvaHeuristic(board)
