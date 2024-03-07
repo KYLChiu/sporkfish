@@ -6,15 +6,15 @@ from config import load_config
 
 from .board.board import Board
 from .board.board_factory import BoardFactory, BoardPyChess
+from .endgame_tablebase import EndgameTablebase, EndgameTablebaseConfig
 from .engine import Engine
-from .evaluator import Evaluator
 from .opening_book import OpeningBook, OpeningBookConfig
-from .searcher import Searcher, SearcherConfig
+from .searcher.searcher_config import SearcherConfig
+from .searcher.searcher_factory import SearcherFactory
 from .time_manager import TimeManager, TimeManagerConfig
 
 
 class UCIClient:
-
     """
     A class representing a client for the Universal Chess Interface (UCI). It wraps the communicator, engine and board in one.
 
@@ -35,7 +35,6 @@ class UCIClient:
     - create_engine() -> engine.Engine:
         Create and return an instance of the chess engine for the UCI client.
         The engine is configured with an evaluator, searcher, and opening book.
-
     """
 
     class UCIProtocol:
@@ -226,10 +225,14 @@ class UCIClient:
         """
 
         config = load_config()
-
-        ev = Evaluator()
-
-        search = Searcher(ev, SearcherConfig.from_dict(config.get("SearcherConfig")))  # type: ignore
-        ob = OpeningBook(OpeningBookConfig.from_dict(config.get("OpeningBookConfig")))  # type: ignore
-        eng = Engine(search, ob)
+        search = SearcherFactory.create(
+            SearcherConfig.from_dict(config.get("SearcherConfig"))  # type: ignore
+        )
+        ob = OpeningBook(
+            OpeningBookConfig.from_dict(config.get("OpeningBookConfig"))  # type: ignore
+        )
+        et = EndgameTablebase(
+            EndgameTablebaseConfig.from_dict(config.get("EndgameTablebaseConfig"))  # type: ignore
+        )
+        eng = Engine(search, ob, et)
         return eng

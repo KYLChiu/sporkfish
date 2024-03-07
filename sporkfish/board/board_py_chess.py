@@ -16,6 +16,7 @@ class BoardPyChess(Board):
         """
         self.board = chess.Board()
 
+    # --- Board mutators ---
     def push(self, move: chess.Move) -> None:
         """
         Apply the given move to the board.
@@ -46,6 +47,7 @@ class BoardPyChess(Board):
         """
         self.board.push_uci(move)
 
+    # --- Board information ---
     @property
     def turn(self) -> chess.Color:
         """
@@ -120,6 +122,15 @@ class BoardPyChess(Board):
         :rtype: bool
         """
         return self.board.is_capture(move)
+
+    def is_en_passant(self, move: chess.Move) -> bool:
+        """
+        Check if the move made is an en passant move.
+
+        :return: True if the move is an en passant move, false otherwise.
+        :rtype: bool
+        """
+        return self.board.is_en_passant(move)
 
     def is_check(self) -> bool:
         """

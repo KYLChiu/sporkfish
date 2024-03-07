@@ -1,29 +1,39 @@
-from typing import Any
-import logging
-
 import pytest
 from init_board_helper import board_setup, init_board, score_fen
 
 from sporkfish.board.board_factory import BoardFactory, BoardPyChess
 from sporkfish.evaluator import Evaluator
-from sporkfish.searcher import Searcher, SearcherConfig
-from sporkfish.zobrist_hasher import ZobristHasher
+from sporkfish.searcher.move_ordering.move_order_config import (
+    MoveOrderMode,
+    MoveOrderConfig,
+)
+from sporkfish.searcher.move_ordering.move_orderer import MoveOrderer
+from sporkfish.searcher.move_ordering.mvv_lva_heuristic import MvvLvaHeuristic
+from sporkfish.searcher.searcher import Searcher
+from sporkfish.searcher.searcher_config import SearcherConfig
+from sporkfish.searcher.searcher_factory import SearcherFactory
 
 
 def _searcher_with_fen(
     fen: str,
     max_depth: int = 3,
     enable_null_move_pruning=False,
+    enable_futility_pruning=False,
+    enable_delta_pruning=False,
     enable_transposition_table=False,
+    enable_aspiration_windows=False,
+    move_order_config=MoveOrderConfig(move_order_mode=MoveOrderMode.MVV_LVA),
 ):
     board = BoardFactory.create(board_type=BoardPyChess)
-    e = Evaluator()
-    s = Searcher(
-        e,
+    s = SearcherFactory.create(
         SearcherConfig(
             max_depth,
             enable_null_move_pruning=enable_null_move_pruning,
+            enable_futility_pruning=enable_futility_pruning,
+            enable_delta_pruning=enable_delta_pruning,
             enable_transposition_table=enable_transposition_table,
+            enable_aspiration_windows=enable_aspiration_windows,
+            move_order_config=move_order_config,
         ),
     )
     board.set_fen(fen)
@@ -51,9 +61,10 @@ class TestValidMove:
 @pytest.mark.parametrize(
     ("fen_string", "max_depth"),
     [
-        ("r1r3k1/1ppp1ppp/p7/8/1P1nPPn1/3B1RP1/P1PP3q/R1BQ2K1 w - - 2 18", 4),
-        ("r1r3k1/1ppp1ppp/p7/8/1P1nPPn1/3B1RP1/P1PP3q/R1BQ2K1 w - - 2 18", 5),
-        ("r1r3k1/1ppp1ppp/p7/8/1P1nPPn1/3B1RP1/P1PP3q/R1BQ2K1 w - - 2 18", 6),
+        (board_setup["white"]["mid"], 4),
+        (board_setup["white"]["open"], 5),
+        (board_setup["black"]["mid"], 6),
+        (board_setup["black"]["end"], 6),
     ],
 )
 class TestPerformance:
@@ -63,12 +74,23 @@ class TestPerformance:
     python3 -m pytest tests/test_searcher.py::TestPerformance -sv --runslow
     """
 
+    @pytest.fixture
+    def request_fixture(self, request):
+        return request
+
     def _run_perf_analytics(
         self,
+        test_name: str,
         fen: str,
         max_depth: int,
         enable_null_move_pruning: bool = False,
+        enable_futility_pruning: bool = False,
+        enable_delta_pruning: bool = False,
         enable_transposition_table: bool = False,
+        enable_aspiration_windows: bool = False,
+        move_order_config: MoveOrderConfig = MoveOrderConfig(
+            move_order_mode=MoveOrderMode.MVV_LVA
+        ),
     ) -> None:
         import cProfile
         import pstats
@@ -76,47 +98,136 @@ class TestPerformance:
         profiler = cProfile.Profile()
         profiler.enable()
         _searcher_with_fen(
-            fen, max_depth, enable_null_move_pruning, enable_transposition_table
+            fen,
+            max_depth,
+            enable_null_move_pruning=enable_null_move_pruning,
+            enable_futility_pruning=enable_futility_pruning,
+            enable_delta_pruning=enable_delta_pruning,
+            enable_transposition_table=enable_transposition_table,
+            enable_aspiration_windows=enable_aspiration_windows,
+            move_order_config=move_order_config,
         )
         profiler.disable()
         stats = pstats.Stats(profiler)
 
-        stats.strip_dirs().sort_stats("tottime").print_stats(10)
+        import os
+        import sys
 
-    # @pytest.mark.slow
-    # def test_perf_base(self, fen_string: str, max_depth: int) -> None:
-    #     """Performance test base"""
-    #     self._run_perf_analytics(
-    #         fen=fen_string,
-    #         max_depth=max_depth,
-    #     )
+        test_name = (
+            test_name.replace("[", "_")
+            .replace("]", "_")
+            .replace(" ", "_")
+            .replace("/", "_")
+        )
+        perf_test_folder = "perf/"
 
-    # @pytest.mark.slow
-    # def test_perf_transposition_table(self, fen_string: str, max_depth: int) -> None:
-    #     """Performance test with transposition table"""
-    #     self._run_perf_analytics(
-    #         fen=fen_string,
-    #         max_depth=max_depth,
-    #         enable_transposition_table=True,
-    #     )
+        if not os.path.exists(perf_test_folder):
+            os.mkdir(perf_test_folder)
+
+        with open(
+            os.path.join(perf_test_folder, f"{test_name}.txt"),
+            "w",
+        ) as f:
+            sys.stdout = f
+            print(
+                "------------------------------------------------------------------------------------------------"
+            )
+            print(f"FEN: {fen}")
+            stats = pstats.Stats(profiler)
+            stats.strip_dirs().sort_stats("tottime").print_stats()
+            print(
+                "------------------------------------------------------------------------------------------------"
+            )
+
+        sys.stdout = sys.__stdout__
 
     @pytest.mark.slow
-    def test_perf_null_move_pruning(self, fen_string: str, max_depth: int) -> None:
-        """Performance test with null move pruning"""
+    def test_perf_base(self, request_fixture, fen_string: str, max_depth: int) -> None:
         self._run_perf_analytics(
+            request_fixture.node.name,
+            fen=fen_string,
+            max_depth=max_depth,
+        )
+
+    @pytest.mark.slow
+    def test_perf_transposition_table(
+        self, request_fixture, fen_string: str, max_depth: int
+    ) -> None:
+        self._run_perf_analytics(
+            request_fixture.node.name,
+            fen=fen_string,
+            max_depth=max_depth,
+            enable_transposition_table=True,
+        )
+
+    @pytest.mark.slow
+    def test_perf_null_move_pruning(
+        self, request_fixture, fen_string: str, max_depth: int
+    ) -> None:
+        self._run_perf_analytics(
+            request_fixture.node.name,
             fen=fen_string,
             max_depth=max_depth,
             enable_null_move_pruning=True,
         )
 
     @pytest.mark.slow
-    def test_perf_all(self, fen_string: str, max_depth: int) -> None:
-        """Performance test with null move pruning and transposition table"""
+    def test_perf_aspiration_windows(
+        self, request_fixture, fen_string: str, max_depth: int
+    ) -> None:
         self._run_perf_analytics(
+            request_fixture.node.name,
+            fen=fen_string,
+            max_depth=max_depth,
+            enable_aspiration_windows=True,
+        )
+
+    @pytest.mark.slow
+    def test_perf_futility_pruning(
+        self, request_fixture, fen_string: str, max_depth: int
+    ) -> None:
+        self._run_perf_analytics(
+            request_fixture.node.name,
+            fen=fen_string,
+            max_depth=max_depth,
+            enable_futility_pruning=True,
+        )
+
+    @pytest.mark.slow
+    def test_perf_delta_pruning(
+        self, request_fixture, fen_string: str, max_depth: int
+    ) -> None:
+        self._run_perf_analytics(
+            request_fixture.node.name,
+            fen=fen_string,
+            max_depth=max_depth,
+            enable_delta_pruning=True,
+        )
+
+    @pytest.mark.slow
+    def test_combined_move_order(
+        self, request_fixture, fen_string: str, max_depth: int
+    ) -> None:
+        self._run_perf_analytics(
+            request_fixture.node.name,
+            fen=fen_string,
+            max_depth=max_depth,
+            enable_delta_pruning=True,
+            move_order_config=MoveOrderConfig(move_order_mode=MoveOrderMode.COMPOSITE),
+        )
+
+    @pytest.mark.slow
+    def test_perf_combined(
+        self, request_fixture, fen_string: str, max_depth: int
+    ) -> None:
+        """Performance test with combined general performance config on"""
+        self._run_perf_analytics(
+            request_fixture.node.name,
             fen=fen_string,
             max_depth=max_depth,
             enable_null_move_pruning=True,
-            enable_transposition_table=True,
+            enable_delta_pruning=True,
+            enable_aspiration_windows=True,
         )
 
 
@@ -141,14 +252,20 @@ class TestConsistency:
         fen: str,
         max_depth: int,
         enable_null_move_pruning: bool = False,
+        enable_futility_pruning: bool = False,
+        enable_delta_pruning: bool = False,
         enable_transposition_table: bool = False,
+        enable_aspiration_windows: bool = False,
     ):
         score, move = _searcher_with_fen(fen, max_depth)
         score_2, move_2 = _searcher_with_fen(
             fen,
             max_depth,
             enable_null_move_pruning=enable_null_move_pruning,
+            enable_futility_pruning=enable_futility_pruning,
+            enable_delta_pruning=enable_delta_pruning,
             enable_transposition_table=enable_transposition_table,
+            enable_aspiration_windows=enable_aspiration_windows,
         )
         assert score == score_2
         assert move == move_2
@@ -163,6 +280,18 @@ class TestConsistency:
         "Tests base searcher and null move pruning on return the same score and bestmove"
         self._run_consistency_test(
             fen=fen_string, max_depth=max_depth, enable_null_move_pruning=True
+        )
+
+    def test_delta_pruning_consistency(self, fen_string: str, max_depth: int):
+        "Tests base searcher and delta pruning on return the same score and bestmove"
+        self._run_consistency_test(
+            fen=fen_string, max_depth=max_depth, enable_delta_pruning=True
+        )
+
+    def test_aspiration_windows_consistency(self, fen_string: str, max_depth: int):
+        "Tests base searcher and null move pruning on return the same score and bestmove"
+        self._run_consistency_test(
+            fen=fen_string, max_depth=max_depth, enable_aspiration_windows=True
         )
 
 
@@ -220,11 +349,9 @@ class TestQuiescence:
         alpha, beta = 1e8, 1e9
         result = s._quiescence(board, -1, alpha, beta)
 
-        legal_moves = sorted(
-            (move for move in board.legal_moves if board.is_capture(move)),
-            key=lambda move: (s._mvv_lva_heuristic(board, move),),
-            reverse=True,
-        )
+        legal_moves = (move for move in board.legal_moves if board.is_capture(move))
+        mo_heuristic = MvvLvaHeuristic(board)
+        legal_moves = MoveOrderer.order_moves(mo_heuristic, board.legal_moves)
         e = Evaluator()
         for move in legal_moves:
             board.push(move)
@@ -236,48 +363,18 @@ class TestQuiescence:
 
         assert result == alpha
 
-    def test_quiescence_depth_2(
-        self, _init_searcher: Searcher, fen_string: str
-    ) -> None:
-        """
-        Test quiescence behaviour with depth 2
-        with both low alpha and high beta
-        """
-        board = init_board(fen_string)
-        s = _init_searcher
-        alpha, beta = -1e8, 1e9
-        result = s._quiescence(board, 2, alpha, beta)
-
-        e = Evaluator()
-        stand_pat = e.evaluate(board)
-        if alpha < stand_pat:
-            alpha = stand_pat
-
-        legal_moves = sorted(
-            (move for move in board.legal_moves if board.is_capture(move)),
-            key=lambda move: (s._mvv_lva_heuristic(board, move),),
-            reverse=True,
-        )
-        for move in legal_moves:
-            board.push(move)
-            score = -s._quiescence(board, 1, -beta, -alpha)
-            board.pop()
-
-            if score >= beta:
-                alpha = beta
-                break
-
-            if score > alpha:
-                alpha = score
-
-        assert result == alpha
-
 
 @pytest.fixture
-def _init_searcher(max_depth: int = 4) -> Searcher:
+def _init_searcher(
+    max_depth: int = 4, move_order_mode: MoveOrderMode = MoveOrderMode.MVV_LVA
+) -> Searcher:
     """Initialise searcher"""
-    e = Evaluator()
-    return Searcher(e, SearcherConfig(max_depth))
+    return SearcherFactory.create(
+        SearcherConfig(
+            max_depth,
+            move_order_config=MoveOrderConfig(move_order_mode=move_order_mode),
+        )
+    )
 
 
 @pytest.mark.parametrize(
@@ -328,11 +425,8 @@ class TestNegamax:
         alpha, beta = param[0], param[1]
         result = s._negamax(board, 1, alpha, beta)
 
-        legal_moves = sorted(
-            board.legal_moves,
-            key=lambda move: (s._mvv_lva_heuristic(board, move),),
-            reverse=True,
-        )
+        mo_heuristic = MvvLvaHeuristic(board)
+        legal_moves = MoveOrderer.order_moves(mo_heuristic, board.legal_moves)
 
         value = -float("inf")
 
@@ -346,47 +440,3 @@ class TestNegamax:
             alpha = max(alpha, value)
 
         assert result == value
-
-
-@pytest.mark.parametrize(
-    ("fen_string", "move_scores"),
-    [
-        ("k7/8/8/8/8/8/7K/6qR w - - 1 34", [0, 50, 52]),
-    ],
-)
-class TestMvvLvvHeuristic:
-    def test_mvv_lva_heuristic_end_game(
-        self, _init_searcher: Searcher, fen_string: str, move_scores: list[int]
-    ) -> None:
-        """
-        Test mvv lva heuistic on an end game board
-        """
-        board = init_board(fen_string)
-        s = _init_searcher
-
-        all_moves = board.legal_moves
-        num_moves = len(move_scores)
-        assert len(list(all_moves)) == num_moves
-
-        for i, move in enumerate(all_moves):
-            score = s._mvv_lva_heuristic(board, move)
-            assert score == move_scores[i]
-
-    def test_sorting_legal_moves(
-        self, _init_searcher: Searcher, fen_string: str, move_scores: list[int]
-    ) -> None:
-        """
-        Test sorting of legal moves by mvv_lva_heuristic
-        """
-        board = init_board(fen_string)
-        s = _init_searcher
-
-        legal_moves = sorted(
-            board.legal_moves,
-            key=lambda move: (s._mvv_lva_heuristic(board, move),),
-            reverse=True,
-        )
-        num_moves = len(move_scores)
-        for i, move in enumerate(legal_moves):
-            score = s._mvv_lva_heuristic(board, move)
-            assert score == move_scores[num_moves - i - 1]

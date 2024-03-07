@@ -131,6 +131,16 @@ class Board(ABC):
         pass
 
     @abstractmethod
+    def is_en_passant(self, move: chess.Move) -> bool:
+        """
+        Check if the move made is an en passant move.
+
+        :return: True if the move is an en passant move, false otherwise.
+        :rtype: bool
+        """
+        pass
+
+    @abstractmethod
     def is_check(self) -> bool:
         """
         Check if the current side to move is in check.

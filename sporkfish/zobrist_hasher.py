@@ -1,228 +1,278 @@
+from dataclasses import dataclass
+from typing import Optional
+
 import chess
 import numpy as np
 from numba import njit
-from typing import Tuple
 
 from .board.board import Board
 
+_int64_min_val = np.iinfo(np.int64).min
+_int64_max_val = np.iinfo(np.int64).max
+_int8_max_val = np.iinfo(np.int8).max
 
-class BoardInfoExtractor:
-
-    """
-    Extracts information about a chess board used for hashing.
-    """
-
-    @staticmethod
-    def full_hash_info(board: Board) -> Tuple[np.ndarray, bool, np.int8, np.ndarray]:
-        colored_piece_types = np.array(
-            [
-                # This won't have hash collisions as all the piece indices are > 0
-                [
-                    square,
-                    hash(piece) if (piece := board.piece_at(square)) else np.uint8(255),
-                ]
-                for square in chess.SQUARES
-            ],
-            dtype=np.uint8,
-        )
-        board_turn: bool = board.turn
-        en_passant_file: np.uint8 = (
-            chess.square_file(board.ep_square) if board.ep_square else np.uint8(255)
-        )
-        castling_rights = np.array(  # type: ignore
-            [
-                board.has_kingside_castling_rights(chess.WHITE),
-                board.has_queenside_castling_rights(chess.WHITE),
-                board.has_kingside_castling_rights(chess.BLACK),
-                board.has_queenside_castling_rights(chess.BLACK),
-            ],
-            dtype=bool,
-        )
-        return colored_piece_types, board_turn, en_passant_file, castling_rights
-
-    @staticmethod
-    def incremental_hash_info(board: Board):
-        color_piece_type = 255
-        from_sq, to_sq = 255, 255
-        colored_piece_types = np.array([[np.uint8(255), np.uint8(255)]], dtype=np.uint8)
-        # TODO: what happens when no moves?
-        try:
-            last_move = board.peek()
-            from_sq = last_move.from_square
-            to_sq = last_move.to_square
-            color_piece_type = hash(board.piece_at(to_sq))
-            colored_piece_types = np.array(
-                [[from_sq, color_piece_type], [to_sq, color_piece_type]],
-                dtype=np.uint8,
-            )
-            # I really don't like this but don't see another way to do it atm
-            if board.is_capture(last_move):
-                board.pop()
-                np.append(
-                    colored_piece_types,
-                    [[to_sq, hash(board.piece_at(to_sq))]],
-                )
-                board.push(last_move)
-        except:
-            pass
-        # TODO: what about promotion...?
-
-        board_turn: bool = board.turn
-        en_passant_file: np.uint8 = (
-            chess.square_file(board.ep_square) if board.ep_square else 255
-        )
-        castling_rights = np.array(  # type: ignore
-            [
-                board.has_kingside_castling_rights(chess.WHITE),
-                board.has_queenside_castling_rights(chess.WHITE),
-                board.has_kingside_castling_rights(chess.BLACK),
-                board.has_queenside_castling_rights(chess.BLACK),
-            ],
-            dtype=bool,
-        )
-        return colored_piece_types, board_turn, en_passant_file, castling_rights
+# TODO: we may revisit this in future as people claim this can affect collision chances
+# We set these globally as we want these to be shared across all Zobrist hashers
+np.random.seed(10101010)
+_piece_keys = np.random.randint(
+    _int64_min_val, _int64_max_val, size=(64, 12), dtype=np.int64
+)
+_turn_key = np.random.randint(_int64_min_val, _int64_max_val, dtype=np.int64)
+_en_passant_keys = np.random.randint(
+    _int64_min_val, _int64_max_val, size=8, dtype=np.int64
+)
+_castling_keys = np.random.randint(
+    _int64_min_val, _int64_max_val, size=16, dtype=np.int64
+)
 
 
 @njit(cache=True, nogil=True)
-def _compute_aggregate_piece_hash(
-    board_hash: np.uint64, colored_piece_types: np.ndarray, piece_hashes: np.ndarray
-) -> np.uint64:
+def _aggregate_piece_hash(
+    board_hash: np.int64, squares: np.ndarray, colored_piece_types: np.ndarray
+) -> np.int64:
+    num_pieces = len(squares)
+    assert (
+        num_pieces == len(colored_piece_types)
+    ), f"Expected the same number of squares and colored_piece_types but got length {num_pieces}, {len(colored_piece_types)} respectively."
     new_board_hash = board_hash
-    for square, color_piece_type in colored_piece_types:
-        # Get rid of the squares which don't have pieces
-        if color_piece_type != np.uint8(255):
-            new_board_hash ^= piece_hashes[square, color_piece_type]  # type: ignore
+    for idx in range(num_pieces):
+        new_board_hash ^= _piece_keys[squares[idx], colored_piece_types[idx]]  # type: ignore
     return new_board_hash
 
 
 @njit(cache=True, nogil=True)
-def _compute_turn_hash(board_hash: np.uint64, board_turn: bool, turn_hash: np.uint64):
-    if board_turn:
-        new_board_hash = board_hash ^ turn_hash
-        return new_board_hash
-    return board_hash
+def _turn_hash(board_hash: np.int64) -> np.int64:
+    return board_hash ^ _turn_key
 
 
 @njit(cache=True, nogil=True)
-def _compute_en_passant_hash(
-    board_hash: np.uint64, en_passant_file: np.uint64, en_passant_hashes: np.ndarray
-):
-    if en_passant_file != 255:
-        new_board_hash = board_hash ^ en_passant_hashes[en_passant_file]  # type: ignore
-        return new_board_hash
-    return board_hash
+def _conditional_turn_hash(board_hash: np.int64, board_turn: bool) -> np.int64:
+    return board_hash ^ _turn_key if board_turn else board_hash
 
 
 @njit(cache=True, nogil=True)
-def _compute_castling_hash(
-    board_hash: np.uint64, castling_rights: np.uint64, castling_hashes: np.ndarray
-):
-    new_board_hash = board_hash
-    for i, castling_right in enumerate(castling_rights):
-        if castling_right:
-            new_board_hash ^= castling_hashes[i]  # type: ignore
-    return new_board_hash
+def _en_passant_hash(board_hash: np.int64, en_passant_file: np.int8) -> np.int64:
+    return (  # type: ignore
+        board_hash ^ _en_passant_keys[en_passant_file]
+        if en_passant_file != _int8_max_val
+        else board_hash
+    )
 
 
 @njit(cache=True, nogil=True)
-def _compute_hash(
-    initial_hash: np.uint64,
+def _castling_hash(board_hash: np.int64, castling_rights: np.ndarray) -> np.int64:
+    num_castle_rights = len(castling_rights)
+    assert (
+        num_castle_rights == 4
+    ), f"There should only be 4 castling rights to check, 2 for black, 2 for white, but got {num_castle_rights}."
+
+    # This transforms the castling rights from an array of 4 bools
+    # into an int from [0, 15].
+    castling_keys_idx = 0
+    for idx in range(num_castle_rights):
+        if castling_rights[idx]:
+            castling_keys_idx += 1 << idx
+    return board_hash ^ _castling_keys[castling_keys_idx]  # type: ignore
+
+
+@njit(cache=True, nogil=True)
+def _full_zobrist_hash(
+    squares: np.ndarray,
     colored_piece_types: np.ndarray,
-    piece_hashes: np.ndarray,
     board_turn: bool,
-    turn_hash: np.int64,
     en_passant_file: np.int64,
-    en_passant_hashes: np.ndarray,
     castling_rights: np.ndarray,
-    castling_hashes: np.ndarray,
-) -> np.uint64:
-    board_hash = _compute_aggregate_piece_hash(
-        initial_hash, colored_piece_types, piece_hashes
-    )
-    board_hash = _compute_turn_hash(board_hash, board_turn, turn_hash)
-    board_hash = _compute_en_passant_hash(
-        board_hash, en_passant_file, en_passant_hashes
-    )
-    board_hash = _compute_castling_hash(board_hash, castling_rights, castling_hashes)
-    return board_hash
+) -> np.int64:
+    # Here we send all the colored_piece types for all pieces which exist on all the board
+    board_hash = _aggregate_piece_hash(np.int64(0), squares, colored_piece_types)
+    board_hash = _conditional_turn_hash(board_hash, board_turn)
+    board_hash = _en_passant_hash(board_hash, en_passant_file)
+    board_hash = _castling_hash(board_hash, castling_rights)
+    return board_hash  # type: ignore
+
+
+@njit(cache=True, nogil=True)
+def _incremental_zobrist_hash(
+    initial_hash: np.int64,
+    squares: np.ndarray,
+    colored_piece_types: np.ndarray,
+    prev_en_passant_file: np.int8,
+    curr_en_passant_file: np.int8,
+    prev_castling_rights: np.ndarray,
+    curr_castling_rights: np.ndarray,
+) -> np.int64:
+    # Here we send in only the colored_piece_types for the input move
+    # If capturing, the original piece is sent in to be XOR'd out
+    # Promotions are included already as part of the colored_piece_type for the new move
+    board_hash = _aggregate_piece_hash(initial_hash, squares, colored_piece_types)
+
+    # We hash on every turn, to XOR out the previous turn hash.
+    board_hash = _turn_hash(board_hash)
+
+    # We do pairwise hashes for en passant and castling, based on the previous and current rights.
+    # The first one XOR's away the previous rights and the second adds the current rights.
+    # If previous_rights == current_rights then we obtain the same result as before.
+    # This is likely faster than checking if both arrays are the same (to be tested).
+    board_hash = _en_passant_hash(board_hash, prev_en_passant_file)
+    board_hash = _en_passant_hash(board_hash, curr_en_passant_file)
+
+    board_hash = _castling_hash(board_hash, prev_castling_rights)
+    board_hash = _castling_hash(board_hash, curr_castling_rights)
+
+    return board_hash  # type: ignore
+
+
+@dataclass
+class ZobristStateInfo:
+    """
+    Stores the information from the current state of the board.
+
+    :param zobrist_hash: The Zobrist hash value representing the current board state
+    :type zobrist_hash: np.int64
+    :param ep_file: The file where en passant is possible
+    :type ep_file: np.int8
+    :param castling_rights: An array representing castling rights, defaults to np.array([False, False, False, False])
+    :type castling_rights: np.ndarray
+    """
+
+    zobrist_hash: np.int64
+    ep_file: np.int8
+    castling_rights: np.ndarray
 
 
 class ZobristHasher:
-    def __init__(self) -> None:
+    """
+    This allows caching via the transposition table, so we don't have to evaluate positions twice.
+    Two methods are provided:
+    - One hashes the board statically, doing this by retrieving the full board and hence is slow.
+    - The other hashes the board after a move is made (i.e. incrementally), and is designed to be faster.
+    """
+
+    @staticmethod
+    def _parse_ep_file(board: Board) -> np.int8:
         """
-        Initialize the Zobrist Hasher object, used to hash board positions.
-        This allows caching via the transposition table, so we don't have to evaluate positions twice.
+        Parse the en passant file from the given board.
 
-        Attributes:
-        - _piece_hashes (numpy.ndarray): Zobrist hash values for each piece on each square.
-        - _turn_hash (np.uint64): Zobrist hash value for the side to move.
-        - _en_passant_hashes (numpy.ndarray): Zobrist hash values for en passant squares.
-        - _castling_hashes (numpy.ndarray): Zobrist hash values for castling rights.
+        :param board: The chess board.
+        :type board: Board
 
-        Methods:
-        - __init__(): Initialize the Zobrist Hasher object.
-        - hash(board) -> int: Hashes the given chess board using Zobrist hashing.
+        :return: The file where en passant is possible.
+        :rtype: np.int8
         """
-        # Sporkfish's lucky number
-        # TODO: we may revisit this in future as people claim this can affect collision chances greatly
-        np.random.seed(10101010)
-
-        self._piece_hashes = np.random.randint(
-            0, 2**64, size=(64, 12), dtype=np.uint64
-        )
-        self._turn_hash = np.random.randint(0, 2**64, dtype=np.uint64)
-        self._en_passant_hashes = np.random.randint(0, 2**64, size=8, dtype=np.uint64)
-        self._castling_hashes = np.random.randint(0, 2**64, size=4, dtype=np.uint64)
-
-    def hash(self, board: Board) -> np.uint64:
-        """
-        Hashes the given chess board using Zobrist hashing.
-
-        Parameters:
-        - board (Board): The chess board.
-
-        Returns:
-        - int: The computed Zobrist hash value for the board.
-        """
-
-        (
-            colored_piece_types,
-            board_turn,
-            en_passant_file,
-            castling_rights,
-        ) = BoardInfoExtractor.full_hash_info(board)
-
-        return _compute_hash(  # type: ignore
-            np.uint64(0),
-            colored_piece_types,
-            self._piece_hashes,
-            board_turn,
-            self._turn_hash,
-            en_passant_file,
-            self._en_passant_hashes,
-            castling_rights,
-            self._castling_hashes,
+        return (
+            np.int8(chess.square_file(board.ep_square))  # type: ignore
+            if board.ep_square
+            else _int8_max_val
         )
 
-    def incremental_hash(self, initial_hash: np.uint64, board: Board):
-        try:
-            (
-                colored_piece_types,
-                board_turn,
-                en_passant_file,
-                castling_rights,
-            ) = BoardInfoExtractor.incremental_hash_info(board)
-        except:
-            return initial_hash
+    @staticmethod
+    def _parse_castling_rights(board: Board) -> np.ndarray:
+        """
+        Parse the castling rights from the given board.
 
-        return _compute_hash(  # type: ignore
-            np.uint64(initial_hash),
-            colored_piece_types,
-            self._piece_hashes,
-            board_turn,
-            self._turn_hash,
-            en_passant_file,
-            self._en_passant_hashes,
-            castling_rights,
-            self._castling_hashes,
+        :param board: The chess board.
+        :type board: Board
+
+        :return: An array representing castling rights.
+        :rtype: np.ndarray
+        """
+        return np.array(  # type: ignore
+            [
+                board.has_kingside_castling_rights(chess.WHITE),
+                board.has_queenside_castling_rights(chess.WHITE),
+                board.has_kingside_castling_rights(chess.BLACK),
+                board.has_queenside_castling_rights(chess.BLACK),
+            ],
+            dtype=bool,
         )
+
+    def full_zobrist_hash(self, board: Board) -> ZobristStateInfo:
+        """
+        Compute the Zobrist hash value for the entire board.
+
+        :param board: The chess board.
+        :type board: Board
+
+        :return: An object containing the Zobrist hash value and other board state information.
+        :rtype: ZobristStateInfo
+        """
+        # colored_piece_types for all pieces that exist on the board
+        squares_colored_piece_types = np.array(
+            [
+                [square, hash(piece)]
+                for square in chess.SQUARES
+                if (piece := board.piece_at(square))
+            ],
+            dtype=np.int8,
+        )
+        # Splice into two arrays
+        squares = squares_colored_piece_types[:, 0]
+        colored_piece_types = squares_colored_piece_types[:, 1]
+
+        ep_file = ZobristHasher._parse_ep_file(board)
+        castling_rights = ZobristHasher._parse_castling_rights(board)
+
+        zobrist_hash = _full_zobrist_hash(  # type: ignore
+            squares, colored_piece_types, board.turn, ep_file, castling_rights
+        )
+        return ZobristStateInfo(zobrist_hash, ep_file, castling_rights)
+
+    def incremental_zobrist_hash(
+        self,
+        board: Board,
+        move: chess.Move,
+        prev_state: ZobristStateInfo,
+        previous_from_square_piece: chess.Piece,
+        captured_piece: Optional[chess.Piece],
+    ) -> ZobristStateInfo:
+        """
+        Compute the Zobrist hash value incrementally after a move.
+
+        :param board: The chess board.
+        :type board: Board
+        :param move: The move being made.
+        :type move: chess.Move
+        :param prev_state: The previous Zobrist state information.
+        :type prev_state: ZobristStateInfo
+        :param previous_from_square_piece: The piece from the originating square of move.
+        :type previous_from_square_piece: chess.Piece
+        :param captured_piece: The piece captured, if any, defaults to None
+        :type captured_piece: Optional[chess.Piece]
+
+        :return: An object containing the updated Zobrist hash value and other board state information.
+        :rtype: ZobristStateInfo
+        """
+        from_color_piece_type = hash(previous_from_square_piece)
+
+        # XOR out the previous from square piece
+        squares_list = [move.from_square]
+        colored_piece_types_list = [from_color_piece_type]
+
+        # XOR in the to square piece, piece type depending on if promoted or not
+        squares_list.append(move.to_square)
+        if move.promotion:
+            colored_piece_types_list.append(hash(board.piece_at(move.to_square)))
+        else:
+            colored_piece_types_list.append(from_color_piece_type)
+
+        # XOR out the captured piece if exists
+        if captured_piece:
+            squares_list.append(move.to_square)
+            colored_piece_types_list.append(hash(captured_piece))
+
+        squares = np.array(squares_list, dtype=np.int8)
+        colored_piece_types = np.array(colored_piece_types_list, dtype=np.int8)
+
+        ep_file = ZobristHasher._parse_ep_file(board)
+        castling_rights = ZobristHasher._parse_castling_rights(board)
+
+        zobrist_hash = _incremental_zobrist_hash(
+            prev_state.zobrist_hash,
+            squares,
+            colored_piece_types,
+            prev_state.ep_file,
+            ep_file,
+            prev_state.castling_rights,
+            castling_rights,
+        )
+        return ZobristStateInfo(zobrist_hash, ep_file, castling_rights)

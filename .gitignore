@@ -158,10 +158,14 @@ cython_debug/
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
-api_token.txt
 
-# vscode
-.vscode
+# API token
+api_token.txt
+test_bot_api_token.txt
+
+# vscode - but not the settings.json file
+.vscode/*
+!.vscode/settings.json
 
 # Mac
 .DS_Store
@@ -169,3 +173,5 @@ api_token.txt
 # Profiling
 prof/
 
+# Performance testing
+perf/
