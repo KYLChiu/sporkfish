@@ -137,7 +137,7 @@ class LichessBotBerserk(LichessBot):
 
     def _play_game(self, game_id: str) -> GameTerminationReason:
         """
-        Streaming game states and pass to game playing logic.
+        Stream game states and pass to function handling game states.
 
         :param game_id: The ID of the game on Lichess.
         :type game_id: str
