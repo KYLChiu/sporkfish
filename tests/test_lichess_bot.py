@@ -128,7 +128,7 @@ class TestLichessBot:
         assert sporkfish._event_action_accept_challenge(challenge_event)
         game_id = challenge_event["challenge"]["id"]
 
-        def sporkfish_play() -> GameTerminationReason:
+        def sporkfish_play() -> None:
             termination = sporkfish._play_game(game_id)
             result_queue.put(termination)
 
@@ -136,6 +136,6 @@ class TestLichessBot:
         proc.start()
 
         test_bot.client.bots.make_move(game_id, "d2d4")
-        test_bot.client.bots.resign_game()
+        test_bot.client.bots.resign_game(game_id)
 
         assert result_queue.get() == GameTerminationReason.RESIGNATION
