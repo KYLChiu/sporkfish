@@ -127,10 +127,12 @@ class TestLichessBot:
         assert sporkfish._event_action_accept_challenge(challenge_event)
         game_id = challenge_event["challenge"]["id"]
 
-        sporkfish.client.bots.make_move(game_id, "e2e4")
-        test_bot.client.bots.make_move(game_id, "e7e5")
-
         assert (
             sporkfish._handle_states(game_id, {"type": "gameStateResign"})
             == GameTerminationReason.RESIGNATION
         )
+
+        try:
+            sporkfish.client.bots.abort_game(challenge_event["challenge"]["id"])
+        except RetryError:
+            pass

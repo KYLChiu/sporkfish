@@ -1,6 +1,6 @@
 import datetime
 import logging
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, Iterator, Optional, Tuple, Union
 
 import berserk
 
@@ -96,7 +96,7 @@ class LichessBotBerserk(LichessBot):
             self.client.bots.make_move(game_id, best_move)
 
     def _handle_states(
-        self, game_id: str, states: Dict[str, Any]
+        self, game_id: str, states: Iterator[Dict[str, Any]]
     ) -> GameTerminationReason:
         """
         The main game playing loop, which plays a game based on the given game states.
@@ -104,7 +104,7 @@ class LichessBotBerserk(LichessBot):
         :param game_id: The ID of the game on Lichess.
         :type game_id: str
         :param states: The game states to play the game from.
-        :type states: Dict[str, Any]
+        :type states: Iterator[Dict[str, Any]]
         :return: The reason for the game termination.
         :rtype: GameTerminationReason
         """
