@@ -9,7 +9,6 @@ from sporkfish.lichess_bot import lichess_bot_berserk
 from sporkfish.lichess_bot.game_termination_reason import GameTerminationReason
 
 error_queue = multiprocessing.Queue()
-result_queue = multiprocessing.Queue()
 
 
 class TestLichessBot:
@@ -128,21 +127,10 @@ class TestLichessBot:
         assert sporkfish._event_action_accept_challenge(challenge_event)
         game_id = challenge_event["challenge"]["id"]
 
-        def sporkfish_play() -> None:
-            termination = sporkfish._play_game(game_id)
-            result_queue.put(termination)
-
         sporkfish.client.bots.make_move(game_id, "e2e4")
         test_bot.client.bots.make_move(game_id, "e7e5")
 
-        proc = multiprocessing.Process(target=sporkfish_play)
-        proc.start()
-
-        # Not the most reliable way to test, but I am not keen to pass the states to be mocked
-        time.sleep(5)
-
-        test_bot.client.bots.resign_game(game_id)
-
-        assert result_queue.get() == GameTerminationReason.RESIGNATION
-
-        proc.terminate()
+        assert (
+            sporkfish._handle_states(game_id, {"type": "gameStateResign"})
+            == GameTerminationReason.RESIGNATION
+        )

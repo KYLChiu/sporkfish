@@ -95,17 +95,19 @@ class LichessBotBerserk(LichessBot):
             best_move = self._get_best_move(color, time, inc)
             self.client.bots.make_move(game_id, best_move)
 
-    def _play_game(self, game_id: str) -> GameTerminationReason:
+    def _handle_states(
+        self, game_id: str, states: Dict[str, Any]
+    ) -> GameTerminationReason:
         """
-        Play a game on Lichess by streaming game states, setting positions, and making moves.
+        The main game playing loop, which plays a game based on the given game states.
 
         :param game_id: The ID of the game on Lichess.
         :type game_id: str
+        :param states: The game states to play the game from.
+        :type states: Dict[str, Any]
         :return: The reason for the game termination.
         :rtype: GameTerminationReason
         """
-        # Get game states and process initial state
-        states = self.client.bots.stream_game_state(game_id)
         game_full = next(states)
         logging.debug(f"Full game data: {game_full}")
 
@@ -132,6 +134,18 @@ class LichessBotBerserk(LichessBot):
                 return GameTerminationReason.RESIGNATION
 
         return GameTerminationReason.UNKNOWN
+
+    def _play_game(self, game_id: str) -> GameTerminationReason:
+        """
+        Streaming game states and pass to game playing logic.
+
+        :param game_id: The ID of the game on Lichess.
+        :type game_id: str
+        :return: The reason for the game termination.
+        :rtype: GameTerminationReason
+        """
+        states = self.client.bots.stream_game_state(game_id)
+        return self._handle_states(game_id, states)
 
     @classmethod
     def _should_accept_challenge(cls, event: Dict[str, Any]) -> bool:
