@@ -127,10 +127,15 @@ class TestLichessBot:
         assert sporkfish._event_action_accept_challenge(challenge_event)
         game_id = challenge_event["challenge"]["id"]
 
-        assert (
-            sporkfish._handle_states(game_id, {"type": "gameStateResign"})
-            == GameTerminationReason.RESIGNATION
-        )
+        states = sporkfish.client.bots.stream_game_state(game_id)
+        game_full = next(states)
+
+        def states_gen():
+            yield game_full
+            yield {"type": "gameStateResign"}
+
+        term = sporkfish._handle_states(game_id, states_gen)
+        assert term == GameTerminationReason.RESIGNATION
 
         try:
             sporkfish.client.bots.abort_game(challenge_event["challenge"]["id"])
