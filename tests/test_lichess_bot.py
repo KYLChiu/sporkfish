@@ -117,7 +117,7 @@ class TestLichessBot:
 
         challenge_event = test_bot.client.challenges.create(
             username="Sporkfish",
-            color="white",
+            color="black",
             variant="standard",
             rated=False,
             clock_limit=30,
@@ -135,7 +135,12 @@ class TestLichessBot:
         proc = multiprocessing.Process(target=sporkfish_play)
         proc.start()
 
+        # Not exactly the most reliable way to test...
+        time.sleep(3)
+
         test_bot.client.bots.make_move(game_id, "d2d4")
         test_bot.client.bots.resign_game(game_id)
 
         assert result_queue.get() == GameTerminationReason.RESIGNATION
+
+        proc.terminate()
