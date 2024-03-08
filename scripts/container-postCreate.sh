@@ -9,5 +9,6 @@ pip install -r requirements.txt
 git config --global --add safe.directory $(pwd)
 pre-commit install --hook-type pre-commit
 pre-commit install --hook-type pre-push
+mypy --install-types --non-interactive
 
 exit 0
