@@ -65,13 +65,13 @@ class MiniMaxVariants(Searcher, ABC):
             logging.info("Disabled transposition table in search.")
 
         self._evaluator = evaluator
-        self.max_depth = searcher_config.max_depth
+        self._max_depth = searcher_config.max_depth
 
         # Killer move table - storing quiet beta-cut off moves
         self._killer_moves = (
             [
                 [chess.Move.null(), chess.Move.null()]
-                for _ in range(self._searcher_config.max_depth + 1)
+                for _ in range(self._max_depth + 1)
             ]
             if self._searcher_config.move_order_config.move_order_mode
             == MoveOrderMode.KILLER_MOVE
@@ -152,7 +152,8 @@ class MiniMaxVariants(Searcher, ABC):
         :param depth: The depth at which the move caused the cutoff
         :type depth: int
         """
-        increment = (self.max_depth - depth) * (self.max_depth - depth)
+        ply=self._max_depth
+        increment = ply* ply
         if move in self._history_table:
             self._history_table[
                 move
@@ -413,7 +414,7 @@ class MiniMaxVariants(Searcher, ABC):
         score = -float("inf")
         move = chess.Move.null()
 
-        for depth in range(1, self._searcher_config.max_depth + 1):
+        for depth in range(1, self._max_depth + 1):
             new_board = copy.deepcopy(board)
 
             self._statistics.reset()

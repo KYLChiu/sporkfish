@@ -13,7 +13,7 @@ class KillerMoveHeuristic(MoveOrderHeuristic):
         killer_moves: List[List[chess.Move]],
         depth: int,
     ) -> None:
-        MoveOrderHeuristic.__init__(self)
+        super().__init__(self)
         self._board = board
         self._killer_moves = killer_moves
         self._depth = depth
