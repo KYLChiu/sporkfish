@@ -69,10 +69,7 @@ class MiniMaxVariants(Searcher, ABC):
 
         # Killer move table - storing quiet beta-cut off moves
         self._killer_moves = (
-            [
-                [chess.Move.null(), chess.Move.null()]
-                for _ in range(self._max_depth + 1)
-            ]
+            [[chess.Move.null(), chess.Move.null()] for _ in range(self._max_depth + 1)]
             if self._searcher_config.move_order_config.move_order_mode
             == MoveOrderMode.KILLER_MOVE
             or self._searcher_config.move_order_config.move_order_mode
@@ -152,8 +149,8 @@ class MiniMaxVariants(Searcher, ABC):
         :param depth: The depth at which the move caused the cutoff
         :type depth: int
         """
-        ply=self._max_depth
-        increment = ply* ply
+        ply = self._max_depth
+        increment = ply * ply
         if move in self._history_table:
             self._history_table[
                 move
