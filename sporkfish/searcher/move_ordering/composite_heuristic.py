@@ -24,8 +24,8 @@ class CompositeHeuristic(
     ) -> None:
         MvvLvaHeuristic.__init__(self, board)
         KillerMoveHeuristic.__init__(self, board, killer_moves, depth)
-        MoveOrderHeuristic.__init__(self)
         HistoryHeuristic.__init__(self, board, history_table)
+        MoveOrderHeuristic.__init__(self)
 
         # TODO: this design may be slow, no need to reinitialize these weights for every instance
         # Recall this can be created for every node if not sidetracked by other components, like TT.

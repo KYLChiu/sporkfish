@@ -76,13 +76,22 @@ class MiniMaxVariants(Searcher, ABC):
             == MoveOrderMode.COMPOSITE
             else None
         )
-        if (
-            self._searcher_config.move_order_config.move_order_mode
+        #if (
+        #    self._searcher_config.move_order_config.move_order_mode
+        #    == MoveOrderMode.HISTORY
+        #    or self._searcher_config.move_order_config.move_order_mode
+        #    == MoveOrderMode.COMPOSITE
+        #):
+        #    self._history_table: Dict[chess.Move, int] = dict()
+
+        self._history_table : Dict[chess.Move, int] =(
+            dict()
+            if self._searcher_config.move_order_config.move_order_mode
             == MoveOrderMode.HISTORY
             or self._searcher_config.move_order_config.move_order_mode
             == MoveOrderMode.COMPOSITE
-        ):
-            self._history_table: Dict[chess.Move, int] = dict()
+            else None
+            )
 
     @property
     def evaluator(self) -> Evaluator:
@@ -149,12 +158,13 @@ class MiniMaxVariants(Searcher, ABC):
         :param depth: The depth at which the move caused the cutoff
         :type depth: int
         """
-        ply = self._max_depth
+        ply = self._max_depth -depth
         increment = ply * ply
+        # Increment score for moves that cause cutoff
         if move in self._history_table:
             self._history_table[
                 move
-            ] += increment  # Increment score for moves that cause cutoff
+            ] += increment
         else:
             self._history_table[move] = increment  # Initialize score for new moves
 

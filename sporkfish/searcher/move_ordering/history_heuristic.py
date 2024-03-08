@@ -8,7 +8,7 @@ from .move_order_heuristic import MoveOrderHeuristic
 
 class HistoryHeuristic(MoveOrderHeuristic):
     def __init__(self, board: Board, history_table: Dict[chess.Move, int]) -> None:
-        super().__init__(self)
+        super().__init__()
         self._board = board
         self._history_table = history_table
 
