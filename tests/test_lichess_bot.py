@@ -6,6 +6,7 @@ import pytest
 from tenacity import RetryError
 
 from sporkfish.lichess_bot import lichess_bot_berserk
+from sporkfish.lichess_bot.game_termination_reason import GameTerminationReason
 
 error_queue = multiprocessing.Queue()
 
@@ -97,11 +98,43 @@ class TestLichessBot:
         )
 
         assert challenge_event
-        accepted = sporkfish._event_action_accept_challenge(challenge_event)
-        assert not accepted
+        assert not sporkfish._event_action_accept_challenge(challenge_event)
         try:
             sporkfish.client.bots.abort_game(challenge_event["challenge"]["id"])
-            assert False, "Expected to fail to abort game, as challenge was declined"
+            assert False, "Expected to fail to abort game as challenge was declined."
         except RetryError:
             # This is a success
+            pass
+
+    @pytest.mark.ci
+    def test_opponent_resigned(self):
+        sporkfish = TestLichessBot._create_bot(TestLichessBot._sporkfish_api_token_file)
+        test_bot = TestLichessBot._create_bot(TestLichessBot._test_bot_api_token_file)
+
+        assert sporkfish
+        assert test_bot
+
+        challenge_event = test_bot.client.challenges.create(
+            username="Sporkfish",
+            color="white",
+            variant="standard",
+            rated=False,
+            clock_limit=30,
+            clock_increment=0,
+        )
+
+        assert challenge_event
+        assert sporkfish._event_action_accept_challenge(challenge_event)
+        game_id = challenge_event["challenge"]["id"]
+
+        states = sporkfish.client.bots.stream_game_state(game_id)
+        game_full = next(states)
+        mocked_states = iter((game_full, {"type": "gameStateResign"}))
+
+        term = sporkfish._handle_states(game_id, mocked_states)
+        assert term == GameTerminationReason.RESIGNATION
+
+        try:
+            sporkfish.client.bots.abort_game(challenge_event["challenge"]["id"])
+        except RetryError:
             pass
