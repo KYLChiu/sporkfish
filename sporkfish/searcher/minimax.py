@@ -2,7 +2,7 @@ import copy
 import logging
 import time
 from abc import ABC, abstractmethod
-from typing import Optional, Tuple, Dict
+from typing import Optional, Tuple
 
 import chess
 import stopit
@@ -77,7 +77,7 @@ class MiniMaxVariants(Searcher, ABC):
             else None
         )
 
-        self._history_table: Dict[chess.Move, int] = (
+        self._history_table = (
             dict()  # type: ignore
             if self._searcher_config.move_order_config.move_order_mode
             == MoveOrderMode.HISTORY
@@ -110,12 +110,12 @@ class MiniMaxVariants(Searcher, ABC):
         elif order_type is MoveOrderMode.KILLER_MOVE:
             return KillerMoveHeuristic(board, self._killer_moves, depth)  # type: ignore
         elif order_type is MoveOrderMode.HISTORY:
-            return HistoryHeuristic(board, self._history_table)
+            return HistoryHeuristic(board, self._history_table)  # type: ignore
         elif order_type is MoveOrderMode.COMPOSITE:
             return CompositeHeuristic(
                 board,
                 self._killer_moves,  # type: ignore
-                self._history_table,
+                self._history_table,  # type: ignore
                 depth,
                 self._searcher_config.move_order_config,
             )
@@ -153,11 +153,14 @@ class MiniMaxVariants(Searcher, ABC):
         """
         ply = self._max_depth - depth
         increment = ply * ply
-        # Increment score for moves that cause cutoff
-        if self._history_table and move in self._history_table:
-            self._history_table[move] += increment
-        else:
-            self._history_table[move] = increment  # Initialize score for new moves
+
+        if self._history_table:
+            # Increment score for moves that cause cutoff
+            if move in self._history_table:
+                self._history_table[move] += increment
+            # Initialize score for new moves
+            else:
+                self._history_table[move] = increment
 
     def _aspiration_windows_search(
         self,
