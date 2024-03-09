@@ -76,16 +76,9 @@ class MiniMaxVariants(Searcher, ABC):
             == MoveOrderMode.COMPOSITE
             else None
         )
-        # if (
-        #    self._searcher_config.move_order_config.move_order_mode
-        #    == MoveOrderMode.HISTORY
-        #    or self._searcher_config.move_order_config.move_order_mode
-        #    == MoveOrderMode.COMPOSITE
-        # ):
-        #    self._history_table: Dict[chess.Move, int] = dict()
 
         self._history_table: Dict[chess.Move, int] = (
-            dict()
+            dict()  # type: ignore
             if self._searcher_config.move_order_config.move_order_mode
             == MoveOrderMode.HISTORY
             or self._searcher_config.move_order_config.move_order_mode
@@ -161,7 +154,7 @@ class MiniMaxVariants(Searcher, ABC):
         ply = self._max_depth - depth
         increment = ply * ply
         # Increment score for moves that cause cutoff
-        if move in self._history_table:
+        if self._history_table and move in self._history_table:
             self._history_table[move] += increment
         else:
             self._history_table[move] = increment  # Initialize score for new moves
