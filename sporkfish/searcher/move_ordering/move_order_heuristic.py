@@ -1,13 +1,6 @@
 from abc import ABC, abstractmethod
-from enum import Enum
 
 import chess
-
-
-class MoveOrderMode(Enum):
-    MVV_LVA = "MVV_LVA"
-    KILLER_MOVE = "KILLER_MOVE"
-    COMPOSITE = "COMPOSITE"
 
 
 class MoveOrderHeuristic(ABC):

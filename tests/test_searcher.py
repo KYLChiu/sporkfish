@@ -3,7 +3,10 @@ from init_board_helper import board_setup, init_board, score_fen
 
 from sporkfish.board.board_factory import BoardFactory, BoardPyChess
 from sporkfish.evaluator.pesto import Pesto as Evaluator
-from sporkfish.searcher.move_ordering.move_order_heuristic import MoveOrderMode
+from sporkfish.searcher.move_ordering.move_order_config import (
+    MoveOrderConfig,
+    MoveOrderMode,
+)
 from sporkfish.searcher.move_ordering.move_orderer import MoveOrderer
 from sporkfish.searcher.move_ordering.mvv_lva_heuristic import MvvLvaHeuristic
 from sporkfish.searcher.searcher import Searcher
@@ -19,6 +22,7 @@ def _searcher_with_fen(
     enable_delta_pruning=False,
     enable_transposition_table=False,
     enable_aspiration_windows=False,
+    move_order_config=MoveOrderConfig(move_order_mode=MoveOrderMode.MVV_LVA),
 ):
     board = BoardFactory.create(board_type=BoardPyChess)
     s = SearcherFactory.create(
@@ -29,6 +33,7 @@ def _searcher_with_fen(
             enable_delta_pruning=enable_delta_pruning,
             enable_transposition_table=enable_transposition_table,
             enable_aspiration_windows=enable_aspiration_windows,
+            move_order_config=move_order_config,
         ),
     )
     board.set_fen(fen)
@@ -83,6 +88,9 @@ class TestPerformance:
         enable_delta_pruning: bool = False,
         enable_transposition_table: bool = False,
         enable_aspiration_windows: bool = False,
+        move_order_config: MoveOrderConfig = MoveOrderConfig(
+            move_order_mode=MoveOrderMode.MVV_LVA
+        ),
     ) -> None:
         import cProfile
         import pstats
@@ -97,6 +105,7 @@ class TestPerformance:
             enable_delta_pruning=enable_delta_pruning,
             enable_transposition_table=enable_transposition_table,
             enable_aspiration_windows=enable_aspiration_windows,
+            move_order_config=move_order_config,
         )
         profiler.disable()
         stats = pstats.Stats(profiler)
@@ -193,6 +202,18 @@ class TestPerformance:
             fen=fen_string,
             max_depth=max_depth,
             enable_delta_pruning=True,
+        )
+
+    @pytest.mark.slow
+    def test_combined_move_order(
+        self, request_fixture, fen_string: str, max_depth: int
+    ) -> None:
+        self._run_perf_analytics(
+            request_fixture.node.name,
+            fen=fen_string,
+            max_depth=max_depth,
+            enable_delta_pruning=True,
+            move_order_config=MoveOrderConfig(move_order_mode=MoveOrderMode.COMPOSITE),
         )
 
     @pytest.mark.slow
@@ -347,7 +368,10 @@ def _init_searcher(
 ) -> Searcher:
     """Initialise searcher"""
     return SearcherFactory.create(
-        SearcherConfig(max_depth, move_order_mode=move_order_mode)
+        SearcherConfig(
+            max_depth,
+            move_order_config=MoveOrderConfig(move_order_mode=move_order_mode),
+        )
     )
 
 
