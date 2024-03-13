@@ -1,6 +1,7 @@
 import chess
 
 from ..board.board import Board
+from typing import Dict
 from .evaluator import Evaluator
 
 
@@ -252,3 +253,21 @@ class Pesto(Evaluator):
         eg_phase = 24 - mg_phase
 
         return ((mg_score * mg_phase) + (eg_score * eg_phase)) / 24
+
+    def piece_values(self) -> Dict[chess.PieceType, float]:
+        """
+        Return the piece values for the evaluator.
+
+        :return: The piece values.
+        :rtype: dict
+        """
+        return self.MG_PIECE_VALUES
+
+    def delta(self) -> float:
+        """
+        Return the delta threshold for futility pruning for the evaluator.
+
+        :return: The delta.
+        :rtype: float
+        """
+        return self.DELTA

@@ -154,7 +154,7 @@ class MiniMaxVariants(Searcher, ABC):
         """
         if self._searcher_config.enable_aspiration_windows and depth > 1:
             # We leave configuration for window_size to another PR
-            window_size = self.evaluator.MG_PIECE_VALUES[chess.PAWN] // 2
+            window_size = self.evaluator.piece_values()[chess.PAWN] // 2
             alpha = prev_score - window_size
             beta = prev_score + window_size
             score, move = self._start_search_from_root(
@@ -271,7 +271,7 @@ class MiniMaxVariants(Searcher, ABC):
             # Half a pawn margin is very aggressive
             if (
                 self._evaluator.evaluate(board)
-                + depth * self.evaluator.MG_PIECE_VALUES[chess.PAWN] // 2
+                + depth * self.evaluator.piece_values()[chess.PAWN] // 2
                 <= alpha
             ):
                 return True
@@ -312,8 +312,8 @@ class MiniMaxVariants(Searcher, ABC):
         return (
             True
             if stand_pat
-            + self.evaluator.MG_PIECE_VALUES[captured_piece]
-            + self.evaluator.DELTA
+            + self.evaluator.piece_values()[captured_piece]
+            + self.evaluator.delta()
             < alpha
             else False
         )
