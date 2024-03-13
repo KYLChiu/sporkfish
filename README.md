@@ -70,7 +70,7 @@ This generates an interactive bash shell for you to run the program in.
 Check out the bot on lichess [here](https://lichess.org/@/Sporkfish)! To run the bot, create a file in the root directory named `api_token.txt`. Add your Lichess bot API token. Then run:
 
 ```
-python3 main.py
+python3 -O main.py
 ```
 
 Once you create a game via your bot account, the bot will automatically play. We currently do not support simultaneous games.

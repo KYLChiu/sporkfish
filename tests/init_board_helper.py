@@ -1,5 +1,6 @@
 from sporkfish import evaluator
 from sporkfish.board.board_factory import Board, BoardFactory, BoardPyChess
+from sporkfish.evaluator.pesto import Pesto
 
 white_move = {
     "open": "rnbqkb1r/pppp1ppp/4pn2/8/3P1B2/8/PPP1PPPP/RN1QKBNR w KQkq - 0 3",
@@ -37,5 +38,5 @@ def score_fen(fen_string: str) -> float:
     Compute score based on a specific chess board
     """
     board = init_board(fen_string)
-    ev = evaluator.Evaluator()
+    ev = Pesto()
     return ev.evaluate(board)

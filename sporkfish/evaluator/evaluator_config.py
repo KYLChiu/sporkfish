@@ -10,7 +10,7 @@ class EvaluatorMode(Enum):
 
 class EvaluatorConfig(Configurable):
     """
-    Configuratoin class for the evaluator.
+    Configuration class for the evaluator.
 
     :param evaluator_mode: Evaluator mode (default: EvaluatorMode.PESTO).
                             Determines the evaluator mode used by the evaluator.

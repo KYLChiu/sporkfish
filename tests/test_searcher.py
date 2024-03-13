@@ -2,7 +2,7 @@ import pytest
 from init_board_helper import board_setup, init_board, score_fen
 
 from sporkfish.board.board_factory import BoardFactory, BoardPyChess
-from sporkfish.evaluator import Evaluator
+from sporkfish.evaluator.pesto import Pesto as Evaluator
 from sporkfish.searcher.move_ordering.move_order_heuristic import MoveOrderMode
 from sporkfish.searcher.move_ordering.move_orderer import MoveOrderer
 from sporkfish.searcher.move_ordering.mvv_lva_heuristic import MvvLvaHeuristic
