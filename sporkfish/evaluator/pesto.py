@@ -259,7 +259,7 @@ class Pesto(Evaluator):
         Return the piece values for the evaluator.
 
         :return: The piece values.
-        :rtype: dict
+        :rtype: Dict[chess.PieceType, float]
         """
         return self.MG_PIECE_VALUES
 
