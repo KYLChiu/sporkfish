@@ -14,9 +14,9 @@ class LichessBot(ABC):
         Start the Lichess bot, listening to incoming events and playing games accordingly.
     """
 
-    _accept_challenge_variant_type = "standard"
-    _accept_challenge_speed_type = {"rapid", "bullet", "blitz"}
-    _chatline_message_string = "GGWP, hope you had fun playing with Sporkfish!"
+    _ACCEPTED_VARIANTS = ["standard"]
+    _ACCEPTED_TIME_CONTROLS = {"rapid", "bullet", "blitz"}
+    _GAME_FINISHED_MESSAGE = "GGWP, hope you had fun playing with Sporkfish!"
 
     def __init__(self, bot_id: str) -> None:
         """
