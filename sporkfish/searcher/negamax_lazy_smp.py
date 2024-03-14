@@ -5,7 +5,7 @@ import chess
 from pathos.multiprocessing import ProcessPool
 
 from ..board.board import Board
-from ..evaluator import Evaluator
+from ..evaluator.evaluator import Evaluator
 from .negamax import NegamaxSp
 from .searcher_config import SearcherConfig
 
