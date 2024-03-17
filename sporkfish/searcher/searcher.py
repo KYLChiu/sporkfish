@@ -5,9 +5,9 @@ from typing import Optional, Tuple
 import chess
 
 # should be absolute paths - amend in next PR
-from ..board.board import Board
-from ..statistics import Statistics
-from .searcher_config import SearcherConfig
+from sporkfish.board.board import Board
+from sporkfish.searcher.searcher_config import SearcherConfig
+from sporkfish.statistics import Statistics
 
 
 class Searcher(ABC):

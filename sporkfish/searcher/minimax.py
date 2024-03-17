@@ -7,19 +7,18 @@ from typing import Optional, Tuple
 import chess
 import stopit
 
-
-from ..board.board import Board
-from ..evaluator.evaluator import Evaluator
-from ..transposition_table import TranspositionTable
-from ..zobrist_hasher import ZobristHasher
-from .move_ordering.composite_heuristic import CompositeHeuristic
-from .move_ordering.killer_move_heuristic import KillerMoveHeuristic
-from .move_ordering.move_order_heuristic import MoveOrderHeuristic
-from .move_ordering.move_order_config import MoveOrderMode
-from .move_ordering.move_orderer import MoveOrderer
-from .move_ordering.mvv_lva_heuristic import MvvLvaHeuristic
-from .searcher import Searcher
-from .searcher_config import SearcherConfig
+from sporkfish.board.board import Board
+from sporkfish.evaluator.evaluator import Evaluator
+from sporkfish.searcher.move_ordering.composite_heuristic import CompositeHeuristic
+from sporkfish.searcher.move_ordering.killer_move_heuristic import KillerMoveHeuristic
+from sporkfish.searcher.move_ordering.move_order_config import MoveOrderMode
+from sporkfish.searcher.move_ordering.move_order_heuristic import MoveOrderHeuristic
+from sporkfish.searcher.move_ordering.move_orderer import MoveOrderer
+from sporkfish.searcher.move_ordering.mvv_lva_heuristic import MvvLvaHeuristic
+from sporkfish.searcher.searcher import Searcher
+from sporkfish.searcher.searcher_config import SearcherConfig
+from sporkfish.transposition_table import TranspositionTable
+from sporkfish.zobrist_hasher import ZobristHasher
 
 
 class MiniMaxVariants(Searcher, ABC):

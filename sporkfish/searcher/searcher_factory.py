@@ -1,8 +1,8 @@
-from ..evaluator.evaluator import Evaluator
-from .negamax import NegamaxSp
-from .negamax_lazy_smp import NegaMaxLazySmp
-from .searcher import Searcher
-from .searcher_config import SearcherConfig, SearchMode
+from sporkfish.evaluator.evaluator import Evaluator
+from sporkfish.searcher.negamax import NegamaxSp
+from sporkfish.searcher.negamax_lazy_smp import NegaMaxLazySmp
+from sporkfish.searcher.searcher import Searcher
+from sporkfish.searcher.searcher_config import SearcherConfig, SearchMode
 
 
 class SearcherFactory:

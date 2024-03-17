@@ -1,7 +1,7 @@
 from typing import Type
 
-from .board import Board
-from .board_py_chess import BoardPyChess
+from sporkfish.board.board import Board
+from sporkfish.board.board_py_chess import BoardPyChess
 
 
 class BoardFactory:

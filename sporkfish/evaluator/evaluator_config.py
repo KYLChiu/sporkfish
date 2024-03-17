@@ -1,6 +1,6 @@
 from enum import Enum
 
-from ..configurable import Configurable
+from sporkfish.configurable import Configurable
 
 
 class EvaluatorMode(Enum):
