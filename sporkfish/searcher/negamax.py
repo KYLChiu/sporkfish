@@ -2,11 +2,11 @@ from typing import Optional, Tuple
 
 import chess
 
-from ..board.board import Board
-from ..evaluator.evaluator import Evaluator
-from .minimax import MiniMaxVariants
-from .move_ordering.move_orderer import MoveOrderer
-from .searcher_config import SearcherConfig
+from sporkfish.board.board import Board
+from sporkfish.evaluator.evaluator import Evaluator
+from sporkfish.searcher.minimax import MiniMaxVariants
+from sporkfish.searcher.move_ordering.move_orderer import MoveOrderer
+from sporkfish.searcher.searcher_config import SearcherConfig
 
 
 class NegamaxSp(MiniMaxVariants):

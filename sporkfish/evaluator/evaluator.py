@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
 from typing import Dict
-from ..board.board import Board
+
 import chess
+
+from sporkfish.board.board import Board
 
 
 class Evaluator(ABC):

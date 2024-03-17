@@ -3,10 +3,10 @@ from typing import Optional
 
 import chess
 
-from .board.board import Board
-from .endgame_tablebase import EndgameTablebase
-from .opening_book import OpeningBook
-from .searcher.searcher import Searcher
+from sporkfish.board.board import Board
+from sporkfish.endgame_tablebase import EndgameTablebase
+from sporkfish.opening_book import OpeningBook
+from sporkfish.searcher.searcher import Searcher
 
 
 class Engine:

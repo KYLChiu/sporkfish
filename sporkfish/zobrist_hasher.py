@@ -2,7 +2,7 @@ import chess
 import numpy as np
 from numba import njit
 
-from .board.board import Board
+from sporkfish.board.board import Board
 
 
 class BoardInfo:

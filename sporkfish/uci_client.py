@@ -3,17 +3,16 @@ import sys
 from enum import Enum, auto
 
 from config import load_config
-
-from .board.board import Board
-from .board.board_factory import BoardFactory, BoardPyChess
-from .endgame_tablebase import EndgameTablebase, EndgameTablebaseConfig
-from .engine import Engine
-from .evaluator.evaluator_config import EvaluatorConfig
-from .evaluator.evaluator_factory import EvaluatorFactory
-from .opening_book import OpeningBook, OpeningBookConfig
-from .searcher.searcher_config import SearcherConfig
-from .searcher.searcher_factory import SearcherFactory
-from .time_manager import TimeManager, TimeManagerConfig
+from sporkfish.board.board import Board
+from sporkfish.board.board_factory import BoardFactory, BoardPyChess
+from sporkfish.endgame_tablebase import EndgameTablebase, EndgameTablebaseConfig
+from sporkfish.engine import Engine
+from sporkfish.evaluator.evaluator_config import EvaluatorConfig
+from sporkfish.evaluator.evaluator_factory import EvaluatorFactory
+from sporkfish.opening_book import OpeningBook, OpeningBookConfig
+from sporkfish.searcher.searcher_config import SearcherConfig
+from sporkfish.searcher.searcher_factory import SearcherFactory
+from sporkfish.time_manager import TimeManager, TimeManagerConfig
 
 
 class UCIClient:

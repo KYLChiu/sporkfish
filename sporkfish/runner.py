@@ -2,9 +2,9 @@ import inspect
 import logging
 from enum import Enum
 
-from .configurable import Configurable
-from .lichess_bot.lichess_bot_berserk import LichessBotBerserk
-from .uci_client import UCIClient
+from sporkfish.configurable import Configurable
+from sporkfish.lichess_bot.lichess_bot_berserk import LichessBotBerserk
+from sporkfish.uci_client import UCIClient
 
 
 class RunMode(Enum):

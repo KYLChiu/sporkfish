@@ -1,6 +1,6 @@
-from .evaluator import Evaluator
-from .evaluator_config import EvaluatorConfig, EvaluatorMode
-from .pesto import Pesto
+from sporkfish.evaluator.evaluator import Evaluator
+from sporkfish.evaluator.evaluator_config import EvaluatorConfig, EvaluatorMode
+from sporkfish.evaluator.pesto import Pesto
 
 
 class EvaluatorFactory:
