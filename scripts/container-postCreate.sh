@@ -1,6 +1,7 @@
 #/bin/bash
 
 # Run pip install
+python -m ensurepip --upgrade
 pip install -r requirements.txt
 
 # Install pre-commit and pre-push
