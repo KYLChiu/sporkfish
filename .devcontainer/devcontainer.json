@@ -14,7 +14,7 @@
     // Use 'postCreateCommand' to run commands after the container is created.
     "postCreateCommand": "./scripts/container-postCreate.sh",
     // Use 'postStartCommand' to run commands every time the container starts.
-    // "postStartCommand": "./scripts/container-postStart.sh",
+    "postStartCommand": "./scripts/container-postStart.sh",
     // Configure tool-specific properties.
     "customizations": {
         "vscode": {
