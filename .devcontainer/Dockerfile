@@ -11,7 +11,7 @@ RUN apt update -y && \
     gpg-agent \
     python3-pip
 RUN add-apt-repository ppa:deadsnakes/ppa
-RUN apt update -y && apt-get update -y && \
+RUN apt update -y && \
     rm -rf /var/lib/apt/lists/* && \
     apt install -y --no-install-recommends python3.12 python3.12-dev python3.12-venv
 
