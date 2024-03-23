@@ -2,6 +2,7 @@ FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+RUN apt-get update -y
 RUN apt update -y && \
     apt install -y --no-install-recommends \
     bash \
@@ -11,9 +12,10 @@ RUN apt update -y && \
     gpg-agent \
     python3-pip
 RUN add-apt-repository ppa:deadsnakes/ppa
-RUN apt update -y && \
-    rm -rf /var/lib/apt/lists/* && \
-    apt install -y --no-install-recommends python3.12 python3.12-dev python3.12-venv
+RUN apt install -y --no-install-recommends --fix-missing \
+    python3.12 \
+    python3.12-dev \
+    python3.12-venv
 
 RUN echo "alias python='python3.12'" >> ~/.bashrc
 RUN echo "alias python3='python3.12'" >> ~/.bashrc
