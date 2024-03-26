@@ -6,9 +6,17 @@ from typing import Optional, Tuple
 
 import chess
 import chess.syzygy
+import requests
 
 from .board.board import Board
 from .configurable import Configurable
+
+# TODO: understand what DTZ means, board function, reread query method
+# query tablebase with our current board position given the legal moves that we can make.
+# we iterate all the legal moves, turning it into a board position and parse it and query the tablebase in order to find the best move
+# during this iteration, we always compute best category, best dtz and best move as metrics to compare and contrast between each moves
+# this python file contains methods to categorize dtz, and based on the category, compare the 2 dtz to get the best btz and the move associated with it
+# how to do effective switching between 2 ways of getting dtz
 
 
 class EndgameTablebaseConfig(Configurable):
@@ -22,6 +30,50 @@ class EndgameTablebaseConfig(Configurable):
         :type endgame_tablebase_path: Optional[str]
         """
         self.endgame_tablebase_path = endgame_tablebase_path
+
+
+class LilaTablebase:
+    base_url = "http://tablebase.lichess.ovh/standard?fen="
+
+    def query_dtz_bestmove(board_fen: str) -> tuple | None:
+        full_url = LilaTablebase.base_url + board_fen
+        try:
+            response = requests.get(full_url).json()
+            best_move = (
+                chess.Move.from_uci(response["moves"][0]["uci"])
+                if len(response["moves"]) > 0
+                else None
+            )
+            # the json from lila db gives us our best moves and probes opponent's dtz
+            # refer to https://github.com/lichess-org/lila-tablebase
+            # our dtz is the inversion of that
+            dtz = (
+                -opponent_dtz if (opponent_dtz := response["moves"][0]["dtz"]) else None
+            )
+            logging.info(
+                "Lila query succeeded. DTZ value retrieved: {dtz}. Best move: {best_move}"
+            )
+            return (dtz, best_move)
+        except ConnectionError as _:
+            logging.warning("Lila query failed, skipping")
+            return None
+
+    def query_dtz(board_fen: str) -> int | None:
+        full_url = LilaTablebase.base_url + board_fen
+        try:
+            response = requests.get(full_url).json()
+            # if we cant find dtz in our local db based on our board position after our legal move
+            # we query lila db to see if it exists
+            # the board position will be after our legal move and therefore dtz obtained is opponent's
+            # our dtz is the inversion of that
+            dtz = -opponent_dtz if (opponent_dtz := response["dtz"]) else None
+            logging.info(
+                "Lila query succeeded. DTZ value retrieved: {dtz}. Best move: {best_move}"
+            )
+            return dtz
+        except ConnectionError as _:
+            logging.warning("Lila query failed, skipping")
+            return None
 
 
 class EndgameTablebase:
@@ -248,16 +300,48 @@ class EndgameTablebase:
                 # b) moreover the position may not exist within the Syzygy tablebase, see e.g.
                 #    5k2/8/8/8/2B5/8/3B4/3K4 w - - 2 2, move=c4d8 doesn't exist in the tablebase.
                 dtz = -opp_dtz if (opp_dtz := self._db.get_dtz(cboard)) else None
+                board_fen = cboard.fen()
                 cboard.pop()
 
-                if not dtz:
-                    continue
+                match dtz:
+                    case int() | float() as dtz:
+                        category = self._categorize_dtz(dtz)
+                        best_category, best_dtz, best_move = self._pick_move(
+                            category, dtz, move, best_category, best_dtz, best_move
+                        )
+                    case _:
+                        if LilaTablebase.query_dtz(board_fen) is not None:
+                            (lila_dtz, lila_bestmove) = LilaTablebase.query_dtz(
+                                board_fen
+                            )
+                            category = self._categorize_dtz(lila_dtz)
+                            best_category, best_dtz, best_move = self._pick_move(
+                                category,
+                                lila_dtz,
+                                lila_bestmove,
+                                best_category,
+                                best_dtz,
+                                best_move,
+                            )
+                        else:
+                            continue
 
-                category = self._categorize_dtz(dtz)
-                best_category, best_dtz, best_move = self._pick_move(
-                    category, dtz, move, best_category, best_dtz, best_move
+            # compare with what lila db thinks is the best move
+            if LilaTablebase.query_dtz_bestmove(board.fen()) is not None:
+                (lila_dtz, lila_bestmove) = LilaTablebase.query_dtz_bestmove(
+                    board.fen()
                 )
-
-            return best_move
+                category = self._categorize_dtz(lila_dtz)
+                best_category, best_dtz, best_move = self._pick_move(
+                    category,
+                    lila_dtz,
+                    lila_bestmove,
+                    best_category,
+                    best_dtz,
+                    best_move,
+                )
+                return best_move
+            else:
+                return best_move
 
         return None

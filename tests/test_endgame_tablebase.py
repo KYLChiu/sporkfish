@@ -3,7 +3,11 @@ from init_board_helper import board_setup
 from perf_helper import run_perf_analytics
 
 from sporkfish.board.board_factory import BoardPyChess
-from sporkfish.endgame_tablebase import EndgameTablebase, EndgameTablebaseConfig
+from sporkfish.endgame_tablebase import (
+    EndgameTablebase,
+    EndgameTablebaseConfig,
+    LilaTablebase,
+)
 
 
 def move_from_et_query(fen: str):
@@ -56,6 +60,28 @@ class TestEndgameTablebase:
         # Cannot check dtz(move) > dtz(move2), this isn't public API unfortunately
         move2 = et.query(board)
         assert move2
+
+    def test_lila_dtz_bestmove(self):
+        test_fen = "8/4k3/8/8/8/8/3BB3/3K4 w - - 0 1"
+        (lila_dtz, lila_bestmove) = LilaTablebase.query_dtz_bestmove(test_fen)
+        if LilaTablebase.query_dtz_bestmove(test_fen) is not None:
+            assert isinstance(lila_dtz, int)
+            assert lila_bestmove is not None
+
+    def test_lila_dtz(self):
+        test_fen = "8/4k3/8/8/8/8/3BB3/3K4 w - - 0 1"
+        lila_dtz = LilaTablebase.query_dtz(test_fen)
+        if LilaTablebase.query_dtz(test_fen) is not None:
+            assert isinstance(lila_dtz, int)
+
+    # def test_lila_query_switch(self):
+    #     # FEN string that doesnt exist in local
+    #     test_fen = "5k2/8/8/8/2B5/8/3B4/3K4 w - - 2 2"
+    #     board = BoardPyChess()
+    #     board.set_fen(test_fen)
+    #     et = EndgameTablebase(EndgameTablebaseConfig("data/endgame_tablebases"))
+
+    # TODO: test lila response when dtz from local is not available
 
 
 @pytest.mark.parametrize(
