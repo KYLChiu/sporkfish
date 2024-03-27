@@ -2,16 +2,26 @@ import pytest
 from init_board_helper import board_setup, init_board, score_fen
 
 from sporkfish.board.board_factory import BoardFactory, BoardPyChess
-from sporkfish.evaluator import Evaluator
+from sporkfish.evaluator.evaluator_config import EvaluatorConfig, EvaluatorMode
+from sporkfish.evaluator.evaluator_factory import EvaluatorFactory
+from sporkfish.evaluator.pesto import Pesto as Evaluator
 from sporkfish.searcher.move_ordering.move_order_config import (
-    MoveOrderMode,
     MoveOrderConfig,
+    MoveOrderMode,
 )
 from sporkfish.searcher.move_ordering.move_orderer import MoveOrderer
 from sporkfish.searcher.move_ordering.mvv_lva_heuristic import MvvLvaHeuristic
 from sporkfish.searcher.searcher import Searcher
 from sporkfish.searcher.searcher_config import SearcherConfig
 from sporkfish.searcher.searcher_factory import SearcherFactory
+
+
+def _evaluator(
+    evaluator_cfg: EvaluatorConfig = EvaluatorConfig(
+        evaluator_mode=EvaluatorMode.PESTO
+    ),
+) -> Evaluator:
+    return EvaluatorFactory.create(evaluator_cfg)
 
 
 def _searcher_with_fen(
@@ -35,6 +45,7 @@ def _searcher_with_fen(
             enable_aspiration_windows=enable_aspiration_windows,
             move_order_config=move_order_config,
         ),
+        evaluator=_evaluator(),
     )
     board.set_fen(fen)
     score, move = s.search(board)
@@ -371,7 +382,8 @@ def _init_searcher(
         SearcherConfig(
             max_depth,
             move_order_config=MoveOrderConfig(move_order_mode=move_order_mode),
-        )
+        ),
+        evaluator=_evaluator(),
     )
 
 

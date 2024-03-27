@@ -1,4 +1,4 @@
-from .configurable import Configurable
+from sporkfish.configurable import Configurable
 
 
 class TimeManagerConfig(Configurable):
