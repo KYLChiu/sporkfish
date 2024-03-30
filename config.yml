@@ -1,6 +1,9 @@
 RunConfig:
   mode: LICHESS # running mode, choose from: LICHESS, UCI
 
+EvaluatorConfig:
+  evaluator_mode: PESTO # mode of evaluation, choice of: SIMPLE, PESTO
+
 SearcherConfig:
   max_depth: 6 # maximum depth for negamax search
   search_mode: SINGLE_PROCESS # mode of search, choice of: SINGLE_PROCESS, LAZY_SMP

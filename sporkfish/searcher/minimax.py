@@ -7,19 +7,18 @@ from typing import Optional, Tuple
 import chess
 import stopit
 
-
-from ..board.board import Board
-from ..evaluator import Evaluator
-from ..transposition_table import TranspositionTable
-from ..zobrist_hasher import ZobristHasher, ZobristStateInfo
-from .move_ordering.composite_heuristic import CompositeHeuristic
-from .move_ordering.killer_move_heuristic import KillerMoveHeuristic
-from .move_ordering.move_order_heuristic import MoveOrderHeuristic
-from .move_ordering.move_order_config import MoveOrderMode
-from .move_ordering.move_orderer import MoveOrderer
-from .move_ordering.mvv_lva_heuristic import MvvLvaHeuristic
-from .searcher import Searcher
-from .searcher_config import SearcherConfig
+from sporkfish.board.board import Board
+from sporkfish.evaluator.evaluator import Evaluator
+from sporkfish.searcher.move_ordering.composite_heuristic import CompositeHeuristic
+from sporkfish.searcher.move_ordering.killer_move_heuristic import KillerMoveHeuristic
+from sporkfish.searcher.move_ordering.move_order_config import MoveOrderMode
+from sporkfish.searcher.move_ordering.move_order_heuristic import MoveOrderHeuristic
+from sporkfish.searcher.move_ordering.move_orderer import MoveOrderer
+from sporkfish.searcher.move_ordering.mvv_lva_heuristic import MvvLvaHeuristic
+from sporkfish.searcher.searcher import Searcher
+from sporkfish.searcher.searcher_config import SearcherConfig
+from sporkfish.transposition_table import TranspositionTable
+from sporkfish.zobrist_hasher import ZobristStateInfo
 
 
 class MiniMaxVariants(Searcher, ABC):
@@ -154,7 +153,7 @@ class MiniMaxVariants(Searcher, ABC):
         """
         if self._searcher_config.enable_aspiration_windows and depth > 1:
             # We leave configuration for window_size to another PR
-            window_size = self.evaluator.MG_PIECE_VALUES[chess.PAWN] // 2
+            window_size = self.evaluator.piece_values()[chess.PAWN] // 2
             alpha = prev_score - window_size
             beta = prev_score + window_size
             score, move = self._start_search_from_root(
@@ -310,7 +309,7 @@ class MiniMaxVariants(Searcher, ABC):
             # Half a pawn margin is very aggressive
             if (
                 self._evaluator.evaluate(board)
-                + depth * self.evaluator.MG_PIECE_VALUES[chess.PAWN] // 2
+                + depth * self.evaluator.piece_values()[chess.PAWN] // 2
                 <= alpha
             ):
                 return True
@@ -351,8 +350,8 @@ class MiniMaxVariants(Searcher, ABC):
         return (
             True
             if stand_pat
-            + self.evaluator.MG_PIECE_VALUES[captured_piece]
-            + self.evaluator.DELTA
+            + self.evaluator.piece_values()[captured_piece]
+            + self.evaluator.delta()
             < alpha
             else False
         )

@@ -1,16 +1,12 @@
-from enum import Enum
+from typing import Dict
 
 import chess
 
-from .board.board import Board
+from sporkfish.board.board import Board
+from sporkfish.evaluator.evaluator import Evaluator
 
 
-class EvaluateMode(Enum):
-    # Piece-Square Table Only (PeSTO) evaluation
-    PESTO = "PESTO"
-
-
-class Evaluator:
+class Pesto(Evaluator):
     """
     A class responsible for evaluating the chess position.
     Using Piece-Square Table Only (PeSTO) evaluation at the moment, see:
@@ -258,3 +254,21 @@ class Evaluator:
         eg_phase = 24 - mg_phase
 
         return ((mg_score * mg_phase) + (eg_score * eg_phase)) / 24
+
+    def piece_values(self) -> Dict[chess.PieceType, float]:
+        """
+        Return the piece values for the evaluator.
+
+        :return: The piece values.
+        :rtype: Dict[chess.PieceType, float]
+        """
+        return self.MG_PIECE_VALUES
+
+    def delta(self) -> float:
+        """
+        Return the delta threshold for futility pruning for the evaluator.
+
+        :return: The delta.
+        :rtype: float
+        """
+        return self.DELTA

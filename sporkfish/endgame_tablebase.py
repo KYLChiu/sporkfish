@@ -7,8 +7,8 @@ from typing import Optional, Tuple
 import chess
 import chess.syzygy
 
-from .board.board import Board
-from .configurable import Configurable
+from sporkfish.board.board import Board
+from sporkfish.configurable import Configurable
 
 
 class EndgameTablebaseConfig(Configurable):

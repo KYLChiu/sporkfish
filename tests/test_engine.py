@@ -3,12 +3,14 @@ import time
 from sporkfish import engine, opening_book
 from sporkfish.board.board_factory import BoardFactory, BoardPyChess
 from sporkfish.endgame_tablebase import EndgameTablebase, EndgameTablebaseConfig
+from sporkfish.evaluator.pesto import Pesto
 from sporkfish.searcher.searcher_config import SearcherConfig
 from sporkfish.searcher.searcher_factory import SearcherFactory
 
 
 def create_engine(depth: int) -> engine.Engine:
-    search = SearcherFactory.create(SearcherConfig(depth))
+    evaluator = Pesto()
+    search = SearcherFactory.create(SearcherConfig(depth), evaluator)
     ob = opening_book.OpeningBook()
     et = EndgameTablebase(EndgameTablebaseConfig("data/endgame_tablebases"))
     eng = engine.Engine(search, ob, et)

@@ -5,7 +5,7 @@ import chess
 import numpy as np
 from numba import njit
 
-from .board.board import Board
+from sporkfish.board.board import Board
 
 _int64_min_val = np.iinfo(np.int64).min
 _int64_max_val = np.iinfo(np.int64).max
