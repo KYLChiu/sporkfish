@@ -330,7 +330,7 @@ class TestQuiescence:
         s = _init_searcher
 
         alpha, beta = 1.1, 2.3
-        result = s._quiescence(board, 0, alpha, beta)
+        result = s._quiescence(board, 0, alpha, beta, None)
         assert result == score_fen(fen_string)
 
     def test_quiescence_depth_2_beta(
@@ -343,7 +343,7 @@ class TestQuiescence:
         board = init_board(fen_string)
         s = _init_searcher
         alpha, beta = 0, -1e8
-        result = s._quiescence(board, 2, alpha, beta)
+        result = s._quiescence(board, 2, alpha, beta, None)
         assert result == beta
 
     def test_quiescence_depth_1_alpha(
@@ -356,7 +356,7 @@ class TestQuiescence:
         board = init_board(fen_string)
         s = _init_searcher
         alpha, beta = 1e8, 1e9
-        result = s._quiescence(board, 1, alpha, beta)
+        result = s._quiescence(board, 1, alpha, beta, None)
 
         legal_moves = (move for move in board.legal_moves if board.is_capture(move))
         mo_heuristic = MvvLvaHeuristic(board)
@@ -420,8 +420,8 @@ class TestNegamax:
         s = _init_searcher
 
         alpha, beta = param[0], param[1]
-        result = s._negamax(board, 0, alpha, beta)
-        assert result == s._quiescence(board, 4, alpha, beta)
+        result = s._negamax(board, 0, alpha, beta, None)
+        assert result == s._quiescence(board, 4, alpha, beta, None)
 
     def test_negamax_depth_1(
         self, _init_searcher: Searcher, fen_string: str, param: list[float, float]
@@ -433,7 +433,7 @@ class TestNegamax:
         s = _init_searcher
 
         alpha, beta = param[0], param[1]
-        result = s._negamax(board, 1, alpha, beta)
+        result = s._negamax(board, 1, alpha, beta, None)
 
         mo_heuristic = MvvLvaHeuristic(board)
         legal_moves = MoveOrderer.order_moves(mo_heuristic, board.legal_moves)
@@ -442,7 +442,7 @@ class TestNegamax:
 
         for move in legal_moves:
             board.push(move)
-            child_value = -s._quiescence(board, 4, -beta, -alpha)
+            child_value = -s._quiescence(board, 4, -beta, -alpha, None)
             board.pop()
 
             value = max(value, child_value)
