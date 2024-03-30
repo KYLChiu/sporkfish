@@ -130,7 +130,7 @@ class ZobristStateInfo:
     :type zobrist_hash: np.int64
     :param ep_file: The file where en passant is possible
     :type ep_file: np.int8
-    :param castling_rights: An array representing castling rights, defaults to np.array([False, False, False, False])
+    :param castling_rights: An array representing castling rights.
     :type castling_rights: np.ndarray
     """
 
