@@ -320,7 +320,7 @@ class TestConsistency:
     ],
 )
 class TestQuiescence:
-    def test_quiescence_search_depth_0(
+    def test_quiescence_depth_0(
         self, _init_searcher: Searcher, fen_string: str
     ) -> None:
         """
@@ -330,10 +330,10 @@ class TestQuiescence:
         s = _init_searcher
 
         alpha, beta = 1.1, 2.3
-        result = s._quiescence_search(board, 0, alpha, beta, None)
+        result = s._quiescence(board, 0, alpha, beta, None)
         assert result == score_fen(fen_string)
 
-    def test_quiescence_search_depth_2_beta(
+    def test_quiescence_depth_2_beta(
         self, _init_searcher: Searcher, fen_string: str
     ) -> None:
         """
@@ -343,10 +343,10 @@ class TestQuiescence:
         board = init_board(fen_string)
         s = _init_searcher
         alpha, beta = 0, -1e8
-        result = s._quiescence_search(board, 2, alpha, beta, None)
+        result = s._quiescence(board, 2, alpha, beta, None)
         assert result == beta
 
-    def test_quiescence_search_depth_1_alpha(
+    def test_quiescence_depth_1_alpha(
         self, _init_searcher: Searcher, fen_string: str
     ) -> None:
         """
@@ -356,7 +356,7 @@ class TestQuiescence:
         board = init_board(fen_string)
         s = _init_searcher
         alpha, beta = 1e8, 1e9
-        result = s._quiescence_search(board, 1, alpha, beta, None)
+        result = s._quiescence(board, 1, alpha, beta, None)
 
         legal_moves = (move for move in board.legal_moves if board.is_capture(move))
         mo_heuristic = MvvLvaHeuristic(board)
@@ -421,7 +421,7 @@ class TestNegamax:
 
         alpha, beta = param[0], param[1]
         result = s._negamax(board, 0, alpha, beta, None)
-        assert result == s._quiescence_search(board, 4, alpha, beta, None)
+        assert result == s._quiescence(board, 4, alpha, beta, None)
 
     def test_negamax_depth_1(
         self, _init_searcher: Searcher, fen_string: str, param: list[float, float]
@@ -442,7 +442,7 @@ class TestNegamax:
 
         for move in legal_moves:
             board.push(move)
-            child_value = -s._quiescence_search(board, 4, -beta, -alpha, None)
+            child_value = -s._quiescence(board, 4, -beta, -alpha, None)
             board.pop()
 
             value = max(value, child_value)

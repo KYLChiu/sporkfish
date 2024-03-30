@@ -172,7 +172,7 @@ class MiniMaxVariants(Searcher, ABC):
             )
         return score, move
 
-    def _quiescence_search(
+    def _quiescence(
         self,
         board: Board,
         depth: int,
@@ -254,7 +254,7 @@ class MiniMaxVariants(Searcher, ABC):
                 if zobrist_state
                 else None
             )
-            score = -self._quiescence_search(
+            score = -self._quiescence(
                 board, depth - 1, -beta, -alpha, child_zobrist_state
             )
             board.pop()

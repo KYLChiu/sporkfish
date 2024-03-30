@@ -44,7 +44,7 @@ class NegamaxSp(MiniMaxVariants):
         # We currently only expect max 4 captures to reach a quiet (non-capturing) position
         # This is not ideal, but otherwise the search becomes incredibly slow
         if depth == 0:
-            return self._quiescence_search(board, 4, alpha, beta, zobrist_state)
+            return self._quiescence(board, 4, alpha, beta, zobrist_state)
 
         # Probe the transposition table for an existing entry
         if zobrist_state and (
