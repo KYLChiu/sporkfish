@@ -18,7 +18,7 @@ from sporkfish.searcher.move_ordering.mvv_lva_heuristic import MvvLvaHeuristic
 from sporkfish.searcher.searcher import Searcher
 from sporkfish.searcher.searcher_config import SearcherConfig
 from sporkfish.transposition_table import TranspositionTable
-from sporkfish.zobrist_hasher import ZobristStateInfo
+from sporkfish.zobrist_hasher import ZobristStateInfo, ZobristHasher
 
 
 class MiniMaxVariants(Searcher, ABC):
