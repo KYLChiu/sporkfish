@@ -5,7 +5,8 @@ from enum import Enum, auto
 from config import load_config
 from sporkfish.board.board import Board
 from sporkfish.board.board_factory import BoardFactory, BoardPyChess
-from sporkfish.endgame_tablebase import EndgameTablebase, EndgameTablebaseConfig
+from sporkfish.endgame_tablebases.composite_endgame_tablebase import CompositeTablebase
+from sporkfish.endgame_tablebases.endgame_tablebase_config import EndgameTablebaseConfig
 from sporkfish.engine import Engine
 from sporkfish.evaluator.evaluator_config import EvaluatorConfig
 from sporkfish.evaluator.evaluator_factory import EvaluatorFactory
@@ -236,7 +237,7 @@ class UCIClient:
         ob = OpeningBook(
             OpeningBookConfig.from_dict(config.get("OpeningBookConfig"))  # type: ignore
         )
-        et = EndgameTablebase(
+        et = CompositeTablebase(
             EndgameTablebaseConfig.from_dict(config.get("EndgameTablebaseConfig"))  # type: ignore
         )
         eng = Engine(search, ob, et)

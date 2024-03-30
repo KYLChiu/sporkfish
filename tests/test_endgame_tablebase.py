@@ -3,7 +3,10 @@ from init_board_helper import board_setup
 from perf_helper import run_perf_analytics
 
 from sporkfish.board.board_factory import BoardPyChess
-from sporkfish.endgame_tablebase import EndgameTablebase, EndgameTablebaseConfig
+from sporkfish.endgame_tablebases.endgame_tablebase import (
+    EndgameTablebase,
+    EndgameTablebaseConfig,
+)
 
 
 def move_from_et_query(fen: str):
