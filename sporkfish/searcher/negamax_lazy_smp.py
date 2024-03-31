@@ -8,7 +8,6 @@ from sporkfish.board.board import Board
 from sporkfish.evaluator.evaluator import Evaluator
 from sporkfish.searcher.negamax import NegamaxSp
 from sporkfish.searcher.searcher_config import SearcherConfig
-from sporkfish.statistics import NodeTypes, Statistics
 
 
 # This doesn't really work yet. Don't use.

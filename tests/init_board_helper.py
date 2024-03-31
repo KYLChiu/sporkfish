@@ -7,7 +7,6 @@ from sporkfish.searcher.move_ordering.move_order_config import (
     MoveOrderConfig,
     MoveOrderMode,
 )
-from sporkfish.searcher.move_ordering.move_orderer import MoveOrderer
 from sporkfish.searcher.searcher_config import SearcherConfig
 from sporkfish.searcher.searcher_factory import SearcherFactory
 

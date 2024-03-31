@@ -17,7 +17,7 @@ from sporkfish.searcher.move_ordering.move_orderer import MoveOrderer
 from sporkfish.searcher.move_ordering.mvv_lva_heuristic import MvvLvaHeuristic
 from sporkfish.searcher.searcher import Searcher
 from sporkfish.searcher.searcher_config import SearcherConfig
-from sporkfish.statistics import NodeTypes, Statistics
+from sporkfish.statistics import NodeTypes
 from sporkfish.transposition_table import TranspositionTable
 from sporkfish.zobrist_hasher import ZobristHasher, ZobristStateInfo
 
@@ -219,6 +219,7 @@ class MiniMaxVariants(Searcher, ABC):
             return stand_pat
 
         if stand_pat >= beta:
+            self._statistics.increment_pruning()
             return beta
 
         if alpha < stand_pat:
@@ -230,9 +231,11 @@ class MiniMaxVariants(Searcher, ABC):
         )
 
         for move in legal_moves:
+            # delta pruning
             if self._searcher_config.enable_delta_pruning and self._delta_pruning(
                 board, move, stand_pat, alpha
             ):
+                self._statistics.increment_pruning()
                 continue
 
             # Get the piece from the originating square and the captured piece

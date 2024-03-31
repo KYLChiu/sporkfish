@@ -7,7 +7,7 @@ from sporkfish.evaluator.evaluator import Evaluator
 from sporkfish.searcher.minimax import MiniMaxVariants
 from sporkfish.searcher.move_ordering.move_orderer import MoveOrderer
 from sporkfish.searcher.searcher_config import SearcherConfig
-from sporkfish.statistics import NodeTypes, Statistics
+from sporkfish.statistics import NodeTypes
 from sporkfish.zobrist_hasher import ZobristStateInfo
 
 
@@ -53,6 +53,7 @@ class NegamaxSp(MiniMaxVariants):
                 zobrist_state.zobrist_hash, depth
             )
         ):
+            self._statistics.increment_nodes_from_tt()
             return tt_entry["score"]  # type: ignore
 
         self._statistics.increment_node_visited(NodeTypes.NEGAMAX)
@@ -234,6 +235,7 @@ class NegamaxSp(MiniMaxVariants):
             alpha = max(alpha, value)
             if alpha >= beta:
                 self._update_killer_moves(move, depth)
+                self._statistics.increment_pruning()
                 break
 
         if zobrist_state:
