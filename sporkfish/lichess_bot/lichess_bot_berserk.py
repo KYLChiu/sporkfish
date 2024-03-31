@@ -9,6 +9,101 @@ from sporkfish.lichess_bot.game_termination_reason import GameTerminationReason
 from sporkfish.lichess_bot.lichess_bot import LichessBot
 
 
+# TODO: I can't get this to work with metaclasses. Maybe in a future PR.
+# The goal is to automatically wrap all functions in berserk.Client so they are retriable.
+class BerserkRetriable:
+    """
+    Interface to interact with Lichess API with retry logic.
+    Wraps the berserk.Client API.
+    """
+
+    # Retry configuration parameters
+    _num_retries = 2
+    _time_to_wait_seconds = 1
+
+    def __init__(self, token: str):
+        """
+        Initialize the Berserk instance with the Lichess API token.
+
+        :param token: The Lichess API token.
+        :type token: str
+        """
+        self._client = berserk.Client(berserk.TokenSession(token))
+        self._set_retries()
+
+    # This is a bit dodgy, but it's the only way to patch the berserk.Client API for now.
+    # The issue is that berserk only contains all its API once initialized, so we can't patch it before.
+    def _set_retries(self) -> None:
+        """
+        Patches all public callable functions from modules in the berserk.Client with retry logic.
+        """
+        for module in (
+            getattr(self._client, name)
+            for name in dir(self._client)
+            if not name.startswith("_")
+        ):
+            for attr_name, attr in inspect.getmembers(module):
+                if not attr_name.startswith("_") and callable(attr):
+                    setattr(module, attr_name, self._retry_decorator(attr))
+
+    def _retry_decorator(
+        self,
+        func: Callable,
+    ) -> Callable:
+        """
+        Wraps a method on the Lichess API with retry logic.
+
+        :param func: The berserk API.
+        :type func: Callable
+        :return: The API wrapped in retry logic.
+        :rtype: Callable
+        """
+
+        @functools.wraps(func)
+        @retry(
+            stop=stop_after_attempt(BerserkRetriable._num_retries),
+            wait=wait_fixed(BerserkRetriable._time_to_wait_seconds),
+            retry=retry_if_exception_type(berserk.exceptions.ResponseError),
+        )
+        def wrapper(
+            *args: Sequence[Any],
+            **kwargs: Mapping[str, Any],
+        ) -> Any:
+            return func(*args, **kwargs)
+
+        return wrapper
+
+
+class GameHandler:
+    """
+    A class representing a game handler for a Lichess game.
+    It contains the game state and methods to interact with the game.
+    """
+
+    @property
+    def client(self) -> berserk.Client:
+        return self._berserk._client
+
+    def __init__(self, game_id, _berserk):
+        """
+        Initialize the GameHandler with a game ID and a BerserkRetriable instance.
+
+        :param game_id: The ID of the game provided by Lichess.
+        :type game_id: str
+        :param _berserk: The BerserkRetriable instance to interact with the Lichess API.
+        :type _berserk: BerserkRetriable
+        """
+        self.game_id = game_id
+        self._berserk = _berserk
+        # Initialize game state
+
+    def stream_game_state(self):
+        return self.client.bots.stream_game_state(self.game_id)
+
+    def make_move(self, best_move):
+        self.client.bots.make_move(self.game_id, best_move)
+
+
 class LichessBotBerserk(LichessBot):
     """
     A class representing a Lichess bot powered by the Sporkfish chess engine.
@@ -27,6 +122,7 @@ class LichessBotBerserk(LichessBot):
         """
         super().__init__(bot_id)
         self._berserk = BerserkRetriable(token)
+        self.active_games = {}  # Store active games
 
     @property
     def client(self) -> berserk.Client:
@@ -74,16 +170,18 @@ class LichessBotBerserk(LichessBot):
         inc_obj = game_state.get(f"{color_str}inc")
         return self._extract_second(time_obj), self._extract_second(inc_obj)
 
-    def _play_move(self, color: int, prev_moves: str, game_id: str, state: Any) -> None:
+    def _play_move(
+        self, game_handler: GameHandler, color: int, prev_moves: str, state: Any
+    ) -> None:
         """
         Set the position and play a move based on the number of moves, color, previous moves, game ID, and state.
 
+        :param game_handler: The game handler for the current game.
+        :type game_handler: GameHandler
         :param color: The color of the player (0 for white, 1 for black).
         :type color: int
         :param prev_moves: The previous moves made in the game.
         :type prev_moves: str
-        :param game_id: The ID of the game.
-        :type game_id: str
         :param state: The current state of the game.
         :type state: Any
         :return: None
@@ -93,13 +191,14 @@ class LichessBotBerserk(LichessBot):
             self._set_position(prev_moves)
             time, inc = self._get_time(color, state)
             best_move = self._get_best_move(color, time, inc)
-            self.client.bots.make_move(game_id, best_move)
+            game_handler.make_move(best_move)
 
     def _handle_states(
         self, game_id: str, states: Iterator[Dict[str, Any]]
     ) -> GameTerminationReason:
         """
-        The main game playing loop, which plays a game based on the given game states.
+        Look for a game with the specified ID and play it. If the game is not found, create a new game.
+        If a game is found, play the game based on the given game states.
 
         :param game_id: The ID of the game on Lichess.
         :type game_id: str
@@ -108,6 +207,12 @@ class LichessBotBerserk(LichessBot):
         :return: The reason for the game termination.
         :rtype: GameTerminationReason
         """
+        if game_id not in self.active_games:
+            self.active_games[game_id] = GameHandler(game_id, self._berserk)
+        game_handler = self.active_games[game_id]
+
+        # Get game states and process initial state
+        states = game_handler.stream_game_state()
         game_full = next(states)
         logging.debug(f"Full game data: {game_full}")
 
