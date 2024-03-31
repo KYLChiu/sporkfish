@@ -56,16 +56,15 @@ class Searcher(ABC):
             else float("nan"),
             "pv": move,  # Incorrect but will do for now
         }
-
         total = 0
         for type in NodeTypes:
             count = self._statistics.nodes_visited[type]
-            fields[f"node {type}"] = count
+            fields[f"Node {type}"] = count
             total += count
-        fields["total nodes visited"] = total
-        fields["nps"] = float(total / elapsed) if elapsed > 0 else 0  # not sure
-        fields["pruning"] = self._statistics.pruned
-        fields["nodes in tt"] = self._statistics.nodes_from_tt
+        fields["Total nodes"] = total
+        fields["Nodes per sec"] = float(total / elapsed) if elapsed > 0 else 0 
+        fields["Num of Pruning"] = self._statistics.pruned
+        fields["Nodes from TT"] = self._statistics.nodes_from_tt
 
         info_str = " ".join(f"{k} {v}" for k, v in fields.items())
         logging.info(f"info {info_str}")
