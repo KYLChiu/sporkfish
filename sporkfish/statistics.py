@@ -14,9 +14,8 @@ class Statistics:
     def __init__(self):
         """
         Initialize the Statistics object.
-
-        Attributes:
-        - nodes_visited (Value): The number of nodes visited. Shared across processes.
+        Upon initialization, sets the counts of visited nodes, pruned nodes, 
+        and nodes stored in the transposition table to zero.
         """
         self._nodes_visited = {
             NodeTypes.NEGAMAX: 0,
@@ -28,57 +27,105 @@ class Statistics:
 
     def increment_node_visited(self, visited_node_type: NodeTypes, count: int = 1) -> None:
         """
-        Increment the nodes_visited count.
+        Increment the count of visited nodes of a specified type.
 
-        Parameters:
-        - count (int): The number of nodes to increment the count by. Default is 1.
+        :param visited_node_type: The type of node being visited.
+        :type visited_node_type: NodeTypes
+        :param count: The number of nodes to increment the count by. Default is 1.
+        :type count: int
+        :return: None
+        :rtype: None
         """
         self._nodes_visited[visited_node_type] += count
 
     def increment_pruning(self, count: int = 1) -> None:
         """
-        xxx
+        Increments the pruning count by the specified amount.
+
+        :param count: The amount by which to increment the pruning count (default is 1).
+        :type count: int
+
+        :return: None
+        :rtype: None
         """
         self._pruned += count
 
     def increment_nodes_in_tt(self, count: int = 1) -> None:
         """
-        xxx
+        Increments the nodes in TT count by the specified amount.
+
+        :param count: The amount by which to increment the pruning count (default is 1).
+        :type count: int
+
+        :return: None
+        :rtype: None
         """
         self._nodes_in_tt += count
 
     def reset_node_visited(self, default_val = 0) -> None:
         """
-        Reset the statistics by setting nodes_visited to 0 
-        and updating start_time to the current time. ???
+        Reset the statistics by setting nodes_visited to a default value.
+
+        :param default_val: The default value to set nodes_visited to (default is 0).
+        :type default_val: int
+
+        :return: None
+        :rtype: None
         """
         for key in self._nodes_visited.keys():
             self._nodes_visited[key] = default_val
 
     def reset_pruning(self, default_val = 0) -> None:
+        """
+        Reset the pruning count to a default value.
+
+        :param default_val: The default value to set pruning count to (default is 0).
+        :type default_val: int
+
+        :return: None
+        :rtype: None
+        """
         self._pruned = default_val
 
     def reset_nodes_in_tt(self, default_val = 0) -> None:
+        """
+        Reset the nodes in TT count to a default value.
+
+        :param default_val: The default value to set nodes in TT count to (default is 0).
+        :type default_val: int
+
+        :return: None
+        :rtype: None
+        """
         self._nodes_in_tt = default_val
 
     @property
     def pruned(self) -> int:
         """
-        xxx
+        Returns the count of pruned nodes.
+
+        :return: The count of pruned nodes.
+        :rtype: int
         """
         return self._pruned
     
     @property
     def nodes_in_tt(self) -> int:
         """
-        xxx
+        Returns the count of nodes stored in the transposition table.
+
+        :return: The count of nodes stored in the transposition table.
+        :rtype: int
         """
         return self._nodes_in_tt
     
     @property
     def nodes_visited(self) -> Dict[NodeTypes, int]:
         """
-        dda
+        Returns a dictionary containing the count of visited nodes for different node types.
+
+        :return: A dictionary containing the count of visited nodes for different node types.
+        :rtype: dict
         """
         return self._nodes_visited
 
