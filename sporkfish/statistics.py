@@ -14,18 +14,20 @@ class Statistics:
     def __init__(self):
         """
         Initialize the Statistics object.
-        Upon initialization, sets the counts of visited nodes, pruned nodes, 
+        Upon initialization, sets the counts of visited nodes, pruned nodes,
         and nodes stored in the transposition table to zero.
         """
         self._nodes_visited = {
             NodeTypes.NEGAMAX: 0,
             NodeTypes.NEGAMAX_LAZY_SMP: 0,
-            NodeTypes.QUIESCENSE: 0
+            NodeTypes.QUIESCENSE: 0,
         }
         self._pruned = 0
         self._nodes_in_tt = 0
 
-    def increment_node_visited(self, visited_node_type: NodeTypes, count: int = 1) -> None:
+    def increment_node_visited(
+        self, visited_node_type: NodeTypes, count: int = 1
+    ) -> None:
         """
         Increment the count of visited nodes of a specified type.
 
@@ -38,6 +40,7 @@ class Statistics:
         """
         self._nodes_visited[visited_node_type] += count
 
+    # TODO: enrich to record types of pruning
     def increment_pruning(self, count: int = 1) -> None:
         """
         Increments the pruning count by the specified amount.
@@ -50,7 +53,7 @@ class Statistics:
         """
         self._pruned += count
 
-    def increment_nodes_in_tt(self, count: int = 1) -> None:
+    def increment_nodes_from_tt(self, count: int = 1) -> None:
         """
         Increments the nodes in TT count by the specified amount.
 
@@ -62,7 +65,7 @@ class Statistics:
         """
         self._nodes_in_tt += count
 
-    def reset_node_visited(self, default_val = 0) -> None:
+    def reset_node_visited(self, default_val=0) -> None:
         """
         Reset the statistics by setting nodes_visited to a default value.
 
@@ -75,7 +78,7 @@ class Statistics:
         for key in self._nodes_visited.keys():
             self._nodes_visited[key] = default_val
 
-    def reset_pruning(self, default_val = 0) -> None:
+    def reset_pruning(self, default_val=0) -> None:
         """
         Reset the pruning count to a default value.
 
@@ -87,7 +90,7 @@ class Statistics:
         """
         self._pruned = default_val
 
-    def reset_nodes_in_tt(self, default_val = 0) -> None:
+    def reset_nodes_from_tt(self, default_val=0) -> None:
         """
         Reset the nodes in TT count to a default value.
 
@@ -108,17 +111,15 @@ class Statistics:
         :rtype: int
         """
         return self._pruned
-    
-    @property
-    def nodes_in_tt(self) -> int:
-        """
-        Returns the count of nodes stored in the transposition table.
 
-        :return: The count of nodes stored in the transposition table.
+    @property
+    def nodes_from_tt(self) -> int:
+        """
+        :return: The count of nodes returned from the transposition table.
         :rtype: int
         """
         return self._nodes_in_tt
-    
+
     @property
     def nodes_visited(self) -> Dict[NodeTypes, int]:
         """
@@ -128,4 +129,3 @@ class Statistics:
         :rtype: dict
         """
         return self._nodes_visited
-

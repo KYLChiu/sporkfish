@@ -17,8 +17,9 @@ from sporkfish.searcher.move_ordering.move_orderer import MoveOrderer
 from sporkfish.searcher.move_ordering.mvv_lva_heuristic import MvvLvaHeuristic
 from sporkfish.searcher.searcher import Searcher
 from sporkfish.searcher.searcher_config import SearcherConfig
+from sporkfish.statistics import NodeTypes, Statistics
 from sporkfish.transposition_table import TranspositionTable
-from sporkfish.zobrist_hasher import ZobristStateInfo, ZobristHasher
+from sporkfish.zobrist_hasher import ZobristHasher, ZobristStateInfo
 
 
 class MiniMaxVariants(Searcher, ABC):
@@ -207,9 +208,10 @@ class MiniMaxVariants(Searcher, ABC):
         if zobrist_state and (
             tt_entry := self._transposition_table.probe(zobrist_state.zobrist_hash, 0)
         ):
+            self._statistics.increment_nodes_from_tt()
             return tt_entry["score"]  # type: ignore
 
-        self._statistics.increment()
+        self._statistics.increment_node_visited(NodeTypes.QUIESCENSE)
 
         stand_pat = self._evaluator.evaluate(board)
 
@@ -424,7 +426,7 @@ class MiniMaxVariants(Searcher, ABC):
         for depth in range(1, self._searcher_config.max_depth + 1):
             new_board = copy.deepcopy(board)
 
-            self._statistics.reset()
+            self._statistics.reset_node_visited()
 
             time_left = timeout
             new_score, new_move, elapsed, error_code = self._timeoutable_search(

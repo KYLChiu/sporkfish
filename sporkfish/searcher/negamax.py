@@ -7,6 +7,7 @@ from sporkfish.evaluator.evaluator import Evaluator
 from sporkfish.searcher.minimax import MiniMaxVariants
 from sporkfish.searcher.move_ordering.move_orderer import MoveOrderer
 from sporkfish.searcher.searcher_config import SearcherConfig
+from sporkfish.statistics import NodeTypes, Statistics
 from sporkfish.zobrist_hasher import ZobristStateInfo
 
 
@@ -54,13 +55,14 @@ class NegamaxSp(MiniMaxVariants):
         ):
             return tt_entry["score"]  # type: ignore
 
-        self._statistics.increment()
+        self._statistics.increment_node_visited(NodeTypes.NEGAMAX)
 
         # Null move pruning - reduce the search space by trying a null move,
         # then seeing if the score of the subtree search is still high enough to cause a beta cutoff
         if self._searcher_config.enable_null_move_pruning and self._null_move_pruning(
             board, depth, alpha, beta
         ):
+            self._statistics.increment_pruning()
             return beta
 
         # Move ordering
@@ -87,10 +89,12 @@ class NegamaxSp(MiniMaxVariants):
             board.push(move)
 
             # Futility pruning
-            if self._searcher_config.enable_futility_pruning and self._futility_pruning(
-                board, depth, capture, move, alpha
+            if (
+                self._searcher_config.enable_futility_pruning
+                and self._futility_pruning(board, depth, capture, move, alpha)
             ):
                 board.pop()
+                self._statistics.increment_pruning()
                 continue
 
             # Update the Zobrist hash
@@ -181,7 +185,7 @@ class NegamaxSp(MiniMaxVariants):
         """
         value = -float("inf")
         best_move = chess.Move.null()
-        self._statistics.increment()
+        self._statistics.increment_node_visited(NodeTypes.NEGAMAX)
 
         zobrist_state = (
             self._zobrist_hash.full_zobrist_hash(board)
@@ -250,6 +254,5 @@ class NegamaxSp(MiniMaxVariants):
         :type timeout: Optional[float]
         :rtype: Tuple[float, Move]
         """
-
         score, move = self._iterative_deepening_search(board, timeout)
         return score, move

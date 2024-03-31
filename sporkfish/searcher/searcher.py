@@ -7,7 +7,7 @@ import chess
 # should be absolute paths - amend in next PR
 from sporkfish.board.board import Board
 from sporkfish.searcher.searcher_config import SearcherConfig
-from sporkfish.statistics import Statistics
+from sporkfish.statistics import NodeTypes, Statistics
 
 
 class Searcher(ABC):
@@ -25,8 +25,7 @@ class Searcher(ABC):
         """
 
         self._searcher_config = searcher_config
-        self._stats = 0
-        self._statistics = Statistics(self._stats)
+        self._statistics = Statistics()
         self._dict: dict = dict()
 
     def _log_info(
@@ -52,13 +51,22 @@ class Searcher(ABC):
             "depth": depth,
             # time in ms
             "time": int(1000 * elapsed),
-            "nodes": self._statistics.nodes_visited,
-            "nps": int(self._statistics.nodes_visited / elapsed) if elapsed > 0 else 0,
             "score cp": int(score)
             if score not in {float("inf"), -float("inf")}
             else float("nan"),
             "pv": move,  # Incorrect but will do for now
         }
+
+        total = 0
+        for type in NodeTypes:
+            count = self._statistics.nodes_visited[type]
+            fields[f"node {type}"] = count
+            total += count
+        fields["total nodes visited"] = total
+        fields["nps"] = float(total / elapsed) if elapsed > 0 else 0  # not sure
+        fields["pruning"] = self._statistics.pruned
+        fields["nodes in tt"] = self._statistics.nodes_from_tt
+
         info_str = " ".join(f"{k} {v}" for k, v in fields.items())
         logging.info(f"info {info_str}")
 

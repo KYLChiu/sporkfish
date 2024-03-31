@@ -1,5 +1,15 @@
 from sporkfish.board.board_factory import Board, BoardFactory, BoardPyChess
+from sporkfish.evaluator.evaluator_config import EvaluatorConfig, EvaluatorMode
+from sporkfish.evaluator.evaluator_factory import EvaluatorFactory
 from sporkfish.evaluator.pesto import Pesto
+from sporkfish.evaluator.pesto import Pesto as Evaluator
+from sporkfish.searcher.move_ordering.move_order_config import (
+    MoveOrderConfig,
+    MoveOrderMode,
+)
+from sporkfish.searcher.move_ordering.move_orderer import MoveOrderer
+from sporkfish.searcher.searcher_config import SearcherConfig
+from sporkfish.searcher.searcher_factory import SearcherFactory
 
 white_move = {
     "open": "rnbqkb1r/pppp1ppp/4pn2/8/3P1B2/8/PPP1PPPP/RN1QKBNR w KQkq - 0 3",
@@ -39,3 +49,39 @@ def score_fen(fen_string: str) -> float:
     board = init_board(fen_string)
     ev = Pesto()
     return ev.evaluate(board)
+
+
+def searcher_with_fen(
+    fen: str,
+    max_depth: int = 3,
+    enable_null_move_pruning=False,
+    enable_futility_pruning=False,
+    enable_delta_pruning=False,
+    enable_transposition_table=False,
+    enable_aspiration_windows=False,
+    move_order_config=MoveOrderConfig(move_order_mode=MoveOrderMode.MVV_LVA),
+):
+    board = BoardFactory.create(board_type=BoardPyChess)
+    s = SearcherFactory.create(
+        SearcherConfig(
+            max_depth,
+            enable_null_move_pruning=enable_null_move_pruning,
+            enable_futility_pruning=enable_futility_pruning,
+            enable_delta_pruning=enable_delta_pruning,
+            enable_transposition_table=enable_transposition_table,
+            enable_aspiration_windows=enable_aspiration_windows,
+            move_order_config=move_order_config,
+        ),
+        evaluator=evaluator(),
+    )
+    board.set_fen(fen)
+    score, move = s.search(board)
+    return score, move
+
+
+def evaluator(
+    evaluator_cfg: EvaluatorConfig = EvaluatorConfig(
+        evaluator_mode=EvaluatorMode.PESTO
+    ),
+) -> Evaluator:
+    return EvaluatorFactory.create(evaluator_cfg)
