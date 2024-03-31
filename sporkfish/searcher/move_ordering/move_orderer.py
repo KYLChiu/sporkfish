@@ -1,6 +1,6 @@
 from typing import Any
 
-from .move_order_heuristic import MoveOrderHeuristic
+from sporkfish.searcher.move_ordering.move_order_heuristic import MoveOrderHeuristic
 
 
 class MoveOrderer:

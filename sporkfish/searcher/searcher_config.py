@@ -1,9 +1,8 @@
 from enum import Enum
-from typing import Union, Dict
+from typing import Dict, Union
 
+from sporkfish.configurable import Configurable
 from sporkfish.searcher.move_ordering.move_order_config import MoveOrderConfig
-
-from ..configurable import Configurable
 
 
 class SearchMode(Enum):

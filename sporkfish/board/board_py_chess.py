@@ -2,7 +2,7 @@ from typing import Any, Dict, Optional
 
 import chess
 
-from .board import Board
+from sporkfish.board.board import Board
 
 
 class BoardPyChess(Board):

@@ -20,6 +20,7 @@ class TestLichessBot:
         with open(api_token_file) as f:
             return lichess_bot_berserk.LichessBotBerserk(f.read())
 
+    @pytest.mark.slow
     @pytest.mark.skipif(
         sys.platform != "linux",
         reason="Don't create multiple challenges to exceed rate limit of Lichess",

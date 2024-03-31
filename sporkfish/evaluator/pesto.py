@@ -1,8 +1,9 @@
+from typing import Dict
+
 import chess
 
-from ..board.board import Board
-from typing import Dict
-from .evaluator import Evaluator
+from sporkfish.board.board import Board
+from sporkfish.evaluator.evaluator import Evaluator
 
 
 class Pesto(Evaluator):
