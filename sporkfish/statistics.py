@@ -11,7 +11,7 @@ class NodeTypes(Enum):
 class Statistics:
     """A class for tracking statistics related to node visits."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Initialize the Statistics object.
         Upon initialization, sets the counts of visited nodes, pruned nodes,
@@ -65,7 +65,7 @@ class Statistics:
         """
         self._nodes_in_tt += count
 
-    def reset_node_visited(self, default_val=0) -> None:
+    def reset_node_visited(self, default_val: int = 0) -> None:
         """
         Reset the statistics by setting nodes_visited to a default value.
 
@@ -78,7 +78,7 @@ class Statistics:
         for key in self._nodes_visited.keys():
             self._nodes_visited[key] = default_val
 
-    def reset_pruning(self, default_val=0) -> None:
+    def reset_pruning(self, default_val: int = 0) -> None:
         """
         Reset the pruning count to a default value.
 
@@ -90,7 +90,7 @@ class Statistics:
         """
         self._pruned = default_val
 
-    def reset_nodes_from_tt(self, default_val=0) -> None:
+    def reset_nodes_from_tt(self, default_val: int = 0) -> None:
         """
         Reset the nodes in TT count to a default value.
 
