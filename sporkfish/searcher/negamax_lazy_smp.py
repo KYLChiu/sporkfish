@@ -46,6 +46,7 @@ class NegaMaxLazySmp(NegamaxSp):
         """
 
         def task() -> Tuple[float, chess.Move]:
+            # TODO: fix increment statistics
             return NegamaxSp._start_search_from_root(self, board, depth, alpha, beta)
 
         # Let processes race down lazily and see who completes first
