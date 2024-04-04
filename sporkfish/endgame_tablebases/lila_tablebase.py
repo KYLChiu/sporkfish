@@ -24,10 +24,10 @@ class LilaTablebase(EndgameTablebase):
 
     def query(self, board) -> Optional[chess.Move]:
         """
-        Queries the tablebase service for the best move given a board position in FEN format.
+        Queries the tablebase service for the best move given a board position.
 
-        :param board_fen: The FEN representation of the chess board.
-        :type board_fen: str
+        :param board: The current state of the chess board.
+        :type board: Board
         :return: The best move as a `chess.Move` object, or `None` if no move is found.
         :rtype: Optional[chess.Move]
         :raises ConnectionError: If there is an issue connecting to the tablebase service.
