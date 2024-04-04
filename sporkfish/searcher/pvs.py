@@ -28,7 +28,7 @@ class PVSSp(MiniMaxVariants):
         zobrist_state: Optional[ZobristStateInfo],
     ) -> float:
         """
-        Negamax implementation with alpha-beta pruning. For non-root nodes.
+        Principal Variation Search implementation with alpha-beta pruning. For non-root nodes.
 
         Args:
             board: The current state of the chess board.
@@ -179,7 +179,7 @@ class PVSSp(MiniMaxVariants):
         beta: float,
     ) -> Tuple[float, chess.Move]:
         """
-        Entry point for negamax search with fail-soft alpha-beta pruning, single process.
+        Entry point for principal variation search with fail-soft alpha-beta pruning, single process.
 
         :param board: The current chess board position.
         :type board: Board
@@ -264,7 +264,7 @@ class PVSSp(MiniMaxVariants):
         self, board: Board, timeout: Optional[float] = None
     ) -> Tuple[float, chess.Move]:
         """
-        Finds the best move (and associated score) via negamax and iterative deepening.
+        Finds the best move (and associated score) via pvs and iterative deepening.
 
         :param board: The current chess board position.
         :type board: Board
