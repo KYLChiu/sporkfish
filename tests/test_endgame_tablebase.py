@@ -7,6 +7,7 @@ from sporkfish.endgame_tablebases.endgame_tablebase import (
     EndgameTablebase,
     EndgameTablebaseConfig,
 )
+from sporkfish.endgame_tablebases.lila_tablebase import LilaTablebase
 
 
 def move_from_et_query(fen: str):
@@ -17,7 +18,7 @@ def move_from_et_query(fen: str):
     return move
 
 
-class TestEndgameTablebase:
+class TestLocalTablebase:
     def _check_et_query_move_expected(
         self, test_name: str, fen: str, move_expected: bool
     ):
@@ -79,3 +80,11 @@ class TestEndgameTablebasePerformance:
 
     def test_et_query_perf(self, request_fixture, fen_string):
         run_perf_analytics(request_fixture.node.name, move_from_et_query, fen_string)
+
+
+class TestLilaEndgameTablebase:
+    def test_lila_dtz_bestmove(self):
+        test_fen = "8/4k3/8/8/8/8/3BB3/3K4 w - - 0 1"
+        lila_bestmove = LilaTablebase.query_bestmove(test_fen)
+        if LilaTablebase.query_bestmove(test_fen) is not None:
+            assert lila_bestmove
