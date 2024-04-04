@@ -8,6 +8,7 @@ from sporkfish.searcher.move_ordering.move_order_config import MoveOrderConfig
 class SearchMode(Enum):
     SINGLE_PROCESS = "SINGLE_PROCESS"
     LAZY_SMP = "LAZY_SMP"
+    PVS = "PVS"
 
 
 class SearcherConfig(Configurable):
