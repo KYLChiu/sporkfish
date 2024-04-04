@@ -14,9 +14,9 @@ SearcherConfig:
   enable_aspiration_windows: True # flag to enable aspiration windows, i.e. doing a smaller window search around the score from previous iteration of iterative deepening.
   # TODO: I'd like to make these capital to match class vs variable, but for later.
   move_order_config: #  Move order config. Weights are only for composite move ordering, setting to 0 disables the underlying sigular move ordering.
-      move_order_mode: COMPOSITE # mode of move ordering, choice of: MVV_LVA, KILLER_MOVE, COMPOSITE
-      mvv_lva_weight: 2.0 # weight for Most Valuable Victim - Least Valuable Aggressor
-      killer_moves_weight: 1.0 # weight for killer moves (quiet beta cutoff moves)
+    move_order_mode: COMPOSITE # mode of move ordering, choice of: MVV_LVA, KILLER_MOVE, COMPOSITE
+    mvv_lva_weight: 2.0 # weight for Most Valuable Victim - Least Valuable Aggressor
+    killer_moves_weight: 1.0 # weight for killer moves (quiet beta cutoff moves)
 
 # Current time management strategy is alloted_move_time = time_weight * current_time + increment_weight * increment
 TimeManagerConfig:
@@ -28,6 +28,7 @@ OpeningBookConfig:
 
 EndgameTablebaseConfig:
   endgame_tablebase_path: data/endgame_tablebases
+  endgame_tablebase_mode: LOCAL
 
 LoggingConfig:
   version: 1
