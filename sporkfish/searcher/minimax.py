@@ -291,6 +291,8 @@ class MiniMaxVariants(Searcher, ABC):
         :type alpha: float
         :param beta: The current best score for the minimizing player.
         :type beta: float
+        :param search_func: The search function to be used (e.g. negamax, PVS).
+        :type search_func: Callable
 
         :return: True if the null move leads to a beta cutoff, indicating a possible pruning opportunity.
         :rtype: bool
