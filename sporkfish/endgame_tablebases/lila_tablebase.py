@@ -22,7 +22,7 @@ class LilaTablebase(EndgameTablebase):
     def __init__(self) -> None:
         EndgameTablebase.__init__(self)
 
-    def query(self, board_fen: str) -> Optional[chess.Move]:
+    def query(self, board) -> Optional[chess.Move]:
         """
         Queries the tablebase service for the best move given a board position in FEN format.
 
@@ -32,7 +32,8 @@ class LilaTablebase(EndgameTablebase):
         :rtype: Optional[chess.Move]
         :raises ConnectionError: If there is an issue connecting to the tablebase service.
         """
-        full_url = LilaTablebase.BASE_URL + board_fen
+
+        full_url = LilaTablebase.BASE_URL + board.fen()
         try:
             response = requests.get(full_url).json()
             best_move = (
