@@ -71,7 +71,7 @@ class PVSSp(MiniMaxVariants):
         legal_moves = MoveOrderer.order_moves(mo_heuristic, board.legal_moves)
 
         # Recursive search with alpha-beta pruning
-        for i, move in enumerate(legal_moves):
+        for idx, move in enumerate(legal_moves):
             # Get captures for futility pruning or transposition table
             # Get piece at previous from_square for transposition table
             # This needs to be done prior to changing the board state
@@ -110,10 +110,13 @@ class PVSSp(MiniMaxVariants):
                 else None
             )
 
-            if i == 0:
+            # If it's the first move, we do a full window search
+            if idx == 0:
                 child_value = -self._pvs(
                     board, depth - 1, -beta, -alpha, child_zobrist_state
                 )
+            # Otherwise, we do a null window search first
+            # If the value is within the bounds, we do a full window search
             else:
                 child_value = -self._pvs(
                     board, depth - 1, -alpha - 1, -alpha, child_zobrist_state
@@ -170,7 +173,7 @@ class PVSSp(MiniMaxVariants):
         mo_heuristic = self._build_move_order_heuristic(board, depth)
         legal_moves = MoveOrderer.order_moves(mo_heuristic, board.legal_moves)
 
-        for i, move in enumerate(legal_moves):
+        for idx, move in enumerate(legal_moves):
             # Get piece at from_square and captures for transposition table
             # This needs to be done prior to changing the board state
             previous_piece_from_square = (
@@ -196,10 +199,14 @@ class PVSSp(MiniMaxVariants):
                 if zobrist_state
                 else None
             )
-            if i == 0:
+
+            # If it's the first move, we do a full window search
+            if idx == 0:
                 child_value = -self._pvs(
                     board, depth - 1, -beta, -alpha, child_zobrist_state
                 )
+            # Otherwise, we do a null window search first
+            # If the value is within the bounds, we do a full window search
             else:
                 child_value = -self._pvs(
                     board, depth - 1, -alpha - 1, -alpha, child_zobrist_state
