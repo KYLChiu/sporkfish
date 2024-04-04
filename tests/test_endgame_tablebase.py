@@ -3,7 +3,7 @@ from init_board_helper import board_setup
 from perf_helper import run_perf_analytics
 
 from sporkfish.board.board_factory import BoardPyChess
-from sporkfish.endgame_tablebases.endgame_tablebase import EndgameTablebase
+from sporkfish.endgame_tablebases.composite_tablebase import CompositeTablebase
 from sporkfish.endgame_tablebases.endgame_tablebase_config import EndgameTablebaseConfig
 from sporkfish.endgame_tablebases.lila_tablebase import LilaTablebase
 
@@ -11,7 +11,7 @@ from sporkfish.endgame_tablebases.lila_tablebase import LilaTablebase
 def move_from_et_query(fen: str):
     board = BoardPyChess()
     board.set_fen(fen)
-    et = EndgameTablebase(EndgameTablebaseConfig("data/endgame_tablebases"))
+    et = CompositeTablebase(EndgameTablebaseConfig("data/endgame_tablebases"))
     move = et.query(board)
     return move
 
@@ -28,7 +28,7 @@ class TestLocalTablebase:
 
     # Make sure an empty path doesn't crash
     def test_empty_path_tablebase(self):
-        et = EndgameTablebase(EndgameTablebaseConfig())
+        et = CompositeTablebase(EndgameTablebaseConfig())
         et.query(BoardPyChess())
 
     @pytest.mark.parametrize(
@@ -49,7 +49,7 @@ class TestLocalTablebase:
     def test_2nd_probe(self):
         board = BoardPyChess()
         board.set_fen("8/4k3/8/8/8/8/3BB3/3K4 w - - 0 1")
-        et = EndgameTablebase(EndgameTablebaseConfig("data/endgame_tablebases"))
+        et = CompositeTablebase(EndgameTablebaseConfig("data/endgame_tablebases"))
         move = et.query(board)
         board.push(move)
         # Play black move
