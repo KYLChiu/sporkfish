@@ -3,10 +3,8 @@ from init_board_helper import board_setup
 from perf_helper import run_perf_analytics
 
 from sporkfish.board.board_factory import BoardPyChess
-from sporkfish.endgame_tablebases.endgame_tablebase import (
-    EndgameTablebase,
-    EndgameTablebaseConfig,
-)
+from sporkfish.endgame_tablebases.endgame_tablebase import EndgameTablebase
+from sporkfish.endgame_tablebases.endgame_tablebase_config import EndgameTablebaseConfig
 from sporkfish.endgame_tablebases.lila_tablebase import LilaTablebase
 
 
@@ -84,7 +82,8 @@ class TestEndgameTablebasePerformance:
 
 class TestLilaEndgameTablebase:
     def test_lila_dtz_bestmove(self):
-        test_fen = "8/4k3/8/8/8/8/3BB3/3K4 w - - 0 1"
-        lila_bestmove = LilaTablebase.query_bestmove(test_fen)
-        if LilaTablebase.query_bestmove(test_fen) is not None:
+        board = BoardPyChess()
+        board.set_fen("8/4k3/8/8/8/8/3BB3/3K4 w - - 0 1")
+        lila_bestmove = LilaTablebase.query(board)
+        if LilaTablebase.query(board) is not None:
             assert lila_bestmove

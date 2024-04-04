@@ -2,7 +2,8 @@ import time
 
 from sporkfish import engine, opening_book
 from sporkfish.board.board_factory import BoardFactory, BoardPyChess
-from sporkfish.endgame_tablebase import EndgameTablebase, EndgameTablebaseConfig
+from sporkfish.endgame_tablebases.endgame_tablebase import EndgameTablebase
+from sporkfish.endgame_tablebases.endgame_tablebase_config import EndgameTablebaseConfig
 from sporkfish.evaluator.pesto import Pesto
 from sporkfish.searcher.searcher_config import SearcherConfig
 from sporkfish.searcher.searcher_factory import SearcherFactory
