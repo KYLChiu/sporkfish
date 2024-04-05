@@ -92,15 +92,18 @@ class TestLilaEndgameTablebase:
 
 
 class TestCompositeTablebase:
-    def test_composite_lila_dtz_bestmove_empty(self):
+    def test_composite_bestmove_empty(self):
         board = BoardPyChess()
-        lila_bestmove = CompositeTablebase().query(board)
-        assert lila_bestmove is None
+        bestmove = CompositeTablebase().query(board)
+        assert bestmove is None
 
-    def test_composite_lila_dtz_bestmove(self):
+    def test_composite_lila_bestmove(self):
         board = BoardPyChess()
+        # We dont' have this in the local tablebase
         board.set_fen("8/4k3/8/8/8/8/3BB3/3K4 w - - 0 1")
-        lila_bestmove = CompositeTablebase().query(board)
+        lila_bestmove = CompositeTablebase(
+            EndgameTablebaseConfig(endgame_tablebase_mode="LILA")
+        ).query(board)
         assert lila_bestmove
 
     def test_composite_local_bestmove(self):
