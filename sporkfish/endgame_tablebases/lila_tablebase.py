@@ -53,3 +53,6 @@ class LilaTablebase(EndgameTablebase):
         except requests.exceptions.RequestException as e:
             logging.error(f"Failed to connect to Lila tablebase service, error: {e}")
             return None
+        except KeyError as e:
+            logging.error(f"Failed to parse Lila tablebase response, error: {e}")
+            return None
