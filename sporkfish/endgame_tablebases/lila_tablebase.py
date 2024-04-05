@@ -4,6 +4,7 @@ from typing import Optional
 import chess
 import requests
 
+from sporkfish.board.board import Board
 from sporkfish.endgame_tablebases.endgame_tablebase import EndgameTablebase
 
 
@@ -22,7 +23,7 @@ class LilaTablebase(EndgameTablebase):
     def __init__(self) -> None:
         EndgameTablebase.__init__(self)
 
-    def query(self, board) -> Optional[chess.Move]:
+    def query(self, board: Board) -> Optional[chess.Move]:
         """
         Queries the tablebase service for the best move given a board position.
 
@@ -38,11 +39,17 @@ class LilaTablebase(EndgameTablebase):
             response = requests.get(full_url).json()
             best_move = (
                 chess.Move.from_uci(response["moves"][0]["uci"])
-                if len(response["moves"]) > 0
+                if len(response["moves"]) > 0 and response["dtz"]
                 else None
             )
-            logging.info("Lila query succeeded. Best move retrieved: {best_move}")
+
+            if best_move:
+                logging.debug("Lila query succeeded. Best move retrieved: {best_move}")
+            else:
+                logging.debug("Lila query succeeded. No best move found.")
+
             return best_move
-        except ConnectionError as _:
-            logging.warning("Lila query failed, skipping")
+
+        except requests.exceptions.RequestException as e:
+            logging.error("Failed to connect to Lila tablebase service, error: {e}")
             return None

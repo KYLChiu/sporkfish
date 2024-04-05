@@ -51,12 +51,12 @@ class CompositeTablebase(LocalTablebase, LilaTablebase, EndgameTablebase):
 
         match self._config.endgame_tablebase_mode:
             case EndgameTablebaseMode.LOCAL:
-                if local := LocalTablebase.query(board):
+                if local := LocalTablebase.query(self, board):
                     return local
                 else:
-                    return LilaTablebase.query(board.fen())
+                    return LilaTablebase.query(self, board)
             case EndgameTablebaseMode.LILA:
-                if lila := LilaTablebase.query(board.fen()):
+                if lila := LilaTablebase.query(self, board):
                     return lila
                 else:
                     return LocalTablebase.query(board)

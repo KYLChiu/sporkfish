@@ -28,7 +28,7 @@ OpeningBookConfig:
 
 EndgameTablebaseConfig:
   endgame_tablebase_path: data/endgame_tablebases
-  endgame_tablebase_mode: LOCAL
+  endgame_tablebase_mode: LOCAL # mode of endgame tablebase, choice of: LOCAL, LILA
 
 LoggingConfig:
   version: 1
