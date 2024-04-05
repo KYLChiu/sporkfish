@@ -31,7 +31,7 @@ class TestLocalTablebase:
 
     # Make sure an empty path doesn't crash
     def test_empty_path_tablebase(self):
-        et = CompositeTablebase(EndgameTablebaseConfig())
+        et = LocalTablebase(EndgameTablebaseConfig())
         et.query(BoardPyChess())
 
     @pytest.mark.parametrize(
@@ -52,7 +52,7 @@ class TestLocalTablebase:
     def test_2nd_probe(self):
         board = BoardPyChess()
         board.set_fen("8/4k3/8/8/8/8/3BB3/3K4 w - - 0 1")
-        et = CompositeTablebase(EndgameTablebaseConfig("data/endgame_tablebases"))
+        et = LocalTablebase(EndgameTablebaseConfig("data/endgame_tablebases"))
         move = et.query(board)
         board.push(move)
         # Play black move
