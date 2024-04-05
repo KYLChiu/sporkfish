@@ -1,3 +1,5 @@
+from typing import Optional
+
 import chess
 
 from sporkfish.board.board import Board
@@ -35,7 +37,7 @@ class CompositeTablebase(LocalTablebase, LilaTablebase, EndgameTablebase):
 
         self._config = config
 
-    def query(self, board: Board) -> chess.Move | None:
+    def query(self, board: Board) -> Optional[chess.Move]:
         """
         Queries the tablebase based on the given board state.
 
@@ -46,7 +48,7 @@ class CompositeTablebase(LocalTablebase, LilaTablebase, EndgameTablebase):
         :param board: The current state of the chess board.
         :type board: Board
         :return: The best move according to the tablebase, or None if no move is found.
-        :rtype: chess.Move | None
+        :rtype: Optional[chess.Move]
         """
 
         match self._config.endgame_tablebase_mode:
