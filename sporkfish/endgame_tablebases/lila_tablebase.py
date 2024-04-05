@@ -50,6 +50,6 @@ class LilaTablebase(EndgameTablebase):
 
             return best_move
 
-        except requests.exceptions.RequestException as e:
+        except requests.exceptions.RequestException:
             logging.error("Failed to connect to Lila tablebase service, error: {e}")
             return None
