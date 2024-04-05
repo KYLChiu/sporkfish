@@ -59,4 +59,4 @@ class CompositeTablebase(LocalTablebase, LilaTablebase, EndgameTablebase):
                 if lila := LilaTablebase.query(self, board):
                     return lila
                 else:
-                    return LocalTablebase.query(board)
+                    return LocalTablebase.query(self, board)
