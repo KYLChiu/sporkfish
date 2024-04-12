@@ -3,18 +3,23 @@ from init_board_helper import board_setup
 from perf_helper import run_perf_analytics
 
 from sporkfish.board.board_factory import BoardPyChess
-from sporkfish.endgame_tablebase import EndgameTablebase, EndgameTablebaseConfig
+from sporkfish.endgame_tablebases.composite_tablebase import (
+    CompositeTablebase,
+    LocalTablebase,
+)
+from sporkfish.endgame_tablebases.endgame_tablebase_config import EndgameTablebaseConfig
+from sporkfish.endgame_tablebases.lila_tablebase import LilaTablebase
 
 
 def move_from_et_query(fen: str):
     board = BoardPyChess()
     board.set_fen(fen)
-    et = EndgameTablebase(EndgameTablebaseConfig("data/endgame_tablebases"))
+    et = LocalTablebase(EndgameTablebaseConfig("data/endgame_tablebases"))
     move = et.query(board)
     return move
 
 
-class TestEndgameTablebase:
+class TestLocalTablebase:
     def _check_et_query_move_expected(
         self, test_name: str, fen: str, move_expected: bool
     ):
@@ -26,7 +31,7 @@ class TestEndgameTablebase:
 
     # Make sure an empty path doesn't crash
     def test_empty_path_tablebase(self):
-        et = EndgameTablebase(EndgameTablebaseConfig())
+        et = LocalTablebase(EndgameTablebaseConfig())
         et.query(BoardPyChess())
 
     @pytest.mark.parametrize(
@@ -47,7 +52,7 @@ class TestEndgameTablebase:
     def test_2nd_probe(self):
         board = BoardPyChess()
         board.set_fen("8/4k3/8/8/8/8/3BB3/3K4 w - - 0 1")
-        et = EndgameTablebase(EndgameTablebaseConfig("data/endgame_tablebases"))
+        et = LocalTablebase(EndgameTablebaseConfig("data/endgame_tablebases"))
         move = et.query(board)
         board.push(move)
         # Play black move
@@ -76,3 +81,39 @@ class TestEndgameTablebasePerformance:
 
     def test_et_query_perf(self, request_fixture, fen_string):
         run_perf_analytics(request_fixture.node.name, move_from_et_query, fen_string)
+
+
+class TestLilaEndgameTablebase:
+    def test_lila_dtz_bestmove(self):
+        board = BoardPyChess()
+        board.set_fen("8/4k3/8/8/8/8/3BB3/3K4 w - - 0 1")
+        lila_bestmove = LilaTablebase().query(board)
+        assert lila_bestmove
+
+
+class TestCompositeTablebase:
+    def test_composite_bestmove_empty(self):
+        board = BoardPyChess()
+        bestmove = CompositeTablebase().query(board)
+        assert bestmove is None
+
+    def test_composite_lila_bestmove(self):
+        board = BoardPyChess()
+        # We dont' have this in the local tablebase
+        board.set_fen("8/4k3/8/8/8/8/3BB3/3K4 w - - 0 1")
+        lila_bestmove = CompositeTablebase(
+            EndgameTablebaseConfig(endgame_tablebase_mode="LILA")
+        ).query(board)
+        assert lila_bestmove
+
+    def test_composite_local_bestmove(self):
+        board = BoardPyChess()
+        # One step to mate
+        board.set_fen("7k/8/7K/3B4/8/8/8/2B5 w - - 0 1")
+        lila_bestmove = CompositeTablebase(
+            EndgameTablebaseConfig(endgame_tablebase_mode="LILA")
+        ).query(board)
+        assert lila_bestmove
+        # Check its equal to local bestmove
+        local_bestmove = move_from_et_query(board.fen())
+        assert lila_bestmove == local_bestmove

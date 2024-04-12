@@ -4,7 +4,7 @@ from typing import Optional
 import chess
 
 from sporkfish.board.board import Board
-from sporkfish.endgame_tablebase import EndgameTablebase
+from sporkfish.endgame_tablebases.endgame_tablebase import EndgameTablebase
 from sporkfish.opening_book import OpeningBook
 from sporkfish.searcher.searcher import Searcher
 
