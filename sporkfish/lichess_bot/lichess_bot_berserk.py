@@ -9,71 +9,6 @@ from sporkfish.lichess_bot.game_termination_reason import GameTerminationReason
 from sporkfish.lichess_bot.lichess_bot import LichessBot
 
 
-# TODO: I can't get this to work with metaclasses. Maybe in a future PR.
-# The goal is to automatically wrap all functions in berserk.Client so they are retriable.
-class BerserkRetriable:
-    """
-    Interface to interact with Lichess API with retry logic.
-    Wraps the berserk.Client API.
-    """
-
-    # Retry configuration parameters
-    _num_retries = 2
-    _time_to_wait_seconds = 1
-
-    def __init__(self, token: str):
-        """
-        Initialize the Berserk instance with the Lichess API token.
-
-        :param token: The Lichess API token.
-        :type token: str
-        """
-        self._client = berserk.Client(berserk.TokenSession(token))
-        self._set_retries()
-
-    # This is a bit dodgy, but it's the only way to patch the berserk.Client API for now.
-    # The issue is that berserk only contains all its API once initialized, so we can't patch it before.
-    def _set_retries(self) -> None:
-        """
-        Patches all public callable functions from modules in the berserk.Client with retry logic.
-        """
-        for module in (
-            getattr(self._client, name)
-            for name in dir(self._client)
-            if not name.startswith("_")
-        ):
-            for attr_name, attr in inspect.getmembers(module):
-                if not attr_name.startswith("_") and callable(attr):
-                    setattr(module, attr_name, self._retry_decorator(attr))
-
-    def _retry_decorator(
-        self,
-        func: Callable,
-    ) -> Callable:
-        """
-        Wraps a method on the Lichess API with retry logic.
-
-        :param func: The berserk API.
-        :type func: Callable
-        :return: The API wrapped in retry logic.
-        :rtype: Callable
-        """
-
-        @functools.wraps(func)
-        @retry(
-            stop=stop_after_attempt(BerserkRetriable._num_retries),
-            wait=wait_fixed(BerserkRetriable._time_to_wait_seconds),
-            retry=retry_if_exception_type(berserk.exceptions.ResponseError),
-        )
-        def wrapper(
-            *args: Sequence[Any],
-            **kwargs: Mapping[str, Any],
-        ) -> Any:
-            return func(*args, **kwargs)
-
-        return wrapper
-
-
 class GameHandler:
     """
     A class representing a game handler for a Lichess game.
@@ -228,13 +163,13 @@ class LichessBotBerserk(LichessBot):
         # 1) We are starting a new game and playing white
         # 2) We are restarting the game and it's our turn to play, i.e.
         #    prev_num_moves & 1 == color (0 for white, 1 for black)
-        self._play_move(color, prev_moves_start, game_id, game_full)
+        self._play_move(game_handler, color, prev_moves_start, game_full)
 
         # Loop through subsequent game states
         for state in states:
             logging.debug(f"Game state: {state}")
             if state["type"] == "gameState":
-                self._play_move(color, state["moves"], game_id, state)
+                self._play_move(game_handler, color, state["moves"], state)
             elif state["type"] == "gameStateResign":
                 return GameTerminationReason.RESIGNATION
 
@@ -262,12 +197,19 @@ class LichessBotBerserk(LichessBot):
         :return: True if the bot should accept the challenge, False otherwise.
         :rtype: bool
         """
-        return (
-            True
-            if event["challenge"]["variant"]["key"] in LichessBot._ACCEPTED_VARIANTS
-            and event["challenge"]["speed"] in LichessBot._ACCEPTED_TIME_CONTROLS
-            else False
+        variant_key = event["challenge"]["variant"]["key"]
+        speed = event["challenge"]["speed"]
+        if (variant_key in cls._ACCEPTED_VARIANTS) and (
+            speed in cls._ACCEPTED_TIME_CONTROLS
+        ):
+            logging.debug(
+                f"Accecpting challenge with variant: {variant_key} and speed: {speed}"
+            )
+            return True
+        logging.debug(
+            f"Declining challenge with variant: {variant_key} and speed: {speed}"
         )
+        return False
 
     # --- Event handlers ---
     def _event_action_accept_challenge(self, event: Dict[str, Any]) -> bool:

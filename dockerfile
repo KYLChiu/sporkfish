@@ -1,22 +1,22 @@
+# This Dockerfile is used for building the image for production
+FROM python:3.11-bookworm
 
-FROM ubuntu:latest
+ENV APP_HOME /app
+WORKDIR ${APP_HOME}
+COPY . ./
 
-RUN apt-get update -y && \
-    apt-get install -y --no-install-recommends \
-    bash \
-    python3.10 \
-    python3.10-dev \
-    python3.10-venv \
-    python3-pip \
-    binutils
+# Install core dependencies
+RUN apt-get update && apt-get install -y \
+    libpq-dev \
+    gcc \
+    python3-dev \
+    musl-dev \
+    libffi-dev \
+    libssl-dev
 
-RUN python3 -m pip install --upgrade pip
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install python dependencies
+RUN pip3 install --no-cache-dir -r requirements.txt
 
-WORKDIR /app
-COPY . /app
-
-ENV DEBIAN_FRONTEND=noninteractive
-
-CMD ["bash"]
+# Run the application
+ENTRYPOINT [ "python3" ]
+CMD ["-O", "main.py"]
