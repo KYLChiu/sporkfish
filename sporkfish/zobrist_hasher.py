@@ -30,8 +30,8 @@ def _aggregate_piece_hash(
     board_hash: np.int64, squares: np.ndarray, colored_piece_types: np.ndarray
 ) -> np.int64:
     num_pieces = len(squares)
-    assert num_pieces == len(
-        colored_piece_types
+    assert (
+        num_pieces == len(colored_piece_types)
     ), f"Expected the same number of squares and colored_piece_types but got length {num_pieces}, {len(colored_piece_types)} respectively."
     new_board_hash = board_hash
     for idx in range(num_pieces):

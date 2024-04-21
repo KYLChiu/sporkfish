@@ -62,7 +62,7 @@ class Searcher(ABC):
             fields[f"Node {type}"] = count
             total += count
         fields["Total nodes"] = total
-        fields["Nodes per sec"] = float(total / elapsed) if elapsed > 0 else 0 
+        fields["Nodes per sec"] = float(total / elapsed) if elapsed > 0 else 0
         fields["Num of Pruning"] = self._statistics.pruned
         fields["Nodes from TT"] = self._statistics.nodes_from_tt
 

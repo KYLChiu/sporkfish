@@ -10,6 +10,7 @@ from sporkfish.searcher.move_ordering.move_order_config import (
 )
 from sporkfish.searcher.move_ordering.move_order_heuristic import MoveOrderHeuristic
 from sporkfish.searcher.move_ordering.mvv_lva_heuristic import MvvLvaHeuristic
+from sporkfish.searcher.move_ordering.history_heuristic import HistoryHeuristic
 
 
 class CompositeHeuristic(

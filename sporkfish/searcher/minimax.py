@@ -20,6 +20,7 @@ from sporkfish.searcher.searcher_config import SearcherConfig
 from sporkfish.statistics import NodeTypes
 from sporkfish.transposition_table import TranspositionTable
 from sporkfish.zobrist_hasher import ZobristHasher, ZobristStateInfo
+from sporkfish.searcher.move_ordering.history_heuristic import HistoryHeuristic
 
 
 class MiniMaxVariants(Searcher, ABC):
