@@ -1,6 +1,6 @@
-from ...configurable import Configurable
-
 from enum import Enum
+
+from sporkfish.configurable import Configurable
 
 
 class MoveOrderMode(Enum):

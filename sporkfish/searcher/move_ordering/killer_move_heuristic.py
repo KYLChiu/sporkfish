@@ -2,8 +2,8 @@ from typing import List
 
 import chess
 
-from ...board.board import Board
-from .move_order_heuristic import MoveOrderHeuristic
+from sporkfish.board.board import Board
+from sporkfish.searcher.move_ordering.move_order_heuristic import MoveOrderHeuristic
 
 
 class KillerMoveHeuristic(MoveOrderHeuristic):

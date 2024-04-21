@@ -2,13 +2,14 @@ from typing import List, Dict
 
 import chess
 
-
-from ...board.board import Board
-from .killer_move_heuristic import KillerMoveHeuristic
-from .move_order_heuristic import MoveOrderHeuristic
-from .move_order_config import MoveOrderMode, MoveOrderConfig
-from .mvv_lva_heuristic import MvvLvaHeuristic
-from .history_heuristic import HistoryHeuristic
+from sporkfish.board.board import Board
+from sporkfish.searcher.move_ordering.killer_move_heuristic import KillerMoveHeuristic
+from sporkfish.searcher.move_ordering.move_order_config import (
+    MoveOrderConfig,
+    MoveOrderMode,
+)
+from sporkfish.searcher.move_ordering.move_order_heuristic import MoveOrderHeuristic
+from sporkfish.searcher.move_ordering.mvv_lva_heuristic import MvvLvaHeuristic
 
 
 class CompositeHeuristic(

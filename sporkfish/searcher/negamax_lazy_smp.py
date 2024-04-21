@@ -4,10 +4,10 @@ from typing import Tuple
 import chess
 from pathos.multiprocessing import ProcessPool
 
-from ..board.board import Board
-from ..evaluator import Evaluator
-from .negamax import NegamaxSp
-from .searcher_config import SearcherConfig
+from sporkfish.board.board import Board
+from sporkfish.evaluator.evaluator import Evaluator
+from sporkfish.searcher.negamax import NegamaxSp
+from sporkfish.searcher.searcher_config import SearcherConfig
 
 
 # This doesn't really work yet. Don't use.
@@ -46,6 +46,7 @@ class NegaMaxLazySmp(NegamaxSp):
         """
 
         def task() -> Tuple[float, chess.Move]:
+            # TODO: fix increment statistics
             return NegamaxSp._start_search_from_root(self, board, depth, alpha, beta)
 
         # Let processes race down lazily and see who completes first

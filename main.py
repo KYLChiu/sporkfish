@@ -3,7 +3,7 @@ import logging.config
 import multiprocessing
 
 from config import load_config
-from sporkfish.runner import Runner, RunConfig
+from sporkfish.runner import RunConfig, Runner
 
 if __name__ == "__main__":
     config = load_config()

@@ -7,20 +7,19 @@ from typing import Optional, Tuple
 import chess
 import stopit
 
-
-from ..board.board import Board
-from ..evaluator import Evaluator
-from ..transposition_table import TranspositionTable
-from ..zobrist_hasher import ZobristHasher
-from .move_ordering.composite_heuristic import CompositeHeuristic
-from .move_ordering.killer_move_heuristic import KillerMoveHeuristic
-from .move_ordering.history_heuristic import HistoryHeuristic
-from .move_ordering.move_order_heuristic import MoveOrderHeuristic
-from .move_ordering.move_order_config import MoveOrderMode
-from .move_ordering.move_orderer import MoveOrderer
-from .move_ordering.mvv_lva_heuristic import MvvLvaHeuristic
-from .searcher import Searcher
-from .searcher_config import SearcherConfig
+from sporkfish.board.board import Board
+from sporkfish.evaluator.evaluator import Evaluator
+from sporkfish.searcher.move_ordering.composite_heuristic import CompositeHeuristic
+from sporkfish.searcher.move_ordering.killer_move_heuristic import KillerMoveHeuristic
+from sporkfish.searcher.move_ordering.move_order_config import MoveOrderMode
+from sporkfish.searcher.move_ordering.move_order_heuristic import MoveOrderHeuristic
+from sporkfish.searcher.move_ordering.move_orderer import MoveOrderer
+from sporkfish.searcher.move_ordering.mvv_lva_heuristic import MvvLvaHeuristic
+from sporkfish.searcher.searcher import Searcher
+from sporkfish.searcher.searcher_config import SearcherConfig
+from sporkfish.statistics import NodeTypes
+from sporkfish.transposition_table import TranspositionTable
+from sporkfish.zobrist_hasher import ZobristHasher, ZobristStateInfo
 
 
 class MiniMaxVariants(Searcher, ABC):
@@ -186,7 +185,7 @@ class MiniMaxVariants(Searcher, ABC):
         """
         if self._searcher_config.enable_aspiration_windows and depth > 1:
             # We leave configuration for window_size to another PR
-            window_size = self.evaluator.MG_PIECE_VALUES[chess.PAWN] // 2
+            window_size = self.evaluator.piece_values()[chess.PAWN] // 2
             alpha = prev_score - window_size
             beta = prev_score + window_size
             score, move = self._start_search_from_root(
@@ -205,7 +204,14 @@ class MiniMaxVariants(Searcher, ABC):
             )
         return score, move
 
-    def _quiescence(self, board: Board, depth: int, alpha: float, beta: float) -> float:
+    def _quiescence(
+        self,
+        board: Board,
+        depth: int,
+        alpha: float,
+        beta: float,
+        zobrist_state: Optional[ZobristStateInfo],
+    ) -> float:
         """
         Perform a quiescence search to help alleviate the horizon effect and improve checking of tactical possibilities.
 
@@ -228,7 +234,15 @@ class MiniMaxVariants(Searcher, ABC):
         :rtype: float
         """
 
-        self._statistics.increment()
+        # Probe the transposition table for an existing entry
+        # We treat all cases as depth 0, so essentially as an static evaluation
+        if zobrist_state and (
+            tt_entry := self._transposition_table.probe(zobrist_state.zobrist_hash, 0)
+        ):
+            self._statistics.increment_nodes_from_tt()
+            return tt_entry["score"]  # type: ignore
+
+        self._statistics.increment_node_visited(NodeTypes.QUIESCENSE)
 
         stand_pat = self._evaluator.evaluate(board)
 
@@ -236,6 +250,7 @@ class MiniMaxVariants(Searcher, ABC):
             return stand_pat
 
         if stand_pat >= beta:
+            self._statistics.increment_pruning()
             return beta
 
         if alpha < stand_pat:
@@ -247,13 +262,37 @@ class MiniMaxVariants(Searcher, ABC):
         )
 
         for move in legal_moves:
+            # delta pruning
             if self._searcher_config.enable_delta_pruning and self._delta_pruning(
                 board, move, stand_pat, alpha
             ):
+                self._statistics.increment_pruning()
                 continue
 
+            # Get the piece from the originating square and the captured piece
+            # Existence of captured piece is guaranteed in quiescence search
+            previous_piece_from_square = (
+                board.piece_at(move.from_square) if zobrist_state else None
+            )
+            captured_piece = board.piece_at(move.to_square) if zobrist_state else None
+
             board.push(move)
-            score = -self._quiescence(board, depth - 1, -beta, -alpha)
+
+            # Update the Zobrist hash
+            child_zobrist_state = (
+                self._zobrist_hash.incremental_zobrist_hash(
+                    board,
+                    move,
+                    zobrist_state,
+                    previous_piece_from_square,  # type: ignore
+                    captured_piece,
+                )
+                if zobrist_state
+                else None
+            )
+            score = -self._quiescence(
+                board, depth - 1, -beta, -alpha, child_zobrist_state
+            )
             board.pop()
 
             if score >= beta:
@@ -261,6 +300,9 @@ class MiniMaxVariants(Searcher, ABC):
 
             if score > alpha:
                 alpha = score
+
+            if zobrist_state:
+                self._transposition_table.store(zobrist_state.zobrist_hash, 0, score)
 
         return alpha
 
@@ -303,7 +345,7 @@ class MiniMaxVariants(Searcher, ABC):
             # Half a pawn margin is very aggressive
             if (
                 self._evaluator.evaluate(board)
-                + depth * self.evaluator.MG_PIECE_VALUES[chess.PAWN] // 2
+                + depth * self.evaluator.piece_values()[chess.PAWN] // 2
                 <= alpha
             ):
                 return True
@@ -344,14 +386,14 @@ class MiniMaxVariants(Searcher, ABC):
         return (
             True
             if stand_pat
-            + self.evaluator.MG_PIECE_VALUES[captured_piece]
-            + self.evaluator.DELTA
+            + self.evaluator.piece_values()[captured_piece]
+            + self.evaluator.delta()
             < alpha
             else False
         )
 
     @stopit.threading_timeoutable(default=(float("-inf"), chess.Move.null(), 0.0, 1))
-    def _search_timeoutable(
+    def _timeoutable_search(
         self,
         board_to_search: Board,
         depth: int,
@@ -418,10 +460,10 @@ class MiniMaxVariants(Searcher, ABC):
         for depth in range(1, self._max_depth + 1):
             new_board = copy.deepcopy(board)
 
-            self._statistics.reset()
+            self._statistics.reset_node_visited()
 
             time_left = timeout
-            new_score, new_move, elapsed, error_code = self._search_timeoutable(
+            new_score, new_move, elapsed, error_code = self._timeoutable_search(
                 timeout=time_left,
                 board_to_search=new_board,
                 depth=depth,
