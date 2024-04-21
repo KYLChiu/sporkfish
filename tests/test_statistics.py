@@ -1,7 +1,7 @@
-
 from sporkfish.statistics import Statistics
 
 # TODO: add tests to check searcher is indeed incrementing statistics correctly
+
 
 class TestIncrementStatistics:
     def test_increment_node_visited(self):
