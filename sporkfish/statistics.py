@@ -36,7 +36,7 @@ class Statistics:
         self._visited = {
             key: 0 for key in [*NodeTypes, *PruningTypes, *TranpositionTable]
         }
-        self._fields = None
+        self._fields: Dict = {}
 
     # simplify to one api
     def increment_visited(
@@ -91,7 +91,7 @@ class Statistics:
 
     def log_info(
         self, elapsed: float, score: float, move: chess.Move, depth: int
-    ) -> Dict[str, Union[str, int, float, chess.Move]]:
+    ) -> None:
         """
         :param elapsed: The time elapsed for the search process, in seconds.
         :type elapsed: float
@@ -121,7 +121,7 @@ class Statistics:
         self._fields["Total nodes"] = total_node
 
         total_pruning = 0
-        for type in PruningTypes:
+        for type in PruningTypes:  # type: ignore
             count = self._visited[type]
             self._fields[f"Pruning: {type}"] = self._visited[type]
             total_pruning += count

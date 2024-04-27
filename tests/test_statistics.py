@@ -99,7 +99,8 @@ class TestSearcherIncrement:
 
 def init_statistics_log(elapsed=10.0, score=100.0, move=chess.Move.null(), depth=3):
     S = Statistics()
-    assert S.info_data is None
+    assert isinstance(S.info_data, dict)
+    assert len(S.info_data) == 0
     S.log_info(elapsed, score, move, depth)
     return S
 
@@ -108,6 +109,7 @@ class TestLogging:
     def test_logging(self):
         S = init_statistics_log()
         assert isinstance(S.info_data, dict)
+        assert len(S.info_data) > 0
 
     def test_log_depth(
         self, elapsed=0.421, score=24.21, move=chess.Move.null(), depth=342
