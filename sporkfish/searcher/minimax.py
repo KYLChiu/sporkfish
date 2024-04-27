@@ -10,6 +10,7 @@ import stopit
 from sporkfish.board.board import Board
 from sporkfish.evaluator.evaluator import Evaluator
 from sporkfish.searcher.move_ordering.composite_heuristic import CompositeHeuristic
+from sporkfish.searcher.move_ordering.history_heuristic import HistoryHeuristic
 from sporkfish.searcher.move_ordering.killer_move_heuristic import KillerMoveHeuristic
 from sporkfish.searcher.move_ordering.move_order_config import MoveOrderMode
 from sporkfish.searcher.move_ordering.move_order_heuristic import MoveOrderHeuristic
@@ -20,7 +21,6 @@ from sporkfish.searcher.searcher_config import SearcherConfig
 from sporkfish.statistics import NodeTypes, PruningTypes, TranpositionTable
 from sporkfish.transposition_table import TranspositionTable
 from sporkfish.zobrist_hasher import ZobristHasher, ZobristStateInfo
-from sporkfish.searcher.move_ordering.history_heuristic import HistoryHeuristic
 
 
 class MiniMaxVariants(Searcher, ABC):

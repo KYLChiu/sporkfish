@@ -1,7 +1,8 @@
+import pytest
+
 from config import load_config
 from sporkfish.searcher.move_ordering.move_order_config import MoveOrderMode
 from sporkfish.searcher.searcher_config import SearcherConfig, SearchMode
-import pytest
 
 
 def test_load_config():

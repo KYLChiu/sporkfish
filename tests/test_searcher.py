@@ -1,10 +1,10 @@
 import pytest
 from init_board_helper import (
     board_setup,
+    evaluator,
     init_board,
     score_fen,
     searcher_with_fen,
-    evaluator,
 )
 
 from sporkfish.evaluator.evaluator_config import EvaluatorConfig, EvaluatorMode

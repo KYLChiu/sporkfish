@@ -1,7 +1,8 @@
-from enum import Enum
-from typing import Dict, Union, Optional
-import chess
 import logging
+from enum import Enum
+from typing import Dict, Optional, Union
+
+import chess
 
 
 class NodeTypes(Enum):

@@ -1,14 +1,15 @@
-from sporkfish.statistics import Statistics, NodeTypes, PruningTypes, TranpositionTable
 import chess
 import pytest
-from sporkfish.searcher.searcher_config import SearcherConfig, SearchMode
+from init_board_helper import board_setup, evaluator, init_board
+
+from sporkfish.board.board_factory import Board, BoardFactory, BoardPyChess
 from sporkfish.searcher.move_ordering.move_order_config import (
     MoveOrderConfig,
     MoveOrderMode,
 )
+from sporkfish.searcher.searcher_config import SearcherConfig, SearchMode
 from sporkfish.searcher.searcher_factory import SearcherFactory
-from init_board_helper import board_setup, evaluator, init_board
-from sporkfish.board.board_factory import Board, BoardFactory, BoardPyChess
+from sporkfish.statistics import NodeTypes, PruningTypes, Statistics, TranpositionTable
 
 
 class TestIncrementStatistics:
