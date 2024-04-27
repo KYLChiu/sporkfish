@@ -1,5 +1,6 @@
 from sporkfish.statistics import Statistics, NodeTypes, PruningTypes, TranpositionTable
 import chess
+#from tests.test_searcher import init_searcher
 
 # TODO: add tests to check searcher is indeed incrementing statistics correctly
 

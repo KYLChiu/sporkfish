@@ -1,5 +1,5 @@
 import pytest
-from init_board_helper import board_setup, init_board, score_fen, searcher_with_fen
+from init_board_helper import board_setup, init_board, score_fen, searcher_with_fen, evaluator
 
 from sporkfish.evaluator.evaluator_config import EvaluatorConfig, EvaluatorMode
 from sporkfish.evaluator.evaluator_factory import EvaluatorFactory
@@ -14,13 +14,6 @@ from sporkfish.searcher.searcher import Searcher
 from sporkfish.searcher.searcher_config import SearcherConfig
 from sporkfish.searcher.searcher_factory import SearcherFactory
 
-
-def evaluator(
-    evaluator_cfg: EvaluatorConfig = EvaluatorConfig(
-        evaluator_mode=EvaluatorMode.PESTO
-    ),
-) -> Evaluator:
-    return EvaluatorFactory.create(evaluator_cfg)
 
 
 @pytest.mark.parametrize(

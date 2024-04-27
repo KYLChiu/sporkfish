@@ -21,9 +21,9 @@ class SearcherFactory:
         :rtype: Searcher
         :raises TypeError: If the specified searcher type is not supported.
         """
-        if searcher_cfg.search_mode is SearchMode.SINGLE_PROCESS:
+        if searcher_cfg.search_mode is SearchMode.NEGA_MAX_SINGLE_PROCESS: # needs rename
             return NegamaxSp(evaluator, searcher_cfg)
-        elif searcher_cfg.search_mode is SearchMode.LAZY_SMP:
+        elif searcher_cfg.search_mode is SearchMode.NEGA_MAX_LAZY_SMP:
             return NegaMaxLazySmp(evaluator, searcher_cfg)
         else:
             raise TypeError(
