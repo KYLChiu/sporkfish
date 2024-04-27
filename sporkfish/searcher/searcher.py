@@ -28,6 +28,7 @@ class Searcher(ABC):
         self._statistics = Statistics()
         self._dict: dict = dict()
 
+    # move this whole function to statistics
     def _log_info(
         self, elapsed: float, score: float, move: chess.Move, depth: int
     ) -> None:
@@ -47,27 +48,7 @@ class Searcher(ABC):
         :param depth: The depth of the search.
         :type depth: int
         """
-        fields = {
-            "depth": depth,
-            # time in ms
-            "time": int(1000 * elapsed),
-            "score cp": int(score)
-            if score not in {float("inf"), -float("inf")}
-            else float("nan"),
-            "pv": move,  # Incorrect but will do for now
-        }
-        total = 0
-        for type in NodeTypes:
-            count = self._statistics.nodes_visited[type]
-            fields[f"Node {type}"] = count
-            total += count
-        fields["Total nodes"] = total
-        fields["Nodes per sec"] = float(total / elapsed) if elapsed > 0 else 0
-        fields["Num of Pruning"] = self._statistics.pruned
-        fields["Nodes from TT"] = self._statistics.nodes_from_tt
-
-        info_str = " ".join(f"{k} {v}" for k, v in fields.items())
-        logging.info(f"info {info_str}")
+        self._statistics.log_info(elapsed, score, move, depth) 
 
     @abstractmethod
     def search(

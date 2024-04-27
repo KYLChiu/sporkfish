@@ -7,7 +7,7 @@ from sporkfish.evaluator.evaluator import Evaluator
 from sporkfish.searcher.minimax import MiniMaxVariants
 from sporkfish.searcher.move_ordering.move_orderer import MoveOrderer
 from sporkfish.searcher.searcher_config import SearcherConfig
-from sporkfish.statistics import NodeTypes
+from sporkfish.statistics import NodeTypes, PruningTypes
 from sporkfish.zobrist_hasher import ZobristStateInfo
 
 
@@ -56,7 +56,7 @@ class NegamaxSp(MiniMaxVariants):
             self._statistics.increment_nodes_from_tt()
             return tt_entry["score"]  # type: ignore
 
-        self._statistics.increment_node_visited(NodeTypes.NEGAMAX)
+        self._statistics.increment_visited(NodeTypes.NEGAMAX)
 
         # Null move pruning - reduce the search space by trying a null move,
         # then seeing if the score of the subtree search is still high enough to cause a beta cutoff
@@ -186,7 +186,7 @@ class NegamaxSp(MiniMaxVariants):
         """
         value = -float("inf")
         best_move = chess.Move.null()
-        self._statistics.increment_node_visited(NodeTypes.NEGAMAX)
+        self._statistics.increment_visited(NodeTypes.NEGAMAX)
 
         zobrist_state = (
             self._zobrist_hash.full_zobrist_hash(board)
@@ -235,7 +235,7 @@ class NegamaxSp(MiniMaxVariants):
             alpha = max(alpha, value)
             if alpha >= beta:
                 self._update_killer_moves(move, depth)
-                self._statistics.increment_pruning()
+                self._statistics.increment_visited(PruningTypes.ALPHA_BETA)
                 break
 
         if zobrist_state:
