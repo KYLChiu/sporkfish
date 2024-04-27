@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Dict, Union
+from typing import Dict, Union, Optional
 import chess
 import logging
 
@@ -31,6 +31,7 @@ class Statistics:
         and nodes stored in the transposition table to zero.
         """
         self._visited = {key: 0 for key in [*NodeTypes, *PruningTypes, *TranpositionTable]}
+        self._fields = None
 
     # simplify to one api
     def increment_visited(
@@ -71,6 +72,16 @@ class Statistics:
         """
         return self._visited
     
+    @property
+    def info_data(self) -> Optional[Dict]:
+        """
+        Returns a string containing the count of visited nodes for different node types.
+
+        :return: A string containing the count of visited nodes for different node types.
+        :rtype: str
+        """
+        return self._fields
+    
     def log_info(
         self, elapsed: float, score: float, move: chess.Move, depth: int
     ) -> Dict[str, Union[str, int, float, chess.Move]]:
@@ -87,7 +98,7 @@ class Statistics:
         :return: A dictionary containing useful information about the search process.
         :rtype: dict
         """
-        fields = {
+        self._fields = {
             "Depth": depth,
             "Time": int(1000 * elapsed), # time in ms
             "Score cp": int(score) if score not in {float("inf"), -float("inf")} else float("nan"),
@@ -96,19 +107,19 @@ class Statistics:
         total_node = 0
         for type in NodeTypes:
             count = self._visited[type]
-            fields[f"Node: {type}"] = self._visited[type]
+            self._fields[f"Node: {type}"] = self._visited[type]
             total_node += count
-        fields["Total nodes"] = total_node
+        self._fields["Total nodes"] = total_node
 
         total_pruning = 0
         for type in PruningTypes:
             count = self._visited[type]
-            fields[f"Pruning: {type}"] = self._visited[type]
+            self._fields[f"Pruning: {type}"] = self._visited[type]
             total_pruning += count
-        fields["Total pruning"] = total_pruning
+        self._fields["Total pruning"] = total_pruning
 
-        fields["Nodes from TT"] = self._visited[TranpositionTable.TRANSPOSITITON_TABLE]
-        fields["NPS"] = float(total_node / elapsed) if elapsed > 0 else 0
+        self._fields["Nodes from TT"] = self._visited[TranpositionTable.TRANSPOSITITON_TABLE]
+        self._fields["NPS"] = float(total_node / elapsed) if elapsed > 0 else 0
 
-        info_str = " ".join(f"{k} {v}" for k, v in fields.items())
-        logging.info(f"info {info_str}")
+        self._info_str = " ".join(f"{k} {v}" for k, v in self._fields.items())
+        logging.info(f"info {self._info_str}")

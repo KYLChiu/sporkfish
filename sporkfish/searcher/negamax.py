@@ -7,7 +7,7 @@ from sporkfish.evaluator.evaluator import Evaluator
 from sporkfish.searcher.minimax import MiniMaxVariants
 from sporkfish.searcher.move_ordering.move_orderer import MoveOrderer
 from sporkfish.searcher.searcher_config import SearcherConfig
-from sporkfish.statistics import NodeTypes, PruningTypes
+from sporkfish.statistics import NodeTypes, PruningTypes, TranpositionTable
 from sporkfish.zobrist_hasher import ZobristStateInfo
 
 
@@ -53,7 +53,8 @@ class NegamaxSp(MiniMaxVariants):
                 zobrist_state.zobrist_hash, depth
             )
         ):
-            self._statistics.increment_nodes_from_tt()
+            # add test
+            self._statistics.increment_visited(TranpositionTable.TRANSPOSITITON_TABLE)
             return tt_entry["score"]  # type: ignore
 
         self._statistics.increment_visited(NodeTypes.NEGAMAX)
@@ -63,7 +64,8 @@ class NegamaxSp(MiniMaxVariants):
         if self._searcher_config.enable_null_move_pruning and self._null_move_pruning(
             board, depth, alpha, beta
         ):
-            self._statistics.increment_pruning()
+            # add test
+            self._statistics.increment_visited(PruningTypes.NULL_MOVE)
             return beta
 
         # Move ordering
@@ -94,7 +96,8 @@ class NegamaxSp(MiniMaxVariants):
                 board, depth, capture, move, alpha
             ):
                 board.pop()
-                self._statistics.increment_pruning()
+                # add test
+                self._statistics.increment_visited(PruningTypes.FUTILITY)
                 continue
 
             # Update the Zobrist hash
@@ -186,7 +189,6 @@ class NegamaxSp(MiniMaxVariants):
         """
         value = -float("inf")
         best_move = chess.Move.null()
-        self._statistics.increment_visited(NodeTypes.NEGAMAX)
 
         zobrist_state = (
             self._zobrist_hash.full_zobrist_hash(board)
