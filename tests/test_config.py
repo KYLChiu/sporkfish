@@ -15,12 +15,6 @@ def test_create_from_yaml_config():
     assert isinstance(searcher_cfg.max_depth, int)
 
 
-def get_enum_type(value):
-    for mode in SearchMode:
-        if SearchMode.mode == value:
-            return mode
-    raise ValueError("Enum type not found for value: {}".format(value))
-
 @pytest.mark.parametrize(
     ("max_depth", "search_mode", "enable_tt", "move_order_config"),
     [
