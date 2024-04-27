@@ -20,19 +20,19 @@ def test_create_from_yaml_config():
     [
         (
             10,
-            SearchMode.NEGA_MAX_SINGLE_PROCESS,
+            SearchMode.NEGAMAX_SINGLE_PROCESS,
             False,
             {"move_order_mode": MoveOrderMode.KILLER_MOVE, "mvv_lva_weight": 100},
         ),
         (
             3,
-            SearchMode.NEGA_MAX_LAZY_SMP,
+            SearchMode.NEGAMAX_LAZY_SMP,
             False,
             {"move_order_mode": MoveOrderMode.MVV_LVA, "mvv_lva_weight": 20},
         ),
         (
             32,
-            SearchMode.NEGA_MAX_LAZY_SMP,
+            SearchMode.NEGAMAX_SINGLE_PROCESS,
             False,
             {"move_order_mode": MoveOrderMode.HISTORY, "mvv_lva_weight": 0.3},
         ),

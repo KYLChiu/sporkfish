@@ -170,7 +170,7 @@ class TestQuiescence:
 @pytest.fixture
 def init_searcher(
     max_depth: int = 4,
-    search_mode: SearchMode = SearchMode.NEGA_MAX_SINGLE_PROCESS,
+    search_mode: SearchMode = SearchMode.NEGAMAX_SINGLE_PROCESS,
     move_order_mode: MoveOrderMode = MoveOrderMode.MVV_LVA,
 ) -> Searcher:
     """Initialise searcher"""

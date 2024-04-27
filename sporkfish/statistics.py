@@ -8,7 +8,6 @@ class NodeTypes(Enum):
     NEGAMAX = "NEGAMAX"
     NEGAMAX_LAZY_SMP = "NEGAMAX_LAZY_SMP"
     QUIESCENSE = "QUIESCENSE"
-    TRANSPOSITITON_TABLE = "TRANSPOSITITON_TABLE"
 
 
 class PruningTypes(Enum):

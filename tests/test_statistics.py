@@ -51,7 +51,7 @@ class TestResetStatistics:
 
 def init_searcher(
     max_depth: int = 3,
-    search_mode: SearchMode = SearchMode.NEGA_MAX_SINGLE_PROCESS,
+    search_mode: SearchMode = SearchMode.NEGAMAX_SINGLE_PROCESS,
     enable_null_move_pruning=False,
     enable_futility_pruning=False,
     enable_delta_pruning=False,
@@ -84,7 +84,7 @@ def init_searcher(
 )
 class TestSearcherIncrement:
     def test_increment_negamax_sp_searcher(self, fen_string):
-        s = init_searcher(search_mode=SearchMode.NEGA_MAX_SINGLE_PROCESS)
+        s = init_searcher(search_mode=SearchMode.NEGAMAX_SINGLE_PROCESS)
         assert s._statistics.visited[NodeTypes.NEGAMAX] == 0
         board = init_board(fen_string)
         depth = 1
