@@ -9,6 +9,7 @@ from sporkfish.uci_client import UCIClient
 
 class RunMode(Enum):
     """Enumeration for different run modes."""
+
     LICHESS = "LICHESS"
     UCI = "UCI"
 

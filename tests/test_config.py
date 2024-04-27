@@ -18,9 +18,24 @@ def test_create_from_yaml_config():
 @pytest.mark.parametrize(
     ("max_depth", "search_mode", "enable_tt", "move_order_config"),
     [
-        (10, SearchMode.NEGA_MAX_SINGLE_PROCESS, False, {"move_order_mode": MoveOrderMode.KILLER_MOVE, "mvv_lva_weight": 100}),
-        (3, SearchMode.NEGA_MAX_LAZY_SMP, False, {"move_order_mode": MoveOrderMode.MVV_LVA, "mvv_lva_weight": 20}),
-        (32, SearchMode.NEGA_MAX_LAZY_SMP, False, {"move_order_mode": MoveOrderMode.HISTORY, "mvv_lva_weight": 0.3}),
+        (
+            10,
+            SearchMode.NEGA_MAX_SINGLE_PROCESS,
+            False,
+            {"move_order_mode": MoveOrderMode.KILLER_MOVE, "mvv_lva_weight": 100},
+        ),
+        (
+            3,
+            SearchMode.NEGA_MAX_LAZY_SMP,
+            False,
+            {"move_order_mode": MoveOrderMode.MVV_LVA, "mvv_lva_weight": 20},
+        ),
+        (
+            32,
+            SearchMode.NEGA_MAX_LAZY_SMP,
+            False,
+            {"move_order_mode": MoveOrderMode.HISTORY, "mvv_lva_weight": 0.3},
+        ),
     ],
 )
 class TestCreateFromDict:
@@ -38,6 +53,11 @@ class TestCreateFromDict:
         assert searcher_cfg.search_mode == search_mode
         assert searcher_cfg.enable_transposition_table is False
         assert searcher_cfg.move_order_config
-        assert searcher_cfg.move_order_config.move_order_mode == move_order_config["move_order_mode"]
-        assert searcher_cfg.move_order_config.mvv_lva_weight == move_order_config["mvv_lva_weight"]
-
+        assert (
+            searcher_cfg.move_order_config.move_order_mode
+            == move_order_config["move_order_mode"]
+        )
+        assert (
+            searcher_cfg.move_order_config.mvv_lva_weight
+            == move_order_config["mvv_lva_weight"]
+        )

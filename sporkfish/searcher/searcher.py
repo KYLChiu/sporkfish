@@ -48,7 +48,7 @@ class Searcher(ABC):
         :param depth: The depth of the search.
         :type depth: int
         """
-        self._statistics.log_info(elapsed, score, move, depth) 
+        self._statistics.log_info(elapsed, score, move, depth)
 
     @abstractmethod
     def search(

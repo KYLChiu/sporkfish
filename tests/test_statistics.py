@@ -11,9 +11,6 @@ from init_board_helper import board_setup, evaluator, init_board
 from sporkfish.board.board_factory import Board, BoardFactory, BoardPyChess
 
 
-
-
-
 class TestIncrementStatistics:
     def test_increment_visited(self):
         S = Statistics()
@@ -41,6 +38,7 @@ class TestIncrementStatistics:
         assert S.visited[NodeTypes.NEGAMAX] == 0
         S.increment_visited(NodeTypes.NEGAMAX)
         assert S.visited[NodeTypes.NEGAMAX] == 1
+
 
 class TestResetStatistics:
     def test_reset_visited(self):
@@ -77,6 +75,7 @@ def init_searcher(
     )
     return s
 
+
 @pytest.mark.parametrize(
     ("fen_string"),
     [
@@ -85,7 +84,7 @@ def init_searcher(
 )
 class TestSearcherIncrement:
     def test_increment_negamax_sp_searcher(self, fen_string):
-        s = init_searcher(search_mode = SearchMode.NEGA_MAX_SINGLE_PROCESS)
+        s = init_searcher(search_mode=SearchMode.NEGA_MAX_SINGLE_PROCESS)
         assert s._statistics.visited[NodeTypes.NEGAMAX] == 0
         board = init_board(fen_string)
         depth = 1
@@ -98,19 +97,20 @@ class TestSearcherIncrement:
     # more tests needed!
 
 
-def init_statistics_log(elapsed = 10.0, score = 100.0, move = chess.Move.null(), depth = 3):
+def init_statistics_log(elapsed=10.0, score=100.0, move=chess.Move.null(), depth=3):
     S = Statistics()
     assert S.info_data is None
     S.log_info(elapsed, score, move, depth)
     return S
+
 
 class TestLogging:
     def test_logging(self):
         S = init_statistics_log()
         assert isinstance(S.info_data, dict)
 
-    def test_log_depth(self, elapsed = 0.421, score = 24.21, move = chess.Move.null(), depth = 342):
+    def test_log_depth(
+        self, elapsed=0.421, score=24.21, move=chess.Move.null(), depth=342
+    ):
         S = init_statistics_log(elapsed, score, move, depth)
         assert S.info_data["Depth"] == depth
-
-    

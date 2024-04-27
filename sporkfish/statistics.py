@@ -10,14 +10,17 @@ class NodeTypes(Enum):
     QUIESCENSE = "QUIESCENSE"
     TRANSPOSITITON_TABLE = "TRANSPOSITITON_TABLE"
 
+
 class PruningTypes(Enum):
     NULL_MOVE = "NULL_MOVE"
     DELTA = "DELTA"
     FUTILITY = "FUTILITY"
     ALPHA_BETA = "ALPHA_BETA"
 
+
 class TranpositionTable(Enum):
     TRANSPOSITITON_TABLE = "TRANSPOSITITON_TABLE"
+
 
 class Statistics:
     """
@@ -30,12 +33,16 @@ class Statistics:
         Upon initialization, sets the counts of visited nodes, pruned nodes,
         and nodes stored in the transposition table to zero.
         """
-        self._visited = {key: 0 for key in [*NodeTypes, *PruningTypes, *TranpositionTable]}
+        self._visited = {
+            key: 0 for key in [*NodeTypes, *PruningTypes, *TranpositionTable]
+        }
         self._fields = None
 
     # simplify to one api
     def increment_visited(
-        self, visited_type: Union[NodeTypes, PruningTypes, TranpositionTable], count: int = 1
+        self,
+        visited_type: Union[NodeTypes, PruningTypes, TranpositionTable],
+        count: int = 1,
     ) -> None:
         """
         Increment the count of visited nodes of a specified type.
@@ -71,7 +78,7 @@ class Statistics:
         :rtype: dict
         """
         return self._visited
-    
+
     @property
     def info_data(self) -> Optional[Dict]:
         """
@@ -81,7 +88,7 @@ class Statistics:
         :rtype: str
         """
         return self._fields
-    
+
     def log_info(
         self, elapsed: float, score: float, move: chess.Move, depth: int
     ) -> Dict[str, Union[str, int, float, chess.Move]]:
@@ -100,8 +107,10 @@ class Statistics:
         """
         self._fields = {
             "Depth": depth,
-            "Time": int(1000 * elapsed), # time in ms
-            "Score cp": int(score) if score not in {float("inf"), -float("inf")} else float("nan"),
+            "Time": int(1000 * elapsed),  # time in ms
+            "Score cp": int(score)
+            if score not in {float("inf"), -float("inf")}
+            else float("nan"),
             "PV": move,  # Incorrect - pending: https://github.com/KYLChiu/sporkfish/issues/13
         }
         total_node = 0
@@ -118,7 +127,9 @@ class Statistics:
             total_pruning += count
         self._fields["Total pruning"] = total_pruning
 
-        self._fields["Nodes from TT"] = self._visited[TranpositionTable.TRANSPOSITITON_TABLE]
+        self._fields["Nodes from TT"] = self._visited[
+            TranpositionTable.TRANSPOSITITON_TABLE
+        ]
         self._fields["NPS"] = float(total_node / elapsed) if elapsed > 0 else 0
 
         self._info_str = " ".join(f"{k} {v}" for k, v in self._fields.items())

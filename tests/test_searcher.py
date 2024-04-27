@@ -1,5 +1,11 @@
 import pytest
-from init_board_helper import board_setup, init_board, score_fen, searcher_with_fen, evaluator
+from init_board_helper import (
+    board_setup,
+    init_board,
+    score_fen,
+    searcher_with_fen,
+    evaluator,
+)
 
 from sporkfish.evaluator.evaluator_config import EvaluatorConfig, EvaluatorMode
 from sporkfish.evaluator.evaluator_factory import EvaluatorFactory
@@ -13,7 +19,6 @@ from sporkfish.searcher.move_ordering.mvv_lva_heuristic import MvvLvaHeuristic
 from sporkfish.searcher.searcher import Searcher
 from sporkfish.searcher.searcher_config import SearcherConfig, SearchMode
 from sporkfish.searcher.searcher_factory import SearcherFactory
-
 
 
 @pytest.mark.parametrize(
@@ -111,9 +116,7 @@ class TestConsistency:
     ],
 )
 class TestQuiescence:
-    def test_quiescence_depth_0(
-        self, init_searcher: Searcher, fen_string: str
-    ) -> None:
+    def test_quiescence_depth_0(self, init_searcher: Searcher, fen_string: str) -> None:
         """
         Test for quiescence base case (depth 0)
         """
@@ -166,13 +169,15 @@ class TestQuiescence:
 
 @pytest.fixture
 def init_searcher(
-    max_depth: int = 4, search_mode: SearchMode = SearchMode.NEGA_MAX_SINGLE_PROCESS, move_order_mode: MoveOrderMode = MoveOrderMode.MVV_LVA
+    max_depth: int = 4,
+    search_mode: SearchMode = SearchMode.NEGA_MAX_SINGLE_PROCESS,
+    move_order_mode: MoveOrderMode = MoveOrderMode.MVV_LVA,
 ) -> Searcher:
     """Initialise searcher"""
     return SearcherFactory.create(
         SearcherConfig(
-            max_depth = max_depth,
-            search_mode = search_mode,
+            max_depth=max_depth,
+            search_mode=search_mode,
             move_order_config=MoveOrderConfig(move_order_mode=move_order_mode),
         ),
         evaluator=evaluator(),
