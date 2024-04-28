@@ -11,7 +11,7 @@ from sporkfish.searcher.searcher import Searcher
 
 class Engine:
     """
-    Class wrapping the opening book and searcher into a convenient interface.
+    Class wrapping the opening book, endgametable base and searcher into a convenient interface.
 
     Attributes:
     - _searcher (Searcher): The chess move searcher.
