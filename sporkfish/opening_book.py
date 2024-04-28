@@ -13,18 +13,14 @@ from sporkfish.configurable import Configurable
 class OpeningBookConfig(Configurable):
     """
     Configuration class for an opening book.
-
-    Attributes:
-        opening_book_path (Optional[str]): Relative (to root directory) or absolute path to opening book binary. Defaults to None.
-
     """
 
     def __init__(self, opening_book_path: Optional[str] = None):
         """
         Initialize an OpeningBookConfig instance.
 
-        Args:
-            opening_book_path (Optional[str]): Relative (to root directory) or absolute path to opening book binary. Defaults to None.
+        :param opening_book_path: Relative (to root directory) or absolute path to opening book binary. Defaults to None.
+        :type config: Optional[str]
         """
         self.opening_book_path = opening_book_path
 
@@ -38,7 +34,6 @@ class OpeningBook:
 
         :param config: Opening book config. If not provided, the default opening book is used.
         :type config: OpeningBookConfig
-        :return: None
         """
         self._config = config
         self._db = None
@@ -55,6 +50,7 @@ class OpeningBook:
 
         :param relative_path: Relative path to the resource.
         :type relative_path: str
+        
         :return: Absolute path to the resource.
         :rtype: str
         """
