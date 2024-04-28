@@ -99,6 +99,7 @@ class UCIClient:
             :type engine: Engine
             :param response_mode: The mode for handling the response (ResponseMode.PRINT or ResponseMode.RETURN).
             :type response_mode: ResponseMode
+
             :return: The UCI response if response_mode is ResponseMode.RETURN.
             :rtype: str
             """
@@ -188,6 +189,7 @@ class UCIClient:
 
         :param command: The UCI command to send.
         :type command: str
+
         :return: The response from the UCI engine.
         :rtype: str
         """

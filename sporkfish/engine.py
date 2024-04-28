@@ -46,6 +46,7 @@ class Engine:
         :type board: Board
         :param timeout: Time in seconds until the engine stops searching.
         :type timeout: Optional[float]
+
         :return: The selected chess move.
         :rtype: chess.Move
         """
@@ -70,6 +71,7 @@ class Engine:
         :type board: Board
         :param timeout: Time in seconds until the engine stops searching.
         :type timeout: Optional[float]
+
         :return: The score of the searcher.
         :rtype: float
         """

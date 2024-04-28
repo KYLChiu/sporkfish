@@ -30,14 +30,17 @@ class NegamaxSp(MiniMaxVariants):
         """
         Negamax implementation with alpha-beta pruning. For non-root nodes.
 
-        Args:
-            board: The current state of the chess board.
-            depth: The remaining depth to search.
-            alpha: The alpha value for alpha-beta pruning.
-            beta: The beta value for alpha-beta pruning.
+        :param board: The current state of the chess board.
+        :type board: Board
+        :param depth: The remaining depth to search.
+        :type depth: int
+        :param alpha: The alpha value for alpha-beta pruning.
+        :type alpha: float
+        :param beta: The beta value for alpha-beta pruning.
+        :type beta: float
 
-        Returns:
-            The evaluation score of the current board position.
+        :returns: The evaluation score of the current board position.
+        :rtype: float
         """
         value = -float("inf")
 
@@ -123,6 +126,7 @@ class NegamaxSp(MiniMaxVariants):
             alpha = max(alpha, value)
 
             if alpha >= beta:
+                self._statistics.increment_visited(PruningTypes.ALPHA_BETA)
                 self._update_killer_moves(move, depth)
                 self._update_history_table(move, depth)
                 break
@@ -141,7 +145,7 @@ class NegamaxSp(MiniMaxVariants):
         thereby avoiding unnecessary exploration of certain branches of the game tree.
 
         :param board: The current state of the chess board.
-        :type board: chess.Board
+        :type board: Board
         :param depth: The current depth in the search tree.
         :type depth: int
         :param alpha: The current best score for the maximizing player.
@@ -184,6 +188,7 @@ class NegamaxSp(MiniMaxVariants):
         :type alpha: float
         :param beta: Beta value for alpha-beta pruning.
         :type beta: float
+
         :return: Tuple containing the best move and its value.
         :rtype: Tuple[float, chess.Move]
         """
@@ -253,9 +258,10 @@ class NegamaxSp(MiniMaxVariants):
 
         :param board: The current chess board position.
         :type board: Board
-        :return: The best score and move based on the search.
         :param timeout: Time in seconds until we stop the search, returning the best depth if we timeout.
         :type timeout: Optional[float]
+
+        :return: The best score and associated move based on the search.
         :rtype: Tuple[float, Move]
         """
         score, move = self._iterative_deepening_search(board, timeout)

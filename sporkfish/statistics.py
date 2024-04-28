@@ -38,7 +38,6 @@ class Statistics:
         }
         self._fields: Dict = {}
 
-    # simplify to one api
     def increment_visited(
         self,
         visited_type: Union[NodeTypes, PruningTypes, TranpositionTable],
@@ -48,11 +47,9 @@ class Statistics:
         Increment the count of visited nodes of a specified type.
 
         :param visited_node_type: The type of node being visited.
-        :type visited_node_type: NodeTypes
+        :type visited_node_type: Union[NodeTypes, PruningTypes, TranpositionTable]
         :param count: The number of nodes to increment the count by. Default is 1.
         :type count: int
-        :return: None
-        :rtype: None
         """
         self._visited[visited_type] += count
 
@@ -62,9 +59,6 @@ class Statistics:
 
         :param default_val: The default value to set nodes_visited to (default is 0).
         :type default_val: int
-
-        :return: None
-        :rtype: None
         """
         for key in self._visited.keys():
             self._visited[key] = default_val
@@ -75,17 +69,17 @@ class Statistics:
         Returns a dictionary containing the count of visited nodes for different node types.
 
         :return: A dictionary containing the count of visited nodes for different node types.
-        :rtype: dict
+        :rtype: Dict[NodeTypes, int]
         """
         return self._visited
 
     @property
-    def info_data(self) -> Optional[Dict]:
+    def info_data(self) -> Dict:
         """
-        Returns a string containing the count of visited nodes for different node types.
+        Returns a dictionary containing useful information about the search process.
 
-        :return: A string containing the count of visited nodes for different node types.
-        :rtype: str
+        :return: A dictionary containing useful information about the search process.
+        :rtype: Dict
         """
         return self._fields
 
@@ -101,9 +95,6 @@ class Statistics:
         :type move: chess.Move
         :param depth: The depth of the search.
         :type depth: int
-
-        :return: A dictionary containing useful information about the search process.
-        :rtype: dict
         """
         self._fields = {
             "Depth": depth,
@@ -132,5 +123,6 @@ class Statistics:
         ]
         self._fields["NPS"] = float(total_node / elapsed) if elapsed > 0 else 0
 
+        # TODO: clean up / format self._info_str
         self._info_str = " ".join(f"{k} {v}" for k, v in self._fields.items())
         logging.info(f"info {self._info_str}")

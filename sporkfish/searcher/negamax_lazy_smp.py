@@ -41,6 +41,7 @@ class NegaMaxLazySmp(NegamaxSp):
         :type alpha: float
         :param beta: Beta value for alpha-beta pruning.
         :type beta: float
+
         :return: Tuple containing the best move and its value.
         :rtype: Tuple[float, chess.Move]
         """

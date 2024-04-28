@@ -11,7 +11,8 @@ from sporkfish.configurable import Configurable
 
 
 class OpeningBookConfig(Configurable):
-    """Configuration class for an opening book.
+    """
+    Configuration class for an opening book.
 
     Attributes:
         opening_book_path (Optional[str]): Relative (to root directory) or absolute path to opening book binary. Defaults to None.
@@ -72,6 +73,7 @@ class OpeningBook:
 
         :param opening_book_path: Path to the opening book file.
         :type opening_book_path: str
+
         :return: The opened opening database reader.
                  Returns None if the file is not found.
         :rtype: Optional[chess.polyglot.MemoryMappedReader]
@@ -91,6 +93,7 @@ class OpeningBook:
 
         :param board: The current chess board position.
         :type board: Board
+
         :return: The recommended move from the opening database.
                 Returns None if no matching entry is found.
         :rtype: Optional[chess.Move]

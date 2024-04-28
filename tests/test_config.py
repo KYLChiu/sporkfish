@@ -28,7 +28,7 @@ def test_create_from_yaml_config():
         (
             3,
             SearchMode.NEGAMAX_LAZY_SMP,
-            False,
+            True,
             {"move_order_mode": MoveOrderMode.MVV_LVA, "mvv_lva_weight": 20},
         ),
         (
@@ -52,7 +52,7 @@ class TestCreateFromDict:
         searcher_cfg = SearcherConfig.from_dict(cfg)
         assert searcher_cfg.max_depth == max_depth
         assert searcher_cfg.search_mode == search_mode
-        assert searcher_cfg.enable_transposition_table is False
+        assert searcher_cfg.enable_transposition_table is enable_tt
         assert searcher_cfg.move_order_config
         assert (
             searcher_cfg.move_order_config.move_order_mode
