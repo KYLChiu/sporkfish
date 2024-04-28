@@ -16,6 +16,7 @@ class Engine:
     Attributes:
     - _searcher (Searcher): The chess move searcher.
     - _opening_book (OpeningBook): The opening book for initial moves.
+    - _endgame_tablebase (EndgameTablebase): The tablebase used for endgame moves.
     """
 
     def __init__(

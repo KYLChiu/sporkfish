@@ -61,6 +61,7 @@ class LichessBotBerserk(LichessBot):
         :type color: int
         :param state: The game state containing time and increment information
         :type state: Any
+
         :return: A tuple containing the time and increment for the specified color, or None if the game is correspondence
         :rtype: Tuple[Optional[float], Optional[float]]
         """
@@ -86,7 +87,6 @@ class LichessBotBerserk(LichessBot):
         :type game_id: str
         :param state: The current state of the game.
         :type state: Any
-        :return: None
         """
         # Check if it's the player's turn based on the number of moves and color
         if len(prev_moves.split()) & 1 == color:
@@ -105,6 +105,7 @@ class LichessBotBerserk(LichessBot):
         :type game_id: str
         :param states: The game states to play the game from.
         :type states: Iterator[Dict[str, Any]]
+
         :return: The reason for the game termination.
         :rtype: GameTerminationReason
         """
@@ -141,6 +142,7 @@ class LichessBotBerserk(LichessBot):
 
         :param game_id: The ID of the game on Lichess.
         :type game_id: str
+
         :return: The reason for the game termination.
         :rtype: GameTerminationReason
         """
@@ -154,6 +156,7 @@ class LichessBotBerserk(LichessBot):
 
         :param event: The event details containing the challenge information.
         :type event: Dict[str, Any]
+
         :return: True if the bot should accept the challenge, False otherwise.
         :rtype: bool
         """
@@ -171,6 +174,7 @@ class LichessBotBerserk(LichessBot):
 
         :param event: The event containing information about the challenge.
         :type event: Dict[str, Any]
+
         :return: True if the challenge is accepted, False if it is declined.
         :rtype: bool
         """
@@ -187,6 +191,7 @@ class LichessBotBerserk(LichessBot):
 
         :param event: The event containing information about the game.
         :type event: Dict[str, Any]
+        
         :return: The reason for the game termination.
         :rtype: GameTerminationReason
         """

@@ -42,6 +42,9 @@ class LichessBot(ABC):
         :type time: Optional[float]
         :param increment: Increment (in ms) for player.
         :type increment: Optional[float]
+
+        :return: The UCI command to send but without the best move.
+        :rtype: str
         """
         command = "go"
 
