@@ -7,7 +7,7 @@ import chess
 # should be absolute paths - amend in next PR
 from sporkfish.board.board import Board
 from sporkfish.searcher.searcher_config import SearcherConfig
-from sporkfish.statistics import NodeTypes, Statistics
+from sporkfish.statistics import Statistics
 
 
 class Searcher(ABC):
@@ -21,23 +21,19 @@ class Searcher(ABC):
 
         :param searcher_config: Config to use for searching.
         :type searcher_config: SearcherConfig
-        :return: None
         """
 
         self._searcher_config = searcher_config
         self._statistics = Statistics()
         self._dict: dict = dict()
 
-    # move this whole function to statistics
     def _log_info(
         self, elapsed: float, score: float, move: chess.Move, depth: int
     ) -> None:
         """
         Log information about the search process.
 
-        This method logs various statistics and details about the search process,
-        including elapsed time, evaluation score, nodes visited, nodes per second (NPS),
-        search depth, and the principal variation (PV).
+        This method logs various statistics and details about the search process.
 
         :param elapsed: The time elapsed for the search process, in seconds.
         :type elapsed: float
@@ -58,7 +54,7 @@ class Searcher(ABC):
         Abstract method to search for the best move in a given board position.
 
         :param board: The current state of the chess board.
-        :type board: chess.Board
+        :type board: Board
         :param timeout: Optional timeout value for the search operation.
                        If provided, the search should terminate after the specified time.
         :type timeout: Optional[float]
