@@ -2,7 +2,6 @@ import chess
 import pytest
 from init_board_helper import board_setup, evaluator, init_board
 
-from sporkfish.board.board_factory import BoardFactory, BoardPyChess
 from sporkfish.searcher.move_ordering.move_order_config import (
     MoveOrderConfig,
     MoveOrderMode,
@@ -60,7 +59,6 @@ def init_searcher(
     enable_aspiration_windows=False,
     move_order_config=MoveOrderConfig(move_order_mode=MoveOrderMode.MVV_LVA),
 ):
-    board = BoardFactory.create(board_type=BoardPyChess)
     s = SearcherFactory.create(
         SearcherConfig(
             max_depth=max_depth,
