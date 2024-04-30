@@ -1,8 +1,3 @@
-import cProfile
-import os
-import pstats
-import sys
-
 import pytest
 from init_board_helper import board_setup, searcher_with_fen
 
@@ -46,6 +41,9 @@ class TestPerformance:
             move_order_mode=MoveOrderMode.MVV_LVA
         ),
     ) -> None:
+        import cProfile
+        import pstats
+
         profiler = cProfile.Profile()
         profiler.enable()
         searcher_with_fen(
@@ -60,6 +58,9 @@ class TestPerformance:
         )
         profiler.disable()
         stats = pstats.Stats(profiler)
+
+        import os
+        import sys
 
         test_name = (
             test_name.replace("[", "_")
