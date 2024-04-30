@@ -191,7 +191,7 @@ class LichessBotBerserk(LichessBot):
 
         :param event: The event containing information about the game.
         :type event: Dict[str, Any]
-        
+
         :return: The reason for the game termination.
         :rtype: GameTerminationReason
         """

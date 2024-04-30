@@ -7,8 +7,6 @@ from init_board_helper import (
     searcher_with_fen,
 )
 
-from sporkfish.evaluator.evaluator_config import EvaluatorConfig, EvaluatorMode
-from sporkfish.evaluator.evaluator_factory import EvaluatorFactory
 from sporkfish.evaluator.pesto import Pesto as Evaluator
 from sporkfish.searcher.move_ordering.move_order_config import (
     MoveOrderConfig,

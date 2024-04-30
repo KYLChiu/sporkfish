@@ -2,7 +2,7 @@ import chess
 import pytest
 from init_board_helper import board_setup, evaluator, init_board
 
-from sporkfish.board.board_factory import Board, BoardFactory, BoardPyChess
+from sporkfish.board.board_factory import BoardFactory, BoardPyChess
 from sporkfish.searcher.move_ordering.move_order_config import (
     MoveOrderConfig,
     MoveOrderMode,

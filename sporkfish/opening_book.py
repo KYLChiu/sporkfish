@@ -50,7 +50,7 @@ class OpeningBook:
 
         :param relative_path: Relative path to the resource.
         :type relative_path: str
-        
+
         :return: Absolute path to the resource.
         :rtype: str
         """

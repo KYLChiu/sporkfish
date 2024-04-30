@@ -1,6 +1,6 @@
 import logging
 from enum import Enum
-from typing import Dict, Optional, Union
+from typing import Dict, Union
 
 import chess
 
