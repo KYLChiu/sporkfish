@@ -14,40 +14,40 @@ from sporkfish.statistics import NodeTypes, PruningTypes, Statistics, Tranpositi
 
 class TestIncrementStatistics:
     def test_increment_visited(self):
-        S = Statistics()
-        for k, v in S.visited.items():
+        s = Statistics()
+        for k, v in s.visited.items():
             assert v == 0
-            S.increment_visited(k)
+            s.increment_visited(k)
 
-        for k, v in S.visited.items():
+        for k, v in s.visited.items():
             assert v == 1
 
     def test_increment_null_move(self):
-        S = Statistics()
-        assert S.visited[PruningTypes.NULL_MOVE] == 0
-        S.increment_visited(PruningTypes.NULL_MOVE)
-        assert S.visited[PruningTypes.NULL_MOVE] == 1
+        s = Statistics()
+        assert s.visited[PruningTypes.NULL_MOVE] == 0
+        s.increment_visited(PruningTypes.NULL_MOVE)
+        assert s.visited[PruningTypes.NULL_MOVE] == 1
 
     def test_increment_tt(self):
-        S = Statistics()
-        assert S.visited[TranpositionTable.TRANSPOSITITON_TABLE] == 0
-        S.increment_visited(TranpositionTable.TRANSPOSITITON_TABLE)
-        assert S.visited[TranpositionTable.TRANSPOSITITON_TABLE] == 1
+        s = Statistics()
+        assert s.visited[TranpositionTable.TRANSPOSITITON_TABLE] == 0
+        s.increment_visited(TranpositionTable.TRANSPOSITITON_TABLE)
+        assert s.visited[TranpositionTable.TRANSPOSITITON_TABLE] == 1
 
     def test_increment_negamax(self):
-        S = Statistics()
-        assert S.visited[NodeTypes.NEGAMAX] == 0
-        S.increment_visited(NodeTypes.NEGAMAX)
-        assert S.visited[NodeTypes.NEGAMAX] == 1
+        s = Statistics()
+        assert s.visited[NodeTypes.NEGAMAX] == 0
+        s.increment_visited(NodeTypes.NEGAMAX)
+        assert s.visited[NodeTypes.NEGAMAX] == 1
 
 
 class TestResetStatistics:
     def test_reset_visited(self):
-        S = Statistics()
-        for k, v in S.visited.items():
+        s = Statistics()
+        for k, v in s.visited.items():
             assert v == 0
-            S.increment_visited(k, 3)
-            assert S.visited[k] == 3
+            s.increment_visited(k, 3)
+            assert s.visited[k] == 3
 
 
 def init_searcher(
@@ -99,21 +99,21 @@ class TestSearcherIncrement:
 
 
 def init_statistics_log(elapsed=10.0, score=100.0, move=chess.Move.null(), depth=3):
-    S = Statistics()
-    assert isinstance(S.info_data, dict)
-    assert len(S.info_data) == 0
-    S.log_info(elapsed, score, move, depth)
-    return S
+    s = Statistics()
+    assert isinstance(s.info_data, dict)
+    assert len(s.info_data) == 0
+    s.log_info(elapsed, score, move, depth)
+    return s
 
 
 class TestLogging:
     def test_logging(self):
-        S = init_statistics_log()
-        assert isinstance(S.info_data, dict)
-        assert len(S.info_data) > 0
+        s = init_statistics_log()
+        assert isinstance(s.info_data, dict)
+        assert len(s.info_data) > 0
 
     def test_log_depth(
         self, elapsed=0.421, score=24.21, move=chess.Move.null(), depth=342
     ):
-        S = init_statistics_log(elapsed, score, move, depth)
-        assert S.info_data["Depth"] == depth
+        s = init_statistics_log(elapsed, score, move, depth)
+        assert s.info_data["Depth"] == depth
