@@ -8,26 +8,14 @@ import chess
 import chess.syzygy
 
 from sporkfish.board.board import Board
-from sporkfish.configurable import Configurable
+from sporkfish.endgame_tablebases.endgame_tablebase import EndgameTablebase
+from sporkfish.endgame_tablebases.endgame_tablebase_config import EndgameTablebaseConfig
 
 
-class EndgameTablebaseConfig(Configurable):
-    """Configuration class for an endgame tablebase."""
-
-    def __init__(self, endgame_tablebase_path: Optional[str] = None):
-        """
-        Initialize an EndgameTablebaseConfig instance.
-
-        :param endgame_tablebase_path: Relative path (to root directory) to endgame tablebase folder. Defaults to None.
-        :type endgame_tablebase_path: Optional[str]
-        """
-        self.endgame_tablebase_path = endgame_tablebase_path
-
-
-class EndgameTablebase:
+class LocalTablebase(EndgameTablebase):
     """Class for handling the endgame tablebase in chess engines."""
 
-    class DTZCategory(IntEnum):
+    class _DTZCategory(IntEnum):
         """
         Represents the different types of DTZ moves.
         The order represents the desirability in ascending order.
@@ -49,6 +37,7 @@ class EndgameTablebase:
         :type config: EndgameTablebaseConfig
         :return: None
         """
+        EndgameTablebase.__init__(self)
         self._config = config
         self._db = None
         if self._config.endgame_tablebase_path:
@@ -119,30 +108,30 @@ class EndgameTablebase:
                 return False
         return True
 
-    def _categorize_dtz(self, dtz: int) -> "EndgameTablebase.DTZCategory":
+    def _categorize_dtz(self, dtz: int) -> "LocalTablebase._DTZCategory":
         """
         Categorizes the Distance to Zeroing (DTZ) value into different categories.
 
         :param dtz: The DTZ value to categorize, from our perspective.
         :type dtz: int
         :return: The category of the DTZ value.
-        :rtype: EndgameTablebase.DTZCategory
+        :rtype: LocalTablebase._DTZCategory
         """
         assert isinstance(
             dtz, int
         ), f"Expected DTZ to be of type int but got {type(dtz).__name__}."
         if dtz < -100:
-            return EndgameTablebase.DTZCategory.BLESSED_LOSS
+            return LocalTablebase._DTZCategory.BLESSED_LOSS
         elif -100 <= dtz <= -1:
-            return EndgameTablebase.DTZCategory.UNCONDITIONAL_LOSS
+            return LocalTablebase._DTZCategory.UNCONDITIONAL_LOSS
         elif dtz == 0:
-            return EndgameTablebase.DTZCategory.UNCONDITIONAL_DRAW
+            return LocalTablebase._DTZCategory.UNCONDITIONAL_DRAW
         elif 1 <= dtz <= 100:
-            return EndgameTablebase.DTZCategory.UNCONDITIONAL_WIN
+            return LocalTablebase._DTZCategory.UNCONDITIONAL_WIN
         else:
-            return EndgameTablebase.DTZCategory.CURSED_WIN
+            return LocalTablebase._DTZCategory.CURSED_WIN
 
-    def _compare_dtz(self, dtz: int, best_dtz: int, category: DTZCategory) -> int:
+    def _compare_dtz(self, dtz: int, best_dtz: int, category: _DTZCategory) -> int:
         """
         Compares two Distance to Zeroing (DTZ) values based on their categories.
         Returns the best resulting DTZ value, based on the condition of the category.
@@ -154,36 +143,36 @@ class EndgameTablebase:
         :param best_dtz: The best DTZ value so far.
         :type best_dtz: int
         :param category: The category of the DTZ value.
-        :type category: EndgameTablebase.DTZCategory
+        :type category: LocalTablebase._DTZCategory
         :return: The best resulting DTZ value, based on condition of the category.
         :rtype: int
         """
         # We want to save our blessed loss as quickly as possible
-        if category == EndgameTablebase.DTZCategory.BLESSED_LOSS:
+        if category == LocalTablebase._DTZCategory.BLESSED_LOSS:
             return max(dtz, best_dtz)
         # We want make the unconditional loss last as long as possible, in case they run out of time
-        elif category == EndgameTablebase.DTZCategory.UNCONDITIONAL_LOSS:
+        elif category == LocalTablebase._DTZCategory.UNCONDITIONAL_LOSS:
             return min(dtz, best_dtz)
-        elif category == EndgameTablebase.DTZCategory.UNCONDITIONAL_DRAW:
+        elif category == LocalTablebase._DTZCategory.UNCONDITIONAL_DRAW:
             return 0
         # We want to unconditionally win as quickly as possible
-        elif category == EndgameTablebase.DTZCategory.UNCONDITIONAL_WIN:
+        elif category == LocalTablebase._DTZCategory.UNCONDITIONAL_WIN:
             return min(dtz, best_dtz)
         # We want to extend our cursed win as much as possible, in case they run out of time
-        elif category == EndgameTablebase.DTZCategory.CURSED_WIN:
+        elif category == LocalTablebase._DTZCategory.CURSED_WIN:
             return max(dtz, best_dtz)
         else:
-            raise TypeError(f"Invalid enum type '{category}' passed for DTZCategory")
+            raise TypeError(f"Invalid enum type '{category}' passed for _DTZCategory")
 
     def _pick_move(
         self,
-        category: DTZCategory,
+        category: _DTZCategory,
         dtz: int,
         move: chess.Move,
-        best_category: DTZCategory,
+        best_category: _DTZCategory,
         best_dtz: int,
         best_move: Optional[chess.Move],
-    ) -> Tuple[DTZCategory, int, Optional[chess.Move]]:
+    ) -> Tuple[_DTZCategory, int, Optional[chess.Move]]:
         """
         Picks the best move based on the category and DTZ score.
 
@@ -194,19 +183,19 @@ class EndgameTablebase:
         If the new best DTZ score is different than the current score, then take the new move.
 
         :param category: The category of the current move.
-        :type category: DTZCategory
+        :type category: _DTZCategory
         :param dtz: The DTZ (Distance to Zeroing) value of the current move.
         :type dtz: int
         :param move: The move to consider.
         :type move: chess.Move
         :param best_category: The category of the best move so far.
-        :type best_category: DTZCategory
+        :type best_category: _DTZCategory
         :param best_dtz: The DTZ value of the best move so far.
         :type best_dtz: int
         :param best_move: The best move so far.
         :type best_move: Optional[chess.Move]
         :return: A tuple containing the category, DTZ value, and move to pick.
-        :rtype: Tuple[DTZCategory, int, Optional[chess.Move]]
+        :rtype: Tuple[_DTZCategory, int, Optional[chess.Move]]
         """
         if category > best_category:
             return category, dtz, move
@@ -233,7 +222,7 @@ class EndgameTablebase:
             cboard = chess.Board()
             cboard.set_fen(board.fen())
             best_category, best_dtz, best_move = (
-                EndgameTablebase.DTZCategory.UNCONDITIONAL_LOSS,
+                LocalTablebase._DTZCategory.UNCONDITIONAL_LOSS,
                 -sys.maxsize,
                 None,
             )

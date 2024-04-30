@@ -17,8 +17,10 @@ from sporkfish.searcher.move_ordering.move_orderer import MoveOrderer
 from sporkfish.searcher.move_ordering.mvv_lva_heuristic import MvvLvaHeuristic
 from sporkfish.searcher.searcher import Searcher
 from sporkfish.searcher.searcher_config import SearcherConfig
+from sporkfish.statistics import NodeTypes
 from sporkfish.transposition_table import TranspositionTable
-from sporkfish.zobrist_hasher import ZobristStateInfo, ZobristHasher
+from sporkfish.zobrist_hasher import ZobristHasher, ZobristStateInfo
+from sporkfish.searcher.move_ordering.history_heuristic import HistoryHeuristic
 
 
 class MiniMaxVariants(Searcher, ABC):
@@ -63,15 +65,22 @@ class MiniMaxVariants(Searcher, ABC):
             logging.info("Disabled transposition table in search.")
 
         self._evaluator = evaluator
+        self._max_depth = searcher_config.max_depth
 
         # Killer move table - storing quiet beta-cut off moves
         self._killer_moves = (
-            [
-                [chess.Move.null(), chess.Move.null()]
-                for _ in range(self._searcher_config.max_depth + 1)
-            ]
+            [[chess.Move.null(), chess.Move.null()] for _ in range(self._max_depth + 1)]
             if self._searcher_config.move_order_config.move_order_mode
             == MoveOrderMode.KILLER_MOVE
+            or self._searcher_config.move_order_config.move_order_mode
+            == MoveOrderMode.COMPOSITE
+            else None
+        )
+
+        self._history_table = (
+            dict()  # type: ignore
+            if self._searcher_config.move_order_config.move_order_mode
+            == MoveOrderMode.HISTORY
             or self._searcher_config.move_order_config.move_order_mode
             == MoveOrderMode.COMPOSITE
             else None
@@ -100,10 +109,13 @@ class MiniMaxVariants(Searcher, ABC):
             return MvvLvaHeuristic(board)
         elif order_type is MoveOrderMode.KILLER_MOVE:
             return KillerMoveHeuristic(board, self._killer_moves, depth)  # type: ignore
+        elif order_type is MoveOrderMode.HISTORY:
+            return HistoryHeuristic(board, self._history_table)  # type: ignore
         elif order_type is MoveOrderMode.COMPOSITE:
             return CompositeHeuristic(
                 board,
                 self._killer_moves,  # type: ignore
+                self._history_table,  # type: ignore
                 depth,
                 self._searcher_config.move_order_config,
             )
@@ -128,6 +140,27 @@ class MiniMaxVariants(Searcher, ABC):
         if self._killer_moves:
             self._killer_moves[depth].pop()
             self._killer_moves[depth].insert(0, move)
+
+    def _update_history_table(self, move: chess.Move, depth: int) -> None:
+        """
+        Update the history table by incrementing the score of a move. This should
+        be called when a move causes an alpha-beta cutoff.
+
+        :param move: The move that caused an alpha-beta cutoff.
+        :type move: chess.Move
+        :param depth: The depth at which the move caused the cutoff
+        :type depth: int
+        """
+        ply = self._max_depth - depth
+        increment = ply * ply
+
+        if self._history_table:
+            # Increment score for moves that cause cutoff
+            if move in self._history_table:
+                self._history_table[move] += increment
+            # Initialize score for new moves
+            else:
+                self._history_table[move] = increment
 
     def _aspiration_windows_search(
         self,
@@ -207,9 +240,10 @@ class MiniMaxVariants(Searcher, ABC):
         if zobrist_state and (
             tt_entry := self._transposition_table.probe(zobrist_state.zobrist_hash, 0)
         ):
+            self._statistics.increment_nodes_from_tt()
             return tt_entry["score"]  # type: ignore
 
-        self._statistics.increment()
+        self._statistics.increment_node_visited(NodeTypes.QUIESCENSE)
 
         stand_pat = self._evaluator.evaluate(board)
 
@@ -217,6 +251,7 @@ class MiniMaxVariants(Searcher, ABC):
             return stand_pat
 
         if stand_pat >= beta:
+            self._statistics.increment_pruning()
             return beta
 
         if alpha < stand_pat:
@@ -228,9 +263,11 @@ class MiniMaxVariants(Searcher, ABC):
         )
 
         for move in legal_moves:
+            # delta pruning
             if self._searcher_config.enable_delta_pruning and self._delta_pruning(
                 board, move, stand_pat, alpha
             ):
+                self._statistics.increment_pruning()
                 continue
 
             # Get the piece from the originating square and the captured piece
@@ -421,10 +458,10 @@ class MiniMaxVariants(Searcher, ABC):
         score = -float("inf")
         move = chess.Move.null()
 
-        for depth in range(1, self._searcher_config.max_depth + 1):
+        for depth in range(1, self._max_depth + 1):
             new_board = copy.deepcopy(board)
 
-            self._statistics.reset()
+            self._statistics.reset_node_visited()
 
             time_left = timeout
             new_score, new_move, elapsed, error_code = self._timeoutable_search(

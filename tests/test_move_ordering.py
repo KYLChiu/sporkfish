@@ -8,6 +8,7 @@ from sporkfish.searcher.move_ordering.composite_heuristic import (
 from sporkfish.searcher.move_ordering.killer_move_heuristic import KillerMoveHeuristic
 from sporkfish.searcher.move_ordering.move_orderer import MoveOrderer
 from sporkfish.searcher.move_ordering.mvv_lva_heuristic import MvvLvaHeuristic
+from sporkfish.searcher.move_ordering.history_heuristic import HistoryHeuristic
 
 
 @pytest.mark.parametrize(
@@ -72,12 +73,24 @@ class TestKillerMoveHeuristic:
             assert score == (1 if i == 0 else 0)
 
 
+class TestHistoryHeuristic:
+    def test_history_heuristic(self) -> None:
+        board = init_board(board_setup["white"]["king_queen_fork"])
+        history_table = {chess.Move.from_uci("c4b6"): 10}
+        mo_heuristic = HistoryHeuristic(board, history_table)
+        legal_moves = MoveOrderer.order_moves(mo_heuristic, board.legal_moves)
+
+        for i, move in enumerate(legal_moves):
+            score = mo_heuristic.evaluate(move)
+            assert score == (10 if i == 0 else 0)
+
+
 class TestCompositeHeuristic:
     def test_consistent_mvv_lva(self):
         board = init_board(board_setup["white"]["can_capture_queen"])
 
         base_heuristic = MvvLvaHeuristic(board)
-        composite_heuristic = CompositeHeuristic(board, [[]], 0)
+        composite_heuristic = CompositeHeuristic(board, [[]], {}, 0)
 
         base_legal_moves = MoveOrderer.order_moves(base_heuristic, board.legal_moves)
         composite_legal_moves = MoveOrderer.order_moves(
@@ -93,7 +106,7 @@ class TestCompositeHeuristic:
             [chess.Move.from_uci("c4b6"), chess.Move.null()],
         ]
         base_heuristic = KillerMoveHeuristic(board, killer_moves, 1)
-        composite_heuristic = CompositeHeuristic(board, killer_moves, 1)
+        composite_heuristic = CompositeHeuristic(board, killer_moves, {}, 1)
 
         base_legal_moves = MoveOrderer.order_moves(base_heuristic, board.legal_moves)
         composite_legal_moves = MoveOrderer.order_moves(
@@ -113,7 +126,7 @@ class TestCompositeHeuristic:
             [chess.Move.null(), chess.Move.null()],
             [chess.Move.from_uci("h2h3"), chess.Move.null()],
         ]
-        composite_heuristic = CompositeHeuristic(board, killer_moves, 1)
+        composite_heuristic = CompositeHeuristic(board, killer_moves, {}, 1)
 
         pos_scores = sum(
             1 for move in board.legal_moves if composite_heuristic.evaluate(move) > 0
@@ -126,7 +139,7 @@ class TestCompositeHeuristic:
             [chess.Move.null(), chess.Move.null()],
             [chess.Move.null(), chess.Move.null()],
         ]
-        composite_heuristic = CompositeHeuristic(board, killer_moves, 1)
+        composite_heuristic = CompositeHeuristic(board, killer_moves, {}, 1)
 
         for value in composite_heuristic._move_order_weights.values():
             assert isinstance(value, float)
