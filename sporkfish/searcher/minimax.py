@@ -10,6 +10,7 @@ import stopit
 from sporkfish.board.board import Board
 from sporkfish.evaluator.evaluator import Evaluator
 from sporkfish.searcher.move_ordering.composite_heuristic import CompositeHeuristic
+from sporkfish.searcher.move_ordering.history_heuristic import HistoryHeuristic
 from sporkfish.searcher.move_ordering.killer_move_heuristic import KillerMoveHeuristic
 from sporkfish.searcher.move_ordering.move_order_config import MoveOrderMode
 from sporkfish.searcher.move_ordering.move_order_heuristic import MoveOrderHeuristic
@@ -17,10 +18,9 @@ from sporkfish.searcher.move_ordering.move_orderer import MoveOrderer
 from sporkfish.searcher.move_ordering.mvv_lva_heuristic import MvvLvaHeuristic
 from sporkfish.searcher.searcher import Searcher
 from sporkfish.searcher.searcher_config import SearcherConfig
-from sporkfish.statistics import NodeTypes
+from sporkfish.statistics import NodeTypes, PruningTypes, TranpositionTable
 from sporkfish.transposition_table import TranspositionTable
 from sporkfish.zobrist_hasher import ZobristHasher, ZobristStateInfo
-from sporkfish.searcher.move_ordering.history_heuristic import HistoryHeuristic
 
 
 class MiniMaxVariants(Searcher, ABC):
@@ -36,7 +36,7 @@ class MiniMaxVariants(Searcher, ABC):
         Abstract method to start the search from the root of the game tree.
 
         :param board_to_search: The current state of the chess board to search.
-        :type board_to_search: chess.Board
+        :type board_to_search: Board
         :param depth: The depth of the search.
         :type depth: int
         :param alpha: The lower bound of the search window.
@@ -100,8 +100,10 @@ class MiniMaxVariants(Searcher, ABC):
         :type board: Board
         :param depth: The depth of the search.
         :type depth: int
+
         :return: An instance of MoveOrderHeuristic.
         :rtype: MoveOrderHeuristic
+
         :raises TypeError: If the specified order type is not supported.
         """
         order_type = self._searcher_config.move_order_config.move_order_mode
@@ -134,7 +136,6 @@ class MiniMaxVariants(Searcher, ABC):
         :type move: chess.Move
         :param depth: The depth of the search.
         :type depth: int
-
         """
         # TODO: do we need to check if captures here too?
         if self._killer_moves:
@@ -223,7 +224,7 @@ class MiniMaxVariants(Searcher, ABC):
         due to missing important tactical moves.
 
         :param board: The current state of the chess board.
-        :type board: chess.Board
+        :type board: Board
         :param depth: The maximum recursion limit.
         :type depth: int
         :param alpha: The lower bound of the search window.
@@ -240,10 +241,10 @@ class MiniMaxVariants(Searcher, ABC):
         if zobrist_state and (
             tt_entry := self._transposition_table.probe(zobrist_state.zobrist_hash, 0)
         ):
-            self._statistics.increment_nodes_from_tt()
+            self._statistics.increment_visited(TranpositionTable.TRANSPOSITITON_TABLE)
             return tt_entry["score"]  # type: ignore
 
-        self._statistics.increment_node_visited(NodeTypes.QUIESCENSE)
+        self._statistics.increment_visited(NodeTypes.QUIESCENSE)
 
         stand_pat = self._evaluator.evaluate(board)
 
@@ -251,7 +252,7 @@ class MiniMaxVariants(Searcher, ABC):
             return stand_pat
 
         if stand_pat >= beta:
-            self._statistics.increment_pruning()
+            self._statistics.increment_visited(PruningTypes.ALPHA_BETA)
             return beta
 
         if alpha < stand_pat:
@@ -267,7 +268,7 @@ class MiniMaxVariants(Searcher, ABC):
             if self._searcher_config.enable_delta_pruning and self._delta_pruning(
                 board, move, stand_pat, alpha
             ):
-                self._statistics.increment_pruning()
+                self._statistics.increment_visited(PruningTypes.DELTA)
                 continue
 
             # Get the piece from the originating square and the captured piece
@@ -324,7 +325,7 @@ class MiniMaxVariants(Searcher, ABC):
         promotions, and checks.
 
         :param board: The current board state.
-        :type board: chess.Board
+        :type board: Board
         :param depth: The current depth in the search tree.
         :type depth: int
         :param was_capture: Indicates if the previous move was a capture.
@@ -333,6 +334,7 @@ class MiniMaxVariants(Searcher, ABC):
         :type move: chess.Move
         :param alpha: The current best score for the maximizing player.
         :type alpha: float
+
         :return: True if the position can be pruned due to futility margin checks, False otherwise.
         :rtype: bool
         """
@@ -367,7 +369,7 @@ class MiniMaxVariants(Searcher, ABC):
                 expense of some material will no longer be considered. However, we might remedy this directly with endgame tablebases.
 
         :param board: The current board state.
-        :type board: chess.Board
+        :type board: Board
         :param move: The move to be considered.
         :type move: chess.Move
         :param stand_pat: The stand pat score for the current position.
@@ -405,7 +407,7 @@ class MiniMaxVariants(Searcher, ABC):
         If search time exceeds the timeout argument, this function immediately returns.
 
         :param board_to_search: The chess board to search.
-        :type board_to_search: chess.Board
+        :type board_to_search: Board
         :param depth: The depth of the search.
         :type depth: int
         :param prev_score: The previous score from a shallower search.
@@ -445,7 +447,7 @@ class MiniMaxVariants(Searcher, ABC):
         It facilitates the use of aspiration windows, as implemented in the _aspiration_windows_search function.
 
         :param board: The chess board to search.
-        :type board: chess.Board
+        :type board: Board
         :param timeout: Optional timeout for the search operation, in seconds.
                         If specified, the search will stop after the timeout has elapsed.
                         If None, the search will continue until the maximum depth is reached.
@@ -461,7 +463,7 @@ class MiniMaxVariants(Searcher, ABC):
         for depth in range(1, self._max_depth + 1):
             new_board = copy.deepcopy(board)
 
-            self._statistics.reset_node_visited()
+            self._statistics.reset_visited()
 
             time_left = timeout
             new_score, new_move, elapsed, error_code = self._timeoutable_search(
@@ -500,7 +502,7 @@ class MiniMaxVariants(Searcher, ABC):
         Abstract method to search for the best move in a given board position.
 
         :param board: The current state of the chess board.
-        :type board: chess.Board
+        :type board: Board
         :param timeout: Optional timeout value for the search operation.
                        If provided, the search should terminate after the specified time.
         :type timeout: Optional[float]

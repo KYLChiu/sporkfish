@@ -1,5 +1,8 @@
+import logging
 from enum import Enum
-from typing import Dict
+from typing import Dict, Union
+
+import chess
 
 
 class NodeTypes(Enum):
@@ -8,8 +11,21 @@ class NodeTypes(Enum):
     QUIESCENSE = "QUIESCENSE"
 
 
+class PruningTypes(Enum):
+    NULL_MOVE = "NULL_MOVE"
+    DELTA = "DELTA"
+    FUTILITY = "FUTILITY"
+    ALPHA_BETA = "ALPHA_BETA"
+
+
+class TranpositionTable(Enum):
+    TRANSPOSITITON_TABLE = "TRANSPOSITITON_TABLE"
+
+
 class Statistics:
-    """A class for tracking statistics related to node visits."""
+    """
+    A class for tracking statistics related to node visits.
+    """
 
     def __init__(self) -> None:
         """
@@ -17,115 +33,96 @@ class Statistics:
         Upon initialization, sets the counts of visited nodes, pruned nodes,
         and nodes stored in the transposition table to zero.
         """
-        self._nodes_visited = {
-            NodeTypes.NEGAMAX: 0,
-            NodeTypes.NEGAMAX_LAZY_SMP: 0,
-            NodeTypes.QUIESCENSE: 0,
+        self._visited = {
+            key: 0 for key in [*NodeTypes, *PruningTypes, *TranpositionTable]
         }
-        self._pruned = 0
-        self._nodes_in_tt = 0
+        self._fields: Dict = {}
 
-    def increment_node_visited(
-        self, visited_node_type: NodeTypes, count: int = 1
+    def increment_visited(
+        self,
+        visited_type: Union[NodeTypes, PruningTypes, TranpositionTable],
+        count: int = 1,
     ) -> None:
         """
         Increment the count of visited nodes of a specified type.
 
         :param visited_node_type: The type of node being visited.
-        :type visited_node_type: NodeTypes
+        :type visited_node_type: Union[NodeTypes, PruningTypes, TranpositionTable]
         :param count: The number of nodes to increment the count by. Default is 1.
         :type count: int
-        :return: None
-        :rtype: None
         """
-        self._nodes_visited[visited_node_type] += count
+        self._visited[visited_type] += count
 
-    # TODO: enrich to record types of pruning
-    def increment_pruning(self, count: int = 1) -> None:
-        """
-        Increments the pruning count by the specified amount.
-
-        :param count: The amount by which to increment the pruning count (default is 1).
-        :type count: int
-
-        :return: None
-        :rtype: None
-        """
-        self._pruned += count
-
-    def increment_nodes_from_tt(self, count: int = 1) -> None:
-        """
-        Increments the nodes in TT count by the specified amount.
-
-        :param count: The amount by which to increment the pruning count (default is 1).
-        :type count: int
-
-        :return: None
-        :rtype: None
-        """
-        self._nodes_in_tt += count
-
-    def reset_node_visited(self, default_val: int = 0) -> None:
+    def reset_visited(self, default_val: int = 0) -> None:
         """
         Reset the statistics by setting nodes_visited to a default value.
 
         :param default_val: The default value to set nodes_visited to (default is 0).
         :type default_val: int
-
-        :return: None
-        :rtype: None
         """
-        for key in self._nodes_visited.keys():
-            self._nodes_visited[key] = default_val
-
-    def reset_pruning(self, default_val: int = 0) -> None:
-        """
-        Reset the pruning count to a default value.
-
-        :param default_val: The default value to set pruning count to (default is 0).
-        :type default_val: int
-
-        :return: None
-        :rtype: None
-        """
-        self._pruned = default_val
-
-    def reset_nodes_from_tt(self, default_val: int = 0) -> None:
-        """
-        Reset the nodes in TT count to a default value.
-
-        :param default_val: The default value to set nodes in TT count to (default is 0).
-        :type default_val: int
-
-        :return: None
-        :rtype: None
-        """
-        self._nodes_in_tt = default_val
+        for key in self._visited.keys():
+            self._visited[key] = default_val
 
     @property
-    def pruned(self) -> int:
-        """
-        Returns the count of pruned nodes.
-
-        :return: The count of pruned nodes.
-        :rtype: int
-        """
-        return self._pruned
-
-    @property
-    def nodes_from_tt(self) -> int:
-        """
-        :return: The count of nodes returned from the transposition table.
-        :rtype: int
-        """
-        return self._nodes_in_tt
-
-    @property
-    def nodes_visited(self) -> Dict[NodeTypes, int]:
+    def visited(self) -> Dict[NodeTypes, int]:
         """
         Returns a dictionary containing the count of visited nodes for different node types.
 
         :return: A dictionary containing the count of visited nodes for different node types.
-        :rtype: dict
+        :rtype: Dict[NodeTypes, int]
         """
-        return self._nodes_visited
+        return self._visited
+
+    @property
+    def info_data(self) -> Dict:
+        """
+        Returns a dictionary containing useful information about the search process.
+
+        :return: A dictionary containing useful information about the search process.
+        :rtype: Dict
+        """
+        return self._fields
+
+    def log_info(
+        self, elapsed: float, score: float, move: chess.Move, depth: int
+    ) -> None:
+        """
+        :param elapsed: The time elapsed for the search process, in seconds.
+        :type elapsed: float
+        :param score: The evaluation score of the best move found.
+        :type score: float
+        :param move: The best move found during the search.
+        :type move: chess.Move
+        :param depth: The depth of the search.
+        :type depth: int
+        """
+        self._fields = {
+            "Depth": depth,
+            "Time": int(1000 * elapsed),  # time in ms
+            "Score cp": int(score)
+            if score not in {float("inf"), -float("inf")}
+            else float("nan"),
+            "PV": move,  # Incorrect - pending: https://github.com/KYLChiu/sporkfish/issues/13
+        }
+        total_node = 0
+        for type in NodeTypes:
+            count = self._visited[type]
+            self._fields[f"Node: {type}"] = self._visited[type]
+            total_node += count
+        self._fields["Total nodes"] = total_node
+
+        total_pruning = 0
+        for type in PruningTypes:  # type: ignore
+            count = self._visited[type]
+            self._fields[f"Pruning: {type}"] = self._visited[type]
+            total_pruning += count
+        self._fields["Total pruning"] = total_pruning
+
+        self._fields["Nodes from TT"] = self._visited[
+            TranpositionTable.TRANSPOSITITON_TABLE
+        ]
+        self._fields["NPS"] = float(total_node / elapsed) if elapsed > 0 else 0
+
+        # TODO: clean up / format self._info_str
+        self._info_str = " ".join(f"{k} {v}" for k, v in self._fields.items())
+        logging.info(f"info {self._info_str}")

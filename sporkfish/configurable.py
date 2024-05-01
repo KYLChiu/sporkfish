@@ -4,20 +4,21 @@ import yaml
 
 
 class Configurable:
-    """Base class for objects that can be configured and serialized to/from YAML.
+    """
+    Base class for objects that can be configured and serialized to/from YAML.
 
     Methods:
         to_yaml: Serialize the object to YAML format.
         from_yaml: Deserialize the object from a YAML string.
         from_dict: Create an object from a dictionary.
-
     """
 
     def to_yaml(self) -> str:
-        """Serialize the object to a YAML-formatted string.
+        """
+        Serialize the object to a YAML-formatted string.
 
-        Returns:
-            str: YAML representation of the object.
+        :returns: YAML representation of the object.
+        :rtype: str
         """
         cls_name = type(self).__name__
         data = {
@@ -28,25 +29,27 @@ class Configurable:
 
     @classmethod
     def from_yaml(cls, yml: str) -> Any:
-        """Deserialize an object from a YAML-formatted string.
+        """
+        Deserialize an object from a YAML-formatted string.
 
-        Args:
-            yml (str): YAML-formatted string.
+        :param yml: YAML-formatted string.
+        :type yml: str
 
-        Returns:
-            Any: Deserialized object.
+        :returns: Deserialized object.
+        :rtype: Any
         """
         d = yaml.safe_load(yml).get(cls.__name__)
         return Configurable.from_dict(d)
 
     @classmethod
     def from_dict(cls, d: Dict[Any, Any]) -> Any:
-        """Create an object from a dictionary.
+        """
+        Create an object from a dictionary.
 
-        Args:
-            d (Dict[Any, Any]): Dictionary containing attribute values.
+        :param d: Dictionary containing attribute values.
+        :type d: Dict[Any, Any]
 
-        Returns:
-            Any: Created parent object.
+        :returns: Created parent object.
+        :rtype: Any
         """
         return cls(**d)

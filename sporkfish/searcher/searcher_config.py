@@ -6,8 +6,8 @@ from sporkfish.searcher.move_ordering.move_order_config import MoveOrderConfig
 
 
 class SearchMode(Enum):
-    SINGLE_PROCESS = "SINGLE_PROCESS"
-    LAZY_SMP = "LAZY_SMP"
+    NEGAMAX_SINGLE_PROCESS = "NEGAMAX_SINGLE_PROCESS"
+    NEGAMAX_LAZY_SMP = "NEGAMAX_LAZY_SMP"
 
 
 class SearcherConfig(Configurable):
@@ -17,7 +17,7 @@ class SearcherConfig(Configurable):
     :param max_depth: Maximum depth for the search (default: 5).
                       Controls how deeply the search algorithm explores the game tree.
     :type max_depth: int
-    :param search_mode: Search mode (default: SearchMode.SINGLE_PROCESS).
+    :param search_mode: Search mode (default: SearchMode.NEGAMAX_SINGLE_PROCESS).
                         Determines the search mode used by the searcher.
     :type search_mode: SearchMode
     :param move_order_config: Move order config.
@@ -51,7 +51,7 @@ class SearcherConfig(Configurable):
     def __init__(
         self,
         max_depth: int = 5,
-        search_mode: SearchMode = SearchMode.SINGLE_PROCESS,
+        search_mode: SearchMode = SearchMode.NEGAMAX_SINGLE_PROCESS,
         move_order_config: Union[MoveOrderConfig, Dict] = MoveOrderConfig(),
         enable_null_move_pruning: bool = True,
         enable_futility_pruning: bool = False,

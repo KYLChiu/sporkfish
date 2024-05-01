@@ -2,7 +2,8 @@ from sporkfish.configurable import Configurable
 
 
 class TimeManagerConfig(Configurable):
-    """Configuration class for TimeManager.
+    """
+    Configuration class for TimeManager.
 
     :param time_weight: Weight for time allocation (default: 0.1).
     :type time_weight: float
@@ -29,7 +30,8 @@ class TimeManager:
         self._config = config
 
     def get_timeout(self, time: float, increment: float) -> float:
-        """Calculate the timeout for a move based on time and increment.
+        """
+        Calculate the timeout for a move based on time and increment.
 
         The timeout is calculated as tw * time + iw * increment.
 
@@ -43,7 +45,8 @@ class TimeManager:
         """
 
         # -------------------------- Basic strategy for time management --------------------------
-        """Outline of the basic strategy for time management in chess.
+        """
+        Outline of the basic strategy for time management in chess.
 
         The strategy involves allocating tw * time + iw * increment for searching the move.
         By default, time_weight (tw) is set to 0.1, and increment_weight (iw) is set to 0.01.

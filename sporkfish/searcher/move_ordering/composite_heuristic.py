@@ -1,8 +1,9 @@
-from typing import List, Dict
+from typing import Dict, List
 
 import chess
 
 from sporkfish.board.board import Board
+from sporkfish.searcher.move_ordering.history_heuristic import HistoryHeuristic
 from sporkfish.searcher.move_ordering.killer_move_heuristic import KillerMoveHeuristic
 from sporkfish.searcher.move_ordering.move_order_config import (
     MoveOrderConfig,
@@ -10,7 +11,6 @@ from sporkfish.searcher.move_ordering.move_order_config import (
 )
 from sporkfish.searcher.move_ordering.move_order_heuristic import MoveOrderHeuristic
 from sporkfish.searcher.move_ordering.mvv_lva_heuristic import MvvLvaHeuristic
-from sporkfish.searcher.move_ordering.history_heuristic import HistoryHeuristic
 
 
 class CompositeHeuristic(
