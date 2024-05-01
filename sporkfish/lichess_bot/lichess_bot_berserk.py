@@ -1,5 +1,6 @@
 import datetime
 import logging
+import time
 from typing import Any, Dict, Iterator, Optional, Tuple, Union
 
 import berserk
@@ -133,6 +134,20 @@ class LichessBotBerserk(LichessBot):
                 self._play_move(color, state["moves"], game_id, state)
             elif state["type"] == "gameStateResign":
                 return GameTerminationReason.RESIGNATION
+            elif state["type"] == "opponentGone":
+                # Busy polling is fine, nothing else to do
+                # Alternative is to asynchronously wait while finding the PV, if PV is the same as opponents move then play
+                # But this is more complex and not necessary for now
+                can_claim_win = state["claimWinInSeconds"]
+                start = time.time()
+                while True:
+                    cur_time = time.time()
+                    if state["gone"] and cur_time - start > can_claim_win:
+                        # Claim victory if opponent is gone for more than the claimWinInSeconds
+                        self.client.board.claim_victory(game_id)
+                        return GameTerminationReason.OPPONENT_LEFT
+                    else:
+                        break
 
         return GameTerminationReason.UNKNOWN
 
