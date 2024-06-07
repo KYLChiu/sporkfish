@@ -109,7 +109,7 @@ class TestLichessBot:
             pass
 
     @pytest.mark.ci
-    @mock.patch("berserk.clients.board.claim_victory")
+    @mock.patch("berserk.clients.board.Board.claim_victory")
     def test_opponent_left(self, mock_claim_victory: mock.Mock):
         mock_claim_victory.return_value = None
 
