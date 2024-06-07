@@ -3,6 +3,7 @@ import sys
 import time
 import unittest.mock as mock
 
+import berserk
 import pytest
 from tenacity import RetryError
 
