@@ -12,7 +12,6 @@ See any of the following sections to quickly setup your development environment.
 - [Using DevContainer with VSCode](#using-devcontainer-with-vscode)* *recommended*
 - [Using DevContainer with PyCharm](#using-devcontainer-with-pycharm)
 - [Using Github Codespace](#using-github-codespace)
-- [Using native Docker](#using-native-docker)
 
 ### Using DevContainer with VSCode
 
@@ -47,21 +46,6 @@ Instructions:
 2. Confirm codespace settings, for Machine type select `2-core` (this can be changed later if you require more power).
 
 An active internet connection will be required for this. This will also use up your monthly allowance for Github codespace.
-
-### Using native Docker
-
-Prerequisites:
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-
-After cloning the repository, from the root directory, run:
-
-```
-docker pull kylchiu/sporkfish-dev:latest
-docker build -t kylchiu/sporkfish-dev:latest .
-docker run -it kylchiu/sporkfish-dev:latest
-```
-
-This generates an interactive bash shell for you to run the program in.
 
 ## Usage
 
