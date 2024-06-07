@@ -1,4 +1,3 @@
-import logging
 from abc import ABC, abstractmethod
 from typing import Optional, Tuple
 
@@ -7,7 +6,7 @@ import chess
 # should be absolute paths - amend in next PR
 from sporkfish.board.board import Board
 from sporkfish.searcher.searcher_config import SearcherConfig
-from sporkfish.statistics import NodeTypes, Statistics
+from sporkfish.statistics import Statistics
 
 
 class Searcher(ABC):
@@ -21,7 +20,6 @@ class Searcher(ABC):
 
         :param searcher_config: Config to use for searching.
         :type searcher_config: SearcherConfig
-        :return: None
         """
 
         self._searcher_config = searcher_config
@@ -34,9 +32,7 @@ class Searcher(ABC):
         """
         Log information about the search process.
 
-        This method logs various statistics and details about the search process,
-        including elapsed time, evaluation score, nodes visited, nodes per second (NPS),
-        search depth, and the principal variation (PV).
+        This method logs various statistics and details about the search process.
 
         :param elapsed: The time elapsed for the search process, in seconds.
         :type elapsed: float
@@ -47,27 +43,7 @@ class Searcher(ABC):
         :param depth: The depth of the search.
         :type depth: int
         """
-        fields = {
-            "depth": depth,
-            # time in ms
-            "time": int(1000 * elapsed),
-            "score cp": int(score)
-            if score not in {float("inf"), -float("inf")}
-            else float("nan"),
-            "pv": move,  # Incorrect but will do for now
-        }
-        total = 0
-        for type in NodeTypes:
-            count = self._statistics.nodes_visited[type]
-            fields[f"Node {type}"] = count
-            total += count
-        fields["Total nodes"] = total
-        fields["Nodes per sec"] = float(total / elapsed) if elapsed > 0 else 0
-        fields["Num of Pruning"] = self._statistics.pruned
-        fields["Nodes from TT"] = self._statistics.nodes_from_tt
-
-        info_str = " ".join(f"{k} {v}" for k, v in fields.items())
-        logging.info(f"info {info_str}")
+        self._statistics.log_info(elapsed, score, move, depth)
 
     @abstractmethod
     def search(
@@ -77,7 +53,7 @@ class Searcher(ABC):
         Abstract method to search for the best move in a given board position.
 
         :param board: The current state of the chess board.
-        :type board: chess.Board
+        :type board: Board
         :param timeout: Optional timeout value for the search operation.
                        If provided, the search should terminate after the specified time.
         :type timeout: Optional[float]

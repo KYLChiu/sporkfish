@@ -2,13 +2,11 @@ import chess
 import pytest
 from init_board_helper import board_setup, init_board
 
-from sporkfish.searcher.move_ordering.composite_heuristic import (
-    CompositeHeuristic,
-)
+from sporkfish.searcher.move_ordering.composite_heuristic import CompositeHeuristic
+from sporkfish.searcher.move_ordering.history_heuristic import HistoryHeuristic
 from sporkfish.searcher.move_ordering.killer_move_heuristic import KillerMoveHeuristic
 from sporkfish.searcher.move_ordering.move_orderer import MoveOrderer
 from sporkfish.searcher.move_ordering.mvv_lva_heuristic import MvvLvaHeuristic
-from sporkfish.searcher.move_ordering.history_heuristic import HistoryHeuristic
 
 
 @pytest.mark.parametrize(

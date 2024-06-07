@@ -73,6 +73,7 @@ Once you create a game via your bot account, the bot will automatically play. We
 Search:
 
 * [Negamax with fail-soft alpha-beta pruning](https://www.cs.cornell.edu/courses/cs312/2002sp/lectures/rec21.htm)
+* [Principal variation search](https://en.wikipedia.org/wiki/Principal_variation_search)
 * [Quiescence search](https://www.chessprogramming.org/Quiescence_Search)
 * [Iterative deepening](https://www.chessprogramming.org/Iterative_Deepening)
 * [Null move pruning](https://www.chessprogramming.org/Null_Move_Pruning)

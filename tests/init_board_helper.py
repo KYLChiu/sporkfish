@@ -7,7 +7,7 @@ from sporkfish.searcher.move_ordering.move_order_config import (
     MoveOrderConfig,
     MoveOrderMode,
 )
-from sporkfish.searcher.searcher_config import SearcherConfig
+from sporkfish.searcher.searcher_config import SearcherConfig, SearchMode
 from sporkfish.searcher.searcher_factory import SearcherFactory
 
 white_move = {
@@ -53,6 +53,7 @@ def score_fen(fen_string: str) -> float:
 def searcher_with_fen(
     fen: str,
     max_depth: int = 3,
+    search_mode=SearchMode.NEGAMAX_SINGLE_PROCESS,
     enable_null_move_pruning=False,
     enable_futility_pruning=False,
     enable_delta_pruning=False,
@@ -64,6 +65,7 @@ def searcher_with_fen(
     s = SearcherFactory.create(
         SearcherConfig(
             max_depth,
+            search_mode=search_mode,
             enable_null_move_pruning=enable_null_move_pruning,
             enable_futility_pruning=enable_futility_pruning,
             enable_delta_pruning=enable_delta_pruning,
