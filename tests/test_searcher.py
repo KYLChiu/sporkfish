@@ -1,8 +1,12 @@
 import pytest
-from init_board_helper import board_setup, init_board, score_fen, searcher_with_fen
+from init_board_helper import (
+    board_setup,
+    evaluator,
+    init_board,
+    score_fen,
+    searcher_with_fen,
+)
 
-from sporkfish.evaluator.evaluator_config import EvaluatorConfig, EvaluatorMode
-from sporkfish.evaluator.evaluator_factory import EvaluatorFactory
 from sporkfish.evaluator.pesto import Pesto as Evaluator
 from sporkfish.searcher.move_ordering.move_order_config import (
     MoveOrderConfig,
@@ -13,14 +17,6 @@ from sporkfish.searcher.move_ordering.mvv_lva_heuristic import MvvLvaHeuristic
 from sporkfish.searcher.searcher import Searcher
 from sporkfish.searcher.searcher_config import SearcherConfig, SearchMode
 from sporkfish.searcher.searcher_factory import SearcherFactory
-
-
-def evaluator(
-    evaluator_cfg: EvaluatorConfig = EvaluatorConfig(
-        evaluator_mode=EvaluatorMode.PESTO
-    ),
-) -> Evaluator:
-    return EvaluatorFactory.create(evaluator_cfg)
 
 
 @pytest.mark.parametrize(
@@ -118,41 +114,39 @@ class TestConsistency:
     ],
 )
 class TestQuiescence:
-    def test_quiescence_depth_0(
-        self, _init_searcher: Searcher, fen_string: str
-    ) -> None:
+    def test_quiescence_depth_0(self, init_searcher: Searcher, fen_string: str) -> None:
         """
         Test for quiescence base case (depth 0)
         """
         board = init_board(fen_string)
-        s = _init_searcher
+        s = init_searcher
 
         alpha, beta = 1.1, 2.3
         result = s._quiescence(board, 0, alpha, beta, None)
         assert result == score_fen(fen_string)
 
     def test_quiescence_depth_2_beta(
-        self, _init_searcher: Searcher, fen_string: str
+        self, init_searcher: Searcher, fen_string: str
     ) -> None:
         """
         Test quiescence returns beta
         if beta is sufficiently negative
         """
         board = init_board(fen_string)
-        s = _init_searcher
+        s = init_searcher
         alpha, beta = 0, -1e8
         result = s._quiescence(board, 2, alpha, beta, None)
         assert result == beta
 
     def test_quiescence_depth_1_alpha(
-        self, _init_searcher: Searcher, fen_string: str
+        self, init_searcher: Searcher, fen_string: str
     ) -> None:
         """
         Test quiescence behaviour with depth 1
         when both alpha and beta are sufficiently large
         """
         board = init_board(fen_string)
-        s = _init_searcher
+        s = init_searcher
         alpha, beta = 1e8, 1e9
         result = s._quiescence(board, 1, alpha, beta, None)
 
@@ -172,13 +166,16 @@ class TestQuiescence:
 
 
 @pytest.fixture
-def _init_searcher(
-    max_depth: int = 4, move_order_mode: MoveOrderMode = MoveOrderMode.MVV_LVA
+def init_searcher(
+    max_depth: int = 4,
+    search_mode: SearchMode = SearchMode.NEGAMAX_SINGLE_PROCESS,
+    move_order_mode: MoveOrderMode = MoveOrderMode.MVV_LVA,
 ) -> Searcher:
     """Initialise searcher"""
     return SearcherFactory.create(
         SearcherConfig(
-            max_depth,
+            max_depth=max_depth,
+            search_mode=search_mode,
             move_order_config=MoveOrderConfig(move_order_mode=move_order_mode),
         ),
         evaluator=evaluator(),
@@ -208,27 +205,27 @@ def _init_searcher(
 )
 class TestNegamax:
     def test_negamax_depth_0(
-        self, _init_searcher: Searcher, fen_string: str, param: list[float, float]
+        self, init_searcher: Searcher, fen_string: str, param: list[float, float]
     ) -> None:
         """
         Testing negamax base case (depth 0)
         Checks that negamax devolve to quiescence search
         """
         board = init_board(fen_string)
-        s = _init_searcher
+        s = init_searcher
 
         alpha, beta = param[0], param[1]
         result = s._negamax(board, 0, alpha, beta, None)
         assert result == s._quiescence(board, 4, alpha, beta, None)
 
     def test_negamax_depth_1(
-        self, _init_searcher: Searcher, fen_string: str, param: list[float, float]
+        self, init_searcher: Searcher, fen_string: str, param: list[float, float]
     ) -> None:
         """
         Testing negamax depth 1
         """
         board = init_board(fen_string)
-        s = _init_searcher
+        s = init_searcher
 
         alpha, beta = param[0], param[1]
         result = s._negamax(board, 1, alpha, beta, None)
@@ -251,14 +248,14 @@ class TestNegamax:
 
 
 @pytest.fixture
-def _init_pvs_searcher(
+def init_pvs_searcher(
     max_depth: int = 4, move_order_mode: MoveOrderMode = MoveOrderMode.MVV_LVA
 ) -> Searcher:
     """Initialise searcher"""
     return SearcherFactory.create(
         SearcherConfig(
             max_depth,
-            search_mode=SearchMode.PVS,
+            search_mode=SearchMode.PVS_SINGLE_PROCESS,
             move_order_config=MoveOrderConfig(move_order_mode=move_order_mode),
         ),
         evaluator=evaluator(),
@@ -288,13 +285,13 @@ def _init_pvs_searcher(
 )
 class TestPVS:
     def test_pvs_depth(
-        self, _init_searcher: Searcher, _init_pvs_searcher: Searcher, fen_string: str
+        self, init_searcher: Searcher, init_pvs_searcher: Searcher, fen_string: str
     ) -> None:
         """
-        Testing PVS base case (depth 1-4)
+        Testing PVS depth 1-4
         """
-        s_nega = _init_searcher
-        s_pvs = _init_pvs_searcher
+        s_nega = init_searcher
+        s_pvs = init_pvs_searcher
 
         for depth in range(1, 5):
             board = init_board(fen_string)

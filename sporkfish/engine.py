@@ -4,18 +4,19 @@ from typing import Optional
 import chess
 
 from sporkfish.board.board import Board
-from sporkfish.endgame_tablebase import EndgameTablebase
+from sporkfish.endgame_tablebases.endgame_tablebase import EndgameTablebase
 from sporkfish.opening_book import OpeningBook
 from sporkfish.searcher.searcher import Searcher
 
 
 class Engine:
     """
-    Class wrapping the opening book and searcher into a convenient interface.
+    Class wrapping the opening book, endgametable base and searcher into a convenient interface.
 
     Attributes:
     - _searcher (Searcher): The chess move searcher.
     - _opening_book (OpeningBook): The opening book for initial moves.
+    - _endgame_tablebase (EndgameTablebase): The tablebase used for endgame moves.
     """
 
     def __init__(
@@ -46,6 +47,7 @@ class Engine:
         :type board: Board
         :param timeout: Time in seconds until the engine stops searching.
         :type timeout: Optional[float]
+
         :return: The selected chess move.
         :rtype: chess.Move
         """
@@ -70,6 +72,7 @@ class Engine:
         :type board: Board
         :param timeout: Time in seconds until the engine stops searching.
         :type timeout: Optional[float]
+
         :return: The score of the searcher.
         :rtype: float
         """

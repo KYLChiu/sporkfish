@@ -33,7 +33,7 @@ class TestPerformance:
         test_name: str,
         fen: str,
         max_depth: int,
-        search_mode: SearchMode = SearchMode.SINGLE_PROCESS,
+        search_mode: SearchMode = SearchMode.NEGAMAX_SINGLE_PROCESS,
         enable_null_move_pruning: bool = False,
         enable_futility_pruning: bool = False,
         enable_delta_pruning: bool = False,

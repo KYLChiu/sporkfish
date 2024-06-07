@@ -1,6 +1,7 @@
 import multiprocessing
 import sys
 import time
+import unittest.mock as mock
 
 import pytest
 from tenacity import RetryError
@@ -105,6 +106,48 @@ class TestLichessBot:
             assert False, "Expected to fail to abort game as challenge was declined."
         except RetryError:
             # This is a success
+            pass
+
+    @pytest.mark.ci
+    @mock.patch("berserk.clients.board.Board.claim_victory")
+    def test_opponent_left(self, mock_claim_victory: mock.Mock):
+        mock_claim_victory.return_value = None
+
+        sporkfish = TestLichessBot._create_bot(TestLichessBot._sporkfish_api_token_file)
+        test_bot = TestLichessBot._create_bot(TestLichessBot._test_bot_api_token_file)
+
+        assert sporkfish
+        assert test_bot
+
+        challenge_event = test_bot.client.challenges.create(
+            username="Sporkfish",
+            color="white",
+            variant="standard",
+            rated=False,
+            clock_limit=30,
+            clock_increment=0,
+        )
+
+        assert challenge_event
+        assert sporkfish._event_action_accept_challenge(challenge_event)
+        game_id = challenge_event["challenge"]["id"]
+
+        states = sporkfish.client.bots.stream_game_state(game_id)
+        game_full = next(states)
+        mocked_states = iter(
+            (
+                game_full,
+                {"type": "opponentGone", "claimWinInSeconds": 0, "gone": True},
+            )
+        )
+
+        term = sporkfish._handle_states(game_id, mocked_states)
+        mock_claim_victory.assert_called_once()
+        assert term == GameTerminationReason.OPPONENT_LEFT
+
+        try:
+            sporkfish.client.bots.abort_game(challenge_event["challenge"]["id"])
+        except RetryError:
             pass
 
     @pytest.mark.ci

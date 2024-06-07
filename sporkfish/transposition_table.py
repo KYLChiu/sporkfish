@@ -42,6 +42,7 @@ class TranspositionTable:
         :type zobrist_hash: np.int64
         :param depth: The depth at which the score is needed.
         :type depth: int
+
         :return: The stored entry if found, or None if not found or the depth is insufficient.
         :rtype: Optional[Dict]
         """

@@ -7,7 +7,7 @@ from sporkfish.evaluator.evaluator import Evaluator
 from sporkfish.searcher.minimax import MiniMaxVariants
 from sporkfish.searcher.move_ordering.move_orderer import MoveOrderer
 from sporkfish.searcher.searcher_config import SearcherConfig
-from sporkfish.statistics import NodeTypes
+from sporkfish.statistics import NodeTypes, PruningTypes, TranspositionTable
 from sporkfish.zobrist_hasher import ZobristStateInfo
 
 
@@ -53,17 +53,17 @@ class PVSSp(MiniMaxVariants):
                 zobrist_state.zobrist_hash, depth
             )
         ):
-            self._statistics.increment_nodes_from_tt()
+            self._statistics.increment_visited(TranspositionTable.TRANSPOSITITON_TABLE)
             return tt_entry["score"]  # type: ignore
 
-        self._statistics.increment_node_visited(NodeTypes.NEGAMAX)
+        self._statistics.increment_visited(NodeTypes.NEGAMAX)
 
         # Null move pruning - reduce the search space by trying a null move,
         # then seeing if the score of the subtree search is still high enough to cause a beta cutoff
         if self._searcher_config.enable_null_move_pruning and self._null_move_pruning(
             board, depth, alpha, beta, self._pvs
         ):
-            self._statistics.increment_pruning()
+            self._statistics.increment_visited(PruningTypes.NULL_MOVE)
             return beta
 
         # Move ordering
@@ -94,7 +94,7 @@ class PVSSp(MiniMaxVariants):
                 board, depth, capture, move, alpha
             ):
                 board.pop()
-                self._statistics.increment_pruning()
+                self._statistics.increment_visited(PruningTypes.FUTILITY)
                 continue
 
             # Update the Zobrist hash
@@ -163,7 +163,7 @@ class PVSSp(MiniMaxVariants):
         """
         value = -float("inf")
         best_move = chess.Move.null()
-        self._statistics.increment_node_visited(NodeTypes.NEGAMAX)
+        self._statistics.increment_visited(NodeTypes.NEGAMAX)
 
         zobrist_state = (
             self._zobrist_hash.full_zobrist_hash(board)
@@ -225,7 +225,7 @@ class PVSSp(MiniMaxVariants):
             alpha = max(alpha, value)
             if alpha >= beta:
                 self._update_killer_moves(move, depth)
-                self._statistics.increment_pruning()
+                self._statistics.increment_visited(PruningTypes.ALPHA_BETA)
                 break
 
         if zobrist_state:

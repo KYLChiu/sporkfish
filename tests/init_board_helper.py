@@ -53,7 +53,7 @@ def score_fen(fen_string: str) -> float:
 def searcher_with_fen(
     fen: str,
     max_depth: int = 3,
-    search_mode=SearchMode.SINGLE_PROCESS,
+    search_mode=SearchMode.NEGAMAX_SINGLE_PROCESS,
     enable_null_move_pruning=False,
     enable_futility_pruning=False,
     enable_delta_pruning=False,

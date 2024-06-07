@@ -7,4 +7,5 @@ class GameTerminationReason(Enum):
     """
 
     RESIGNATION = auto()
+    OPPONENT_LEFT = auto()
     UNKNOWN = auto()

@@ -5,7 +5,8 @@ from enum import Enum, auto
 from config import load_config
 from sporkfish.board.board import Board
 from sporkfish.board.board_factory import BoardFactory, BoardPyChess
-from sporkfish.endgame_tablebase import EndgameTablebase, EndgameTablebaseConfig
+from sporkfish.endgame_tablebases.composite_tablebase import CompositeTablebase
+from sporkfish.endgame_tablebases.endgame_tablebase_config import EndgameTablebaseConfig
 from sporkfish.engine import Engine
 from sporkfish.evaluator.evaluator_config import EvaluatorConfig
 from sporkfish.evaluator.evaluator_factory import EvaluatorFactory
@@ -98,6 +99,7 @@ class UCIClient:
             :type engine: Engine
             :param response_mode: The mode for handling the response (ResponseMode.PRINT or ResponseMode.RETURN).
             :type response_mode: ResponseMode
+
             :return: The UCI response if response_mode is ResponseMode.RETURN.
             :rtype: str
             """
@@ -187,6 +189,7 @@ class UCIClient:
 
         :param command: The UCI command to send.
         :type command: str
+
         :return: The response from the UCI engine.
         :rtype: str
         """
@@ -236,7 +239,7 @@ class UCIClient:
         ob = OpeningBook(
             OpeningBookConfig.from_dict(config.get("OpeningBookConfig"))  # type: ignore
         )
-        et = EndgameTablebase(
+        et = CompositeTablebase(
             EndgameTablebaseConfig.from_dict(config.get("EndgameTablebaseConfig"))  # type: ignore
         )
         eng = Engine(search, ob, et)

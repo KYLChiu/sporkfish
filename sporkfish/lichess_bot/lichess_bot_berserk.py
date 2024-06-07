@@ -1,5 +1,6 @@
 import datetime
 import logging
+import time
 from typing import Any, Dict, Iterator, Optional, Tuple, Union
 
 import berserk
@@ -61,6 +62,7 @@ class LichessBotBerserk(LichessBot):
         :type color: int
         :param state: The game state containing time and increment information
         :type state: Any
+
         :return: A tuple containing the time and increment for the specified color, or None if the game is correspondence
         :rtype: Tuple[Optional[float], Optional[float]]
         """
@@ -86,7 +88,6 @@ class LichessBotBerserk(LichessBot):
         :type game_id: str
         :param state: The current state of the game.
         :type state: Any
-        :return: None
         """
         # Check if it's the player's turn based on the number of moves and color
         if len(prev_moves.split()) & 1 == color:
@@ -105,6 +106,7 @@ class LichessBotBerserk(LichessBot):
         :type game_id: str
         :param states: The game states to play the game from.
         :type states: Iterator[Dict[str, Any]]
+
         :return: The reason for the game termination.
         :rtype: GameTerminationReason
         """
@@ -132,6 +134,25 @@ class LichessBotBerserk(LichessBot):
                 self._play_move(color, state["moves"], game_id, state)
             elif state["type"] == "gameStateResign":
                 return GameTerminationReason.RESIGNATION
+            elif state["type"] == "opponentGone":
+                # Busy polling is fine, nothing else to do
+                # Alternative is to asynchronously wait while finding the PV, if PV is the same as opponents move then play
+                # But this is more complex and not necessary for now
+                can_claim_win = state["claimWinInSeconds"]
+                start = time.time()
+                while True:
+                    if state["gone"]:
+                        # Claim victory if opponent is gone for more than the claimWinInSeconds
+                        if time.time() - start > can_claim_win:
+                            try:
+                                self.client.board.claim_victory(game_id)
+                                return GameTerminationReason.OPPONENT_LEFT
+                            except Exception as e:
+                                logging.error(f"Error claiming victory: {e}")
+                                break
+                        # Otherwise, keep polling
+                    else:
+                        break
 
         return GameTerminationReason.UNKNOWN
 
@@ -141,6 +162,7 @@ class LichessBotBerserk(LichessBot):
 
         :param game_id: The ID of the game on Lichess.
         :type game_id: str
+
         :return: The reason for the game termination.
         :rtype: GameTerminationReason
         """
@@ -154,6 +176,7 @@ class LichessBotBerserk(LichessBot):
 
         :param event: The event details containing the challenge information.
         :type event: Dict[str, Any]
+
         :return: True if the bot should accept the challenge, False otherwise.
         :rtype: bool
         """
@@ -171,6 +194,7 @@ class LichessBotBerserk(LichessBot):
 
         :param event: The event containing information about the challenge.
         :type event: Dict[str, Any]
+
         :return: True if the challenge is accepted, False if it is declined.
         :rtype: bool
         """
@@ -187,6 +211,7 @@ class LichessBotBerserk(LichessBot):
 
         :param event: The event containing information about the game.
         :type event: Dict[str, Any]
+
         :return: The reason for the game termination.
         :rtype: GameTerminationReason
         """
