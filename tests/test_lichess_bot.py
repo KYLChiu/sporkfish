@@ -1,6 +1,7 @@
 import multiprocessing
 import sys
 import time
+import unittest.mock as mock
 
 import pytest
 from tenacity import RetryError
@@ -108,7 +109,10 @@ class TestLichessBot:
             pass
 
     @pytest.mark.ci
-    def test_opponent_left(self):
+    @mock.patch("berserk.Client.board.claim_victory")
+    def test_opponent_left(self, mock_claim_victory: mock.Mock):
+        mock_claim_victory.return_value = None
+
         sporkfish = TestLichessBot._create_bot(TestLichessBot._sporkfish_api_token_file)
         test_bot = TestLichessBot._create_bot(TestLichessBot._test_bot_api_token_file)
 
@@ -138,6 +142,7 @@ class TestLichessBot:
         )
 
         term = sporkfish._handle_states(game_id, mocked_states)
+        mock_claim_victory.assert_called_once()
         assert term == GameTerminationReason.OPPONENT_LEFT
 
         try:
