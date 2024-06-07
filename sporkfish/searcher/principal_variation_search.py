@@ -30,14 +30,19 @@ class PVSSp(MiniMaxVariants):
         """
         Principal Variation Search implementation with alpha-beta pruning. For non-root nodes.
 
-        Args:
-            board: The current state of the chess board.
-            depth: The remaining depth to search.
-            alpha: The alpha value for alpha-beta pruning.
-            beta: The beta value for alpha-beta pruning.
+        :param board: The current state of the chess board.
+        :type board: Board
+        :param depth: The remaining depth to search.
+        :type depth: int
+        :param alpha: The alpha value for alpha-beta pruning.
+        :type alpha: float
+        :param beta: The beta value for alpha-beta pruning.
+        :type beta: float
+        :param zobrist_state: The Zobrist hash state information.
+        :type zobrist_state: Optional[ZobristStateInfo]
 
-        Returns:
-            The evaluation score of the current board position.
+        :returns: The evaluation score of the current board position.
+        :rtype: float
         """
         value = -float("inf")
 
@@ -158,6 +163,7 @@ class PVSSp(MiniMaxVariants):
         :type alpha: float
         :param beta: Beta value for alpha-beta pruning.
         :type beta: float
+
         :return: Tuple containing the best move and its value.
         :rtype: Tuple[float, chess.Move]
         """

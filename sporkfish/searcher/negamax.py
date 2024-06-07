@@ -38,6 +38,8 @@ class NegamaxSp(MiniMaxVariants):
         :type alpha: float
         :param beta: The beta value for alpha-beta pruning.
         :type beta: float
+        :param zobrist_state: The Zobrist hash state information.
+        :type zobrist_state: Optional[ZobristStateInfo]
 
         :returns: The evaluation score of the current board position.
         :rtype: float
