@@ -3,7 +3,6 @@ import sys
 import time
 import unittest.mock as mock
 
-import berserk
 import pytest
 from tenacity import RetryError
 
@@ -110,7 +109,7 @@ class TestLichessBot:
             pass
 
     @pytest.mark.ci
-    @mock.patch("berserk.Client.board.claim_victory")
+    @mock.patch("berserk.clients.board.claim_victory")
     def test_opponent_left(self, mock_claim_victory: mock.Mock):
         mock_claim_victory.return_value = None
 
