@@ -131,7 +131,10 @@ class TestLichessBot:
         states = sporkfish.client.bots.stream_game_state(game_id)
         game_full = next(states)
         mocked_states = iter(
-            (game_full, {"type": "opponentGone", "claimWinInSeconds": 0})
+            (
+                game_full,
+                {"type": "opponentGone", "claimWinInSeconds": 0, "state": "gone"},
+            )
         )
 
         term = sporkfish._handle_states(game_id, mocked_states)

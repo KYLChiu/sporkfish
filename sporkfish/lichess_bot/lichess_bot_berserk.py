@@ -144,8 +144,12 @@ class LichessBotBerserk(LichessBot):
                     if state["gone"]:
                         # Claim victory if opponent is gone for more than the claimWinInSeconds
                         if time.time() - start > can_claim_win:
-                            self.client.board.claim_victory(game_id)
-                            return GameTerminationReason.OPPONENT_LEFT
+                            try:
+                                self.client.board.claim_victory(game_id)
+                                return GameTerminationReason.OPPONENT_LEFT
+                            except Exception as e:
+                                logging.error(f"Error claiming victory: {e}")
+                                break
                         # Otherwise, keep polling
                     else:
                         break
