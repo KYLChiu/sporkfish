@@ -108,6 +108,41 @@ class TestLichessBot:
             pass
 
     @pytest.mark.ci
+    def test_opponent_left(self):
+        sporkfish = TestLichessBot._create_bot(TestLichessBot._sporkfish_api_token_file)
+        test_bot = TestLichessBot._create_bot(TestLichessBot._test_bot_api_token_file)
+
+        assert sporkfish
+        assert test_bot
+
+        challenge_event = test_bot.client.challenges.create(
+            username="Sporkfish",
+            color="white",
+            variant="standard",
+            rated=False,
+            clock_limit=30,
+            clock_increment=0,
+        )
+
+        assert challenge_event
+        assert sporkfish._event_action_accept_challenge(challenge_event)
+        game_id = challenge_event["challenge"]["id"]
+
+        states = sporkfish.client.bots.stream_game_state(game_id)
+        game_full = next(states)
+        mocked_states = iter(
+            (game_full, {"type": "opponentGone", "claimWinInSeconds": 0})
+        )
+
+        term = sporkfish._handle_states(game_id, mocked_states)
+        assert term == GameTerminationReason.OPPONENT_LEFT
+
+        try:
+            sporkfish.client.bots.abort_game(challenge_event["challenge"]["id"])
+        except RetryError:
+            pass
+
+    @pytest.mark.ci
     def test_opponent_resigned(self):
         sporkfish = TestLichessBot._create_bot(TestLichessBot._sporkfish_api_token_file)
         test_bot = TestLichessBot._create_bot(TestLichessBot._test_bot_api_token_file)
