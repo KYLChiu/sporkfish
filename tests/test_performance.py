@@ -5,6 +5,7 @@ from sporkfish.searcher.move_ordering.move_order_config import (
     MoveOrderConfig,
     MoveOrderMode,
 )
+from sporkfish.searcher.searcher_config import SearchMode
 
 
 @pytest.mark.parametrize(
@@ -32,6 +33,7 @@ class TestPerformance:
         test_name: str,
         fen: str,
         max_depth: int,
+        search_mode: SearchMode = SearchMode.NEGAMAX_SINGLE_PROCESS,
         enable_null_move_pruning: bool = False,
         enable_futility_pruning: bool = False,
         enable_delta_pruning: bool = False,
@@ -49,6 +51,7 @@ class TestPerformance:
         searcher_with_fen(
             fen,
             max_depth,
+            search_mode=search_mode,
             enable_null_move_pruning=enable_null_move_pruning,
             enable_futility_pruning=enable_futility_pruning,
             enable_delta_pruning=enable_delta_pruning,
@@ -94,6 +97,17 @@ class TestPerformance:
     def test_perf_base(self, request_fixture, fen_string: str, max_depth: int) -> None:
         self._run_perf_analytics(
             request_fixture.node.name,
+            fen=fen_string,
+            max_depth=max_depth,
+        )
+
+    @pytest.mark.slow
+    def test_perf_base_pvs(
+        self, request_fixture, fen_string: str, max_depth: int
+    ) -> None:
+        self._run_perf_analytics(
+            request_fixture.node.name,
+            search_mode=SearchMode.PVS,
             fen=fen_string,
             max_depth=max_depth,
         )

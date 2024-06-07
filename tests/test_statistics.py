@@ -8,7 +8,7 @@ from sporkfish.searcher.move_ordering.move_order_config import (
 )
 from sporkfish.searcher.searcher_config import SearcherConfig, SearchMode
 from sporkfish.searcher.searcher_factory import SearcherFactory
-from sporkfish.statistics import NodeTypes, PruningTypes, Statistics, TranpositionTable
+from sporkfish.statistics import NodeTypes, PruningTypes, Statistics, TranspositionTable
 
 
 class TestIncrementStatistics:
@@ -29,9 +29,9 @@ class TestIncrementStatistics:
 
     def test_increment_tt(self):
         s = Statistics()
-        assert s.visited[TranpositionTable.TRANSPOSITITON_TABLE] == 0
-        s.increment_visited(TranpositionTable.TRANSPOSITITON_TABLE)
-        assert s.visited[TranpositionTable.TRANSPOSITITON_TABLE] == 1
+        assert s.visited[TranspositionTable.TRANSPOSITITON_TABLE] == 0
+        s.increment_visited(TranspositionTable.TRANSPOSITITON_TABLE)
+        assert s.visited[TranspositionTable.TRANSPOSITITON_TABLE] == 1
 
     def test_increment_negamax(self):
         s = Statistics()

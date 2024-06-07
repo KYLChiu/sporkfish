@@ -2,7 +2,7 @@ import copy
 import logging
 import time
 from abc import ABC, abstractmethod
-from typing import Optional, Tuple
+from typing import Callable, Optional, Tuple
 
 import chess
 import stopit
@@ -18,7 +18,8 @@ from sporkfish.searcher.move_ordering.move_orderer import MoveOrderer
 from sporkfish.searcher.move_ordering.mvv_lva_heuristic import MvvLvaHeuristic
 from sporkfish.searcher.searcher import Searcher
 from sporkfish.searcher.searcher_config import SearcherConfig
-from sporkfish.statistics import NodeTypes, PruningTypes, TranpositionTable
+from sporkfish.statistics import NodeTypes, PruningTypes
+from sporkfish.statistics import TranspositionTable as TranspositionTableNodeType
 from sporkfish.transposition_table import TranspositionTable
 from sporkfish.zobrist_hasher import ZobristHasher, ZobristStateInfo
 
@@ -241,7 +242,9 @@ class MiniMaxVariants(Searcher, ABC):
         if zobrist_state and (
             tt_entry := self._transposition_table.probe(zobrist_state.zobrist_hash, 0)
         ):
-            self._statistics.increment_visited(TranpositionTable.TRANSPOSITITON_TABLE)
+            self._statistics.increment_visited(
+                TranspositionTableNodeType.TRANSPOSITITON_TABLE
+            )
             return tt_entry["score"]  # type: ignore
 
         self._statistics.increment_visited(NodeTypes.QUIESCENSE)
@@ -307,6 +310,42 @@ class MiniMaxVariants(Searcher, ABC):
                 self._transposition_table.store(zobrist_state.zobrist_hash, 0, score)
 
         return alpha
+
+    def _null_move_pruning(
+        self, board: Board, depth: int, alpha: float, beta: float, search_func: Callable
+    ) -> bool:
+        """
+        Implements null move pruning, a technique to reduce the search space by attempting a 'null move'.
+        It evaluates whether skipping a move (null move) would still allow achieving a beta cutoff,
+        thereby avoiding unnecessary exploration of certain branches of the game tree.
+
+        :param board: The current state of the chess board.
+        :type board: chess.Board
+        :param depth: The current depth in the search tree.
+        :type depth: int
+        :param alpha: The current best score for the maximizing player.
+        :type alpha: float
+        :param beta: The current best score for the minimizing player.
+        :type beta: float
+        :param search_func: The search function to be used (e.g. negamax, PVS).
+        :type search_func: Callable
+
+        :return: True if the null move leads to a beta cutoff, indicating a possible pruning opportunity.
+        :rtype: bool
+        """
+        # TODO: add zugzwang check
+        # Will make depth_reduction_factor configurable later
+        depth_reduction_factor = 3
+        in_check = board.is_check()
+        if depth >= depth_reduction_factor and not in_check:
+            null_move_depth = depth - depth_reduction_factor
+            board.push(chess.Move.null())
+            # TODO: check if too expensive to calculate Zobrist state here
+            value = -search_func(board, null_move_depth, -beta, -alpha, None)
+            board.pop()
+            if value >= beta:
+                return True
+        return False
 
     def _futility_pruning(
         self,

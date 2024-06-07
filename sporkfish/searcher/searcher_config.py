@@ -8,6 +8,7 @@ from sporkfish.searcher.move_ordering.move_order_config import MoveOrderConfig
 class SearchMode(Enum):
     NEGAMAX_SINGLE_PROCESS = "NEGAMAX_SINGLE_PROCESS"
     NEGAMAX_LAZY_SMP = "NEGAMAX_LAZY_SMP"
+    PVS_SINGLE_PROCESS = "PVS_SINGLE_PROCESS"
 
 
 class SearcherConfig(Configurable):

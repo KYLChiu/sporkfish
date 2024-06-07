@@ -18,7 +18,7 @@ class PruningTypes(Enum):
     ALPHA_BETA = "ALPHA_BETA"
 
 
-class TranpositionTable(Enum):
+class TranspositionTable(Enum):
     TRANSPOSITITON_TABLE = "TRANSPOSITITON_TABLE"
 
 
@@ -34,20 +34,20 @@ class Statistics:
         and nodes stored in the transposition table to zero.
         """
         self._visited = {
-            key: 0 for key in [*NodeTypes, *PruningTypes, *TranpositionTable]
+            key: 0 for key in [*NodeTypes, *PruningTypes, *TranspositionTable]
         }
         self._fields: Dict = {}
 
     def increment_visited(
         self,
-        visited_type: Union[NodeTypes, PruningTypes, TranpositionTable],
+        visited_type: Union[NodeTypes, PruningTypes, TranspositionTable],
         count: int = 1,
     ) -> None:
         """
         Increment the count of visited nodes of a specified type.
 
         :param visited_node_type: The type of node being visited.
-        :type visited_node_type: Union[NodeTypes, PruningTypes, TranpositionTable]
+        :type visited_node_type: Union[NodeTypes, PruningTypes, TranspositionTable]
         :param count: The number of nodes to increment the count by. Default is 1.
         :type count: int
         """
@@ -119,7 +119,7 @@ class Statistics:
         self._fields["Total pruning"] = total_pruning
 
         self._fields["Nodes from TT"] = self._visited[
-            TranpositionTable.TRANSPOSITITON_TABLE
+            TranspositionTable.TRANSPOSITITON_TABLE
         ]
         self._fields["NPS"] = float(total_node / elapsed) if elapsed > 0 else 0
 

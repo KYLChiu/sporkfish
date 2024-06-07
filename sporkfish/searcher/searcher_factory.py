@@ -1,6 +1,7 @@
 from sporkfish.evaluator.evaluator import Evaluator
 from sporkfish.searcher.negamax import NegamaxSp
 from sporkfish.searcher.negamax_lazy_smp import NegaMaxLazySmp
+from sporkfish.searcher.principal_variation_search import PVSSp
 from sporkfish.searcher.searcher import Searcher
 from sporkfish.searcher.searcher_config import SearcherConfig, SearchMode
 
@@ -27,6 +28,8 @@ class SearcherFactory:
             return NegamaxSp(evaluator, searcher_cfg)
         elif searcher_cfg.search_mode is SearchMode.NEGAMAX_LAZY_SMP:
             return NegaMaxLazySmp(evaluator, searcher_cfg)
+        elif searcher_cfg.search_mode is SearchMode.PVS_SINGLE_PROCESS:
+            return PVSSp(evaluator, searcher_cfg)
         else:
             raise TypeError(
                 f"SearcherFactory does not support the creation of Searcher type: \

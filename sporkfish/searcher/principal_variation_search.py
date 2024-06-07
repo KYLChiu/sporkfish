@@ -11,7 +11,7 @@ from sporkfish.statistics import NodeTypes, PruningTypes, TranspositionTable
 from sporkfish.zobrist_hasher import ZobristStateInfo
 
 
-class NegamaxSp(MiniMaxVariants):
+class PVSSp(MiniMaxVariants):
     def __init__(
         self,
         evaluator: Evaluator,
@@ -19,7 +19,7 @@ class NegamaxSp(MiniMaxVariants):
     ) -> None:
         super().__init__(evaluator, searcher_config)
 
-    def _negamax(
+    def _pvs(
         self,
         board: Board,
         depth: int,
@@ -28,7 +28,7 @@ class NegamaxSp(MiniMaxVariants):
         zobrist_state: Optional[ZobristStateInfo],
     ) -> float:
         """
-        Negamax implementation with alpha-beta pruning. For non-root nodes.
+        Principal Variation Search implementation with alpha-beta pruning. For non-root nodes.
 
         :param board: The current state of the chess board.
         :type board: Board
@@ -58,7 +58,6 @@ class NegamaxSp(MiniMaxVariants):
                 zobrist_state.zobrist_hash, depth
             )
         ):
-            # add test
             self._statistics.increment_visited(TranspositionTable.TRANSPOSITITON_TABLE)
             return tt_entry["score"]  # type: ignore
 
@@ -67,9 +66,8 @@ class NegamaxSp(MiniMaxVariants):
         # Null move pruning - reduce the search space by trying a null move,
         # then seeing if the score of the subtree search is still high enough to cause a beta cutoff
         if self._searcher_config.enable_null_move_pruning and self._null_move_pruning(
-            board, depth, alpha, beta, self._negamax
+            board, depth, alpha, beta, self._pvs
         ):
-            # add test
             self._statistics.increment_visited(PruningTypes.NULL_MOVE)
             return beta
 
@@ -78,7 +76,7 @@ class NegamaxSp(MiniMaxVariants):
         legal_moves = MoveOrderer.order_moves(mo_heuristic, board.legal_moves)
 
         # Recursive search with alpha-beta pruning
-        for move in legal_moves:
+        for idx, move in enumerate(legal_moves):
             # Get captures for futility pruning or transposition table
             # Get piece at previous from_square for transposition table
             # This needs to be done prior to changing the board state
@@ -101,7 +99,6 @@ class NegamaxSp(MiniMaxVariants):
                 board, depth, capture, move, alpha
             ):
                 board.pop()
-                # add test
                 self._statistics.increment_visited(PruningTypes.FUTILITY)
                 continue
 
@@ -118,9 +115,21 @@ class NegamaxSp(MiniMaxVariants):
                 else None
             )
 
-            child_value = -self._negamax(
-                board, depth - 1, -beta, -alpha, child_zobrist_state
-            )
+            # If it's the first move, we do a full window search
+            if idx == 0:
+                child_value = -self._pvs(
+                    board, depth - 1, -beta, -alpha, child_zobrist_state
+                )
+            # Otherwise, we do a null window search first
+            # If the value is within the bounds, we do a full window search
+            else:
+                child_value = -self._pvs(
+                    board, depth - 1, -alpha - 1, -alpha, child_zobrist_state
+                )
+                if alpha < child_value < beta:
+                    child_value = -self._pvs(
+                        board, depth - 1, -beta, -alpha, child_zobrist_state
+                    )
 
             board.pop()
 
@@ -128,9 +137,7 @@ class NegamaxSp(MiniMaxVariants):
             alpha = max(alpha, value)
 
             if alpha >= beta:
-                self._statistics.increment_visited(PruningTypes.ALPHA_BETA)
                 self._update_killer_moves(move, depth)
-                self._update_history_table(move, depth)
                 break
 
         if zobrist_state:
@@ -146,7 +153,7 @@ class NegamaxSp(MiniMaxVariants):
         beta: float,
     ) -> Tuple[float, chess.Move]:
         """
-        Entry point for negamax search with fail-soft alpha-beta pruning, single process.
+        Entry point for principal variation search with fail-soft alpha-beta pruning, single process.
 
         :param board: The current chess board position.
         :type board: Board
@@ -162,6 +169,7 @@ class NegamaxSp(MiniMaxVariants):
         """
         value = -float("inf")
         best_move = chess.Move.null()
+        self._statistics.increment_visited(NodeTypes.NEGAMAX)
 
         zobrist_state = (
             self._zobrist_hash.full_zobrist_hash(board)
@@ -171,7 +179,7 @@ class NegamaxSp(MiniMaxVariants):
         mo_heuristic = self._build_move_order_heuristic(board, depth)
         legal_moves = MoveOrderer.order_moves(mo_heuristic, board.legal_moves)
 
-        for move in legal_moves:
+        for idx, move in enumerate(legal_moves):
             # Get piece at from_square and captures for transposition table
             # This needs to be done prior to changing the board state
             previous_piece_from_square = (
@@ -197,9 +205,22 @@ class NegamaxSp(MiniMaxVariants):
                 if zobrist_state
                 else None
             )
-            child_value = -self._negamax(
-                board, depth - 1, -beta, -alpha, child_zobrist_state
-            )
+
+            # If it's the first move, we do a full window search
+            if idx == 0:
+                child_value = -self._pvs(
+                    board, depth - 1, -beta, -alpha, child_zobrist_state
+                )
+            # Otherwise, we do a null window search first
+            # If the value is within the bounds, we do a full window search
+            else:
+                child_value = -self._pvs(
+                    board, depth - 1, -alpha - 1, -alpha, child_zobrist_state
+                )
+                if alpha < child_value < beta:
+                    child_value = -self._pvs(
+                        board, depth - 1, -beta, -alpha, child_zobrist_state
+                    )
 
             board.pop()
 
@@ -222,14 +243,13 @@ class NegamaxSp(MiniMaxVariants):
         self, board: Board, timeout: Optional[float] = None
     ) -> Tuple[float, chess.Move]:
         """
-        Finds the best move (and associated score) via negamax and iterative deepening.
+        Finds the best move (and associated score) via PVS and iterative deepening.
 
         :param board: The current chess board position.
         :type board: Board
+        :return: The best score and move based on the search.
         :param timeout: Time in seconds until we stop the search, returning the best depth if we timeout.
         :type timeout: Optional[float]
-
-        :return: The best score and associated move based on the search.
         :rtype: Tuple[float, Move]
         """
         score, move = self._iterative_deepening_search(board, timeout)

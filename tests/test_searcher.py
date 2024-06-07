@@ -245,3 +245,58 @@ class TestNegamax:
             alpha = max(alpha, value)
 
         assert result == value
+
+
+@pytest.fixture
+def init_pvs_searcher(
+    max_depth: int = 4, move_order_mode: MoveOrderMode = MoveOrderMode.MVV_LVA
+) -> Searcher:
+    """Initialise searcher"""
+    return SearcherFactory.create(
+        SearcherConfig(
+            max_depth,
+            search_mode=SearchMode.PVS_SINGLE_PROCESS,
+            move_order_config=MoveOrderConfig(move_order_mode=move_order_mode),
+        ),
+        evaluator=evaluator(),
+    )
+
+
+@pytest.mark.parametrize(
+    ("fen_string"),
+    [
+        (board_setup["white"]["open"]),
+        (board_setup["white"]["mid"]),
+        (board_setup["white"]["end"]),
+        (board_setup["white"]["two_kings"]),
+        (board_setup["black"]["open"]),
+        (board_setup["black"]["mid"]),
+        (board_setup["black"]["end"]),
+        (board_setup["black"]["two_kings"]),
+        (board_setup["white"]["open"]),
+        (board_setup["white"]["mid"]),
+        (board_setup["white"]["end"]),
+        (board_setup["white"]["two_kings"]),
+        (board_setup["black"]["open"]),
+        (board_setup["black"]["mid"]),
+        (board_setup["black"]["end"]),
+        # (board_setup["black"]["two_kings"], [0, -90]) # Discussed with Jeremy to temp disable this,
+    ],
+)
+class TestPVS:
+    def test_pvs_depth(
+        self, init_searcher: Searcher, init_pvs_searcher: Searcher, fen_string: str
+    ) -> None:
+        """
+        Testing PVS depth 1-4
+        """
+        s_nega = init_searcher
+        s_pvs = init_pvs_searcher
+
+        for depth in range(1, 5):
+            board = init_board(fen_string)
+
+            alpha, beta = float("-inf"), float("inf")
+            result_nega = s_nega._negamax(board, depth, alpha, beta, None)
+            result_pvs = s_pvs._pvs(board, depth, alpha, beta, None)
+            assert result_pvs == result_nega
