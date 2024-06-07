@@ -133,7 +133,7 @@ class TestLichessBot:
         mocked_states = iter(
             (
                 game_full,
-                {"type": "opponentGone", "claimWinInSeconds": 0, "state": "gone"},
+                {"type": "opponentGone", "claimWinInSeconds": 0, "gone": True},
             )
         )
 
