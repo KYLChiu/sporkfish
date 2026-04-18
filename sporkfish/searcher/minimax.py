@@ -606,22 +606,3 @@ class MiniMaxVariants(Searcher, ABC):
 
         logging.info(f"End search for FEN {board.fen()}.")
         return score, move
-
-    @abstractmethod
-    def search(
-        self, board: Board, timeout: Optional[float] = None
-    ) -> Tuple[float, chess.Move]:
-        """
-        Abstract method to search for the best move in a given board position.
-
-        :param board: The current state of the chess board.
-        :type board: Board
-        :param timeout: Optional timeout value for the search operation.
-                       If provided, the search should terminate after the specified time.
-        :type timeout: Optional[float]
-
-        :return: A tuple containing the evaluation score of the best move found
-                 and the corresponding move itself.
-        :rtype: Tuple[float, chess.Move]
-        """
-        pass
