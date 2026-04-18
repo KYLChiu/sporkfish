@@ -107,7 +107,9 @@ class TestEvaluator:
         pesto = ((mg_score * mg_phase) + (eg_score * eg_phase)) / 24
         # Black pawn on c4 is passed (rank 3, bonus index 4 = 35cp)
         pp_bonus = -35  # negative because it's opponent's passed pawn
-        expected = pesto + pp_bonus * (0.5 + 0.5 * eg_phase / 24)
+        # Black c4 pawn is isolated (no adjacent pawns), opponent's weakness = +12cp for white
+        ps_bonus = 12.0
+        expected = pesto + pp_bonus * (0.5 + 0.5 * eg_phase / 24) + ps_bonus
 
         assert score == expected
 
@@ -131,7 +133,9 @@ class TestEvaluator:
         pesto = ((mg_score * mg_phase) + (eg_score * eg_phase)) / 24
         # Black pawn on c4 is passed (rank 3, bonus index 4 = 35cp)
         pp_bonus = 35  # positive because it's own passed pawn for black
-        expected = pesto + pp_bonus * (0.5 + 0.5 * eg_phase / 24)
+        # Black c4 pawn is isolated (no adjacent pawns), own weakness = -12cp for black
+        ps_bonus = -12.0
+        expected = pesto + pp_bonus * (0.5 + 0.5 * eg_phase / 24) + ps_bonus
 
         assert score == expected
 

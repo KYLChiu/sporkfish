@@ -323,8 +323,14 @@ class Pesto(Evaluator):
 
         # Passed pawn bonus applies in all phases but scales towards endgame.
         pp = self._passed_pawns(board)
-        # Weight more heavily in endgame (where passed pawns matter most).
-        return pesto + pp * (0.5 + 0.5 * eg_phase / 24)
+
+        # Bishop pair: cheap positional bonus (2 pieces_mask calls).
+        bp = self._bishop_pair(board)
+
+        # Pawn structure: penalise doubled/isolated pawns.
+        ps = self._pawn_structure(board)
+
+        return pesto + pp * (0.5 + 0.5 * eg_phase / 24) + bp + ps
 
     # Bishop pair bonus (centipawns). Standard across engines (~25-35cp).
     _BISHOP_PAIR_BONUS = 30.0
