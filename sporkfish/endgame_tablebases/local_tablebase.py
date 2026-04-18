@@ -222,16 +222,14 @@ class LocalTablebase(EndgameTablebase):
         """
 
         if self._db and self._should_query(board):
-            # We need to use a chess.Board() to be compatible with the endgame tablebase
-            # This is a small performace hit but is miniscule compared to searching
-            cboard = chess.Board()
-            cboard.set_fen(board.fen())
+            cboard = board.copy()
+            legal_moves = list(board.legal_moves)
             best_category, best_dtz, best_move = (
                 LocalTablebase._DTZCategory.UNCONDITIONAL_LOSS,
                 -sys.maxsize,
                 None,
             )
-            for move in board.legal_moves:
+            for move in legal_moves:
                 cboard.push(move)
 
                 # Refer to https://python-chess.readthedocs.io/en/latest/syzygy.html

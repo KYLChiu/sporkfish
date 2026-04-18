@@ -52,29 +52,28 @@ class LichessBotBerserk(LichessBot):
             else None
         )
 
-    def _get_time(
-        self, color: int, state: Dict[str, Any]
-    ) -> Tuple[Optional[float], Optional[float]]:
+    def _get_times(
+        self, state: Dict[str, Any]
+    ) -> Tuple[Optional[float], Optional[float], Optional[float], Optional[float]]:
         """
-        Extracts the time and increment given the color and game state.
+        Extracts wtime, btime, winc, binc from the game state.
 
-        :param color: The color of the player (0 for white, 1 for black)
-        :type color: int
         :param state: The game state containing time and increment information
-        :type state: Any
+        :type state: Dict[str, Any]
 
-        :return: A tuple containing the time and increment for the specified color, or None if the game is correspondence
-        :rtype: Tuple[Optional[float], Optional[float]]
+        :return: A tuple of (wtime, btime, winc, binc) in seconds, or all None for correspondence
+        :rtype: Tuple[Optional[float], Optional[float], Optional[float], Optional[float]]
         """
         if state.get("perf", {}).get("name") == "Correspondence":  # type: ignore
-            return None, None
+            return None, None, None, None
 
         game_state: Dict[str, Any] = state.get("state", state)
 
-        color_str = "w" if not color else "b"
-        time_obj = game_state.get(f"{color_str}time")
-        inc_obj = game_state.get(f"{color_str}inc")
-        return self._extract_second(time_obj), self._extract_second(inc_obj)
+        wtime = self._extract_second(game_state.get("wtime"))
+        btime = self._extract_second(game_state.get("btime"))
+        winc = self._extract_second(game_state.get("winc"))
+        binc = self._extract_second(game_state.get("binc"))
+        return wtime, btime, winc, binc
 
     def _play_move(self, color: int, prev_moves: str, game_id: str, state: Any) -> None:
         """
@@ -89,12 +88,13 @@ class LichessBotBerserk(LichessBot):
         :param state: The current state of the game.
         :type state: Any
         """
+        moves = prev_moves.split()
 
         # Check if it's the player's turn based on the number of moves and color
-        if len(prev_moves.split()) & 1 == color:
+        if len(moves) & 1 == color:
             self._set_position(prev_moves)
-            time, inc = self._get_time(color, state)
-            best_move = self._get_best_move(color, time, inc)
+            wtime, btime, winc, binc = self._get_times(state)
+            best_move = self._get_best_move(wtime, btime, winc, binc)
             self.client.bots.make_move(game_id, best_move)
 
     def _handle_states(
@@ -136,25 +136,16 @@ class LichessBotBerserk(LichessBot):
             elif state["type"] == "gameStateResign":
                 return GameTerminationReason.RESIGNATION
             elif state["type"] == "opponentGone":
-                # Busy polling is fine, nothing else to do
-                # Alternative is to asynchronously wait while finding the PV, if PV is the same as opponents move then play
-                # But this is more complex and not necessary for now
+                # Wait for the claim window to elapse, then attempt to claim victory.
+                # The state dict is a snapshot - no need to re-poll it.
                 can_claim_win = state["claimWinInSeconds"]
-                start = time.time()
-                while True:
-                    if state["gone"]:
-                        # Claim victory if opponent is gone for more than the claimWinInSeconds
-                        if time.time() - start > can_claim_win:
-                            try:
-                                self.client.board.claim_victory(game_id)
-                                return GameTerminationReason.OPPONENT_LEFT
-                            except Exception as e:
-                                logging.error(f"Error claiming victory: {e}")
-                                break
-
-                        # Otherwise, keep polling
-                    else:
-                        break
+                if state["gone"] and can_claim_win is not None:
+                    time.sleep(max(0, can_claim_win))
+                    try:
+                        self.client.board.claim_victory(game_id)
+                        return GameTerminationReason.OPPONENT_LEFT
+                    except Exception as e:
+                        logging.error(f"Error claiming victory: {e}")
 
         return GameTerminationReason.UNKNOWN
 
@@ -226,10 +217,13 @@ class LichessBotBerserk(LichessBot):
         :param event: The event containing information about the game.
         :type event: Dict[str, Any]
         """
-        self.client.bots.post_message(
-            event["game"]["fullId"],
-            LichessBot._GAME_FINISHED_MESSAGE,
-        )
+        try:
+            self.client.bots.post_message(
+                event["game"]["fullId"],
+                LichessBot._GAME_FINISHED_MESSAGE,
+            )
+        except Exception as e:
+            logging.warning(f"Could not post game-finish message: {e}")
 
     _event_actions = {
         "challenge": _event_action_accept_challenge,
@@ -242,5 +236,8 @@ class LichessBotBerserk(LichessBot):
         Start the Lichess bot, listening to incoming events sequentially and playing games accordingly.
         """
         for event in self.client.bots.stream_incoming_events():
-            if action := self._event_actions.get(event.get("type", "")):
-                action(self, event)
+            try:
+                if action := self._event_actions.get(event.get("type", "")):
+                    action(self, event)
+            except Exception as e:
+                logging.error(f"Error handling event {event.get('type', '?')}: {e}")

@@ -21,7 +21,11 @@ from sporkfish.searcher.searcher_config import SearcherConfig
 from sporkfish.statistics import NodeTypes, PruningTypes
 from sporkfish.statistics import TranspositionTable as TranspositionTableNodeType
 from sporkfish.transposition_table import TranspositionTable
-from sporkfish.zobrist_hasher import ZobristHasher, ZobristStateInfo
+from sporkfish.zobrist_hasher import (
+    ZobristHasher,
+    ZobristStateInfo,
+    zobrist_piece_index,
+)
 
 
 class MiniMaxVariants(Searcher, ABC):
@@ -233,13 +237,13 @@ class MiniMaxVariants(Searcher, ABC):
         The *horizon effect* arises when the main search stops at a fixed depth mid-capture:
         e.g. we see a queen capture but don't see the recapture on the next ply, making the
         position look falsely great. Quiescence search fixes this by extending the search
-        only on captures (and checks in some engines) until the position is "quiet" —
-        i.e. no more captures are available — before calling the static evaluator.
+        only on captures (and checks in some engines) until the position is "quiet" --
+        i.e. no more captures are available - before calling the static evaluator.
 
         *Stand-pat pruning*: Before searching captures, we compute the static eval
         (`stand_pat`). If even without making any capture we already beat beta, we prune
         immediately (the opponent wouldn't allow this position). If stand_pat > alpha,
-        we raise alpha — we can always "stand pat" and accept the current score.
+        we raise alpha - we can always "stand pat" and accept the current score.
 
         :param board: The current state of the chess board.
         :type board: Board
@@ -267,7 +271,7 @@ class MiniMaxVariants(Searcher, ABC):
                 TranspositionTableNodeType.TRANSPOSITITON_TABLE
             )
 
-            # Tuple layout: (depth, score, flag) — see TranspositionTable._DEPTH/SCORE/FLAG
+            # Tuple layout: (depth, score, flag) - see TranspositionTable._DEPTH/SCORE/FLAG
             tt_score = tt_entry[TranspositionTable._SCORE]  # type: ignore
             tt_flag = tt_entry[TranspositionTable._FLAG]
             if tt_flag == TranspositionTable.EXACT:
@@ -286,7 +290,7 @@ class MiniMaxVariants(Searcher, ABC):
 
         # --- Stand-pat score ---
         # Static evaluation of the current position without making any move.
-        # The current player can always "do nothing" — so this is a guaranteed lower bound.
+        # The current player can always "do nothing" - so this is a guaranteed lower bound.
         stand_pat = self._evaluator.evaluate(board)
 
         # Hit the depth cap: return static eval without searching captures.
@@ -326,12 +330,21 @@ class MiniMaxVariants(Searcher, ABC):
 
             # Snapshot the moving piece and captured piece BEFORE pushing the move,
             # so the incremental Zobrist hash can XOR them out and in correctly.
-            previous_piece_from_square = (
-                board.piece_at(move.from_square) if zobrist_state else None
-            )
-
-            # In quiescence we only search captures, so a captured piece always exists.
-            captured_piece = board.piece_at(move.to_square) if zobrist_state else None
+            # Uses piece_type_at + color_at to avoid chess.Piece object creation.
+            if zobrist_state:
+                from_pt = board.piece_type_at(move.from_square)
+                from_color = board.color_at(move.from_square)
+                from_cpt = zobrist_piece_index(from_pt, from_color)
+                # In quiescence we only search captures, so a captured piece usually exists.
+                cap_pt = board.piece_type_at(move.to_square)
+                captured_cpt = (
+                    zobrist_piece_index(cap_pt, board.color_at(move.to_square))
+                    if cap_pt
+                    else -1
+                )
+            else:
+                from_cpt = -1
+                captured_cpt = -1
 
             self._push(board, move)
 
@@ -341,8 +354,8 @@ class MiniMaxVariants(Searcher, ABC):
                     board,
                     move,
                     zobrist_state,
-                    previous_piece_from_square,  # type: ignore
-                    captured_piece,
+                    from_cpt,
+                    captured_cpt,
                 )
                 if zobrist_state
                 else None
@@ -404,8 +417,9 @@ class MiniMaxVariants(Searcher, ABC):
         """
 
         # TODO: add zugzwang check
-        # Will make depth_reduction_factor configurable later
-        depth_reduction_factor = 3
+        # Adaptive R: use R=4 at deeper nodes where the extra reduction saves
+        # significantly more work, and R=3 at shallower nodes for safety.
+        depth_reduction_factor = 4 if depth >= 6 else 3
         in_check = board.is_check()
         if depth >= depth_reduction_factor and not in_check:
             null_move_depth = depth - depth_reduction_factor
@@ -464,6 +478,65 @@ class MiniMaxVariants(Searcher, ABC):
                 return True
         return False
 
+    def _reverse_futility_pruning(
+        self,
+        board: Board,
+        depth: int,
+        beta: float,
+        in_check: bool,
+    ) -> bool:
+        """
+        Reverse futility pruning (static null-move pruning).
+
+        At shallow depths, if the static eval exceeds beta by a depth-scaled margin,
+        the position is so good that a full search is very unlikely to drop below beta.
+        Prune immediately without any recursive search call.
+
+        Disabled when the side to move is in check (eval is unreliable there).
+
+        :param board: The current board state.
+        :param depth: Remaining search depth.
+        :param beta: The upper bound of the search window.
+        :param in_check: Whether the side to move is in check.
+        :return: True if the position should be pruned.
+        """
+        rfp_max_depth = 3
+        if depth >= 2 and depth <= rfp_max_depth and not in_check:
+            margin = depth * self._evaluator.piece_values()[chess.PAWN]
+            if self._evaluator.evaluate(board) - margin >= beta:
+                return True
+        return False
+
+    def _razoring(
+        self,
+        board: Board,
+        depth: int,
+        alpha: float,
+        in_check: bool,
+        zobrist_state,
+    ) -> Optional[float]:
+        """
+        Razoring: at shallow depths, if static eval + margin is below alpha,
+        drop directly into quiescence search. If qsearch still fails low,
+        return the qsearch score immediately. Otherwise return None to
+        continue with the full search.
+
+        :param board: The current board state.
+        :param depth: Remaining search depth.
+        :param alpha: The lower bound of the search window.
+        :param in_check: Whether the side to move is in check.
+        :param zobrist_state: Zobrist hash state for TT (passed to quiescence).
+        :return: The qsearch score if razoring succeeds, None otherwise.
+        """
+        razor_max_depth = 2
+        if depth <= razor_max_depth and not in_check:
+            margin = depth * self._evaluator.piece_values()[chess.PAWN]
+            if self._evaluator.evaluate(board) + margin < alpha:
+                q_score = self._quiescence(board, 4, alpha, alpha + 1, zobrist_state)
+                if q_score < alpha:
+                    return q_score
+        return None
+
     def _delta_pruning(
         self, board: Board, move: chess.Move, stand_pat: float, alpha: float
     ) -> bool:
@@ -495,7 +568,7 @@ class MiniMaxVariants(Searcher, ABC):
         captured_piece = (
             chess.PAWN
             if board.is_en_passant(move)
-            else board.piece_at(move.to_square).piece_type  # type: ignore
+            else board.piece_type_at(move.to_square)
         )
         return (
             True
@@ -605,4 +678,22 @@ class MiniMaxVariants(Searcher, ABC):
                         break
 
         logging.info(f"End search for FEN {board.fen()}.")
+        return score, move
+
+    def search(
+        self, board: Board, timeout: Optional[float] = None
+    ) -> Tuple[float, chess.Move]:
+        """
+        Finds the best move (and associated score) via iterative deepening.
+
+        :param board: The current chess board position.
+        :type board: Board
+        :param timeout: Time in seconds until we stop the search, returning the best
+                        result from the deepest completed depth.
+        :type timeout: Optional[float]
+
+        :return: The best score and associated move based on the search.
+        :rtype: Tuple[float, chess.Move]
+        """
+        score, move = self._iterative_deepening_search(board, timeout)
         return score, move

@@ -45,16 +45,18 @@ class TestZobristHashIncremental:
         board.set_fen(fen)
         initial_zobrist_state = zh.full_zobrist_hash(board)
         move = chess.Move.from_uci(move_uci)
-        previous_move_from_square = board.piece_at(move.from_square)
+        from_piece = board.piece_at(move.from_square)
+        from_cpt = hash(from_piece)
         captured_piece = board.piece_at(move.to_square)
+        captured_cpt = hash(captured_piece) if captured_piece else -1
         board.push(move)
         return (
             zh,
             board,
             initial_zobrist_state,
             move,
-            previous_move_from_square,
-            captured_piece,
+            from_cpt,
+            captured_cpt,
         )
 
     def test_inc_hash_consistency_basic(self):
@@ -63,20 +65,20 @@ class TestZobristHashIncremental:
 
         initial_zobrist_state = zh.full_zobrist_hash(board)
         for move in board.legal_moves:
-            previous_move_from_square = board.piece_at(move.from_square)
+            from_cpt = hash(board.piece_at(move.from_square))
             board.push(move)
 
-            hash = zh.full_zobrist_hash(board).zobrist_hash
+            hash_val = zh.full_zobrist_hash(board).zobrist_hash
             inc_hash = zh.incremental_zobrist_hash(
                 board,
                 move,
                 initial_zobrist_state,
-                previous_move_from_square,
-                None,  # No capturing moves from starting pos
+                from_cpt,
+                -1,  # No capturing moves from starting pos
             ).zobrist_hash
 
             assert (
-                hash == inc_hash
+                hash_val == inc_hash
             ), f"Incremental hash consistency failed for move {move}"
 
             board.pop()
@@ -127,15 +129,15 @@ class TestZobristHashIncremental:
             board,
             initial_zobrist_state,
             move,
-            previous_move_from_square,
-            captured_piece,
+            from_cpt,
+            captured_cpt,
         ) = _setup_board_and_move
-        hash = zh.full_zobrist_hash(board).zobrist_hash
+        hash_val = zh.full_zobrist_hash(board).zobrist_hash
         inc_hash = zh.incremental_zobrist_hash(
             board,
             move,
             initial_zobrist_state,
-            previous_move_from_square,
-            captured_piece,
+            from_cpt,
+            captured_cpt,
         ).zobrist_hash
-        assert hash == inc_hash, f"{test_name} failed for move {move}"
+        assert hash_val == inc_hash, f"{test_name} failed for move {move}"

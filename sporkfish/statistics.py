@@ -6,19 +6,25 @@ import chess
 
 
 class NodeTypes(Enum):
+    """Tracks interior nodes visited during the main search."""
+
     NEGAMAX = "NEGAMAX"
-    NEGAMAX_LAZY_SMP = "NEGAMAX_LAZY_SMP"
     QUIESCENSE = "QUIESCENSE"
 
 
 class PruningTypes(Enum):
+    """Tracks nodes pruned by each pruning technique."""
+
     NULL_MOVE = "NULL_MOVE"
     DELTA = "DELTA"
     FUTILITY = "FUTILITY"
     ALPHA_BETA = "ALPHA_BETA"
+    REVERSE_FUTILITY = "REVERSE_FUTILITY"
 
 
 class TranspositionTable(Enum):
+    """Tracks nodes retrieved directly from the transposition table cache."""
+
     TRANSPOSITITON_TABLE = "TRANSPOSITITON_TABLE"
 
 

@@ -98,11 +98,7 @@ class OpeningBook:
 
         try:
             if self._db:
-                # We need to use a chess.Board() to be compatible with the opening book
-                # This is a small performace hit but is miniscule compared to searching
-                cboard = chess.Board()
-                cboard.set_fen(board.fen())
-                entry = self._db.find(cboard)
+                entry = self._db.find(board)
                 return entry.move if entry else None
             else:
                 return None

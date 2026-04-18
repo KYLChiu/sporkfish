@@ -11,7 +11,10 @@ from sporkfish.searcher.searcher_config import SearcherConfig
 from sporkfish.statistics import NodeTypes, PruningTypes
 from sporkfish.statistics import TranspositionTable as TranspositionTableNodeType
 from sporkfish.transposition_table import TranspositionTable
-from sporkfish.zobrist_hasher import ZobristStateInfo
+from sporkfish.zobrist_hasher import (
+    ZobristStateInfo,
+    zobrist_piece_index,
+)
 
 # A score large enough to represent checkmate but below infinity, so aspiration
 # windows and TT comparisons behave correctly. The engine subtracts `depth` from
@@ -50,7 +53,7 @@ class PVSSp(MiniMaxVariants):
 
         1. Search the first move with a full [alpha, beta] window.
         2. For all subsequent moves, do a cheap *null window* search: [-alpha-1, -alpha].
-           A null window has zero width — it can only confirm the move is worse than
+           A null window has zero width - it can only confirm the move is worse than
            alpha (fail low) or reveal that it beats alpha (fail high).
         3. If a subsequent move unexpectedly beats alpha (step 2 failed high), re-search
            it with the full window to get the exact score.
@@ -97,7 +100,7 @@ class PVSSp(MiniMaxVariants):
                 TranspositionTableNodeType.TRANSPOSITITON_TABLE
             )
 
-            # Tuple layout: (depth, score, flag, best_move) — see TranspositionTable constants
+            # Tuple layout: (depth, score, flag, best_move) - see TranspositionTable constants
             tt_score = tt_entry[TranspositionTable._SCORE]  # type: ignore
             tt_flag = tt_entry[TranspositionTable._FLAG]
             if tt_flag == TranspositionTable.EXACT:
@@ -120,40 +123,64 @@ class PVSSp(MiniMaxVariants):
 
         # --- Null move pruning ---
         # Pass the turn. If the resulting score still causes a beta cutoff, the current
-        # position is likely too strong for the opponent — prune the branch.
+        # position is likely too strong for the opponent - prune the branch.
         if self._searcher_config.enable_null_move_pruning and self._null_move_pruning(
             board, depth, alpha, beta, self._pvs
         ):
             self._statistics.increment_visited(PruningTypes.NULL_MOVE)
             return beta
 
+        # Cache is_check() - used by stalemate detection, check extension,
+        # and reverse futility pruning guard.
+        in_check = board.is_check()
+
+        # --- Reverse futility pruning ---
+        # At shallow depths, if the static eval already exceeds beta by a margin,
+        # a full search is very unlikely to drop below beta - prune immediately.
+        if (
+            self._searcher_config.enable_reverse_futility_pruning
+            and self._reverse_futility_pruning(board, depth, beta, in_check)
+        ):
+            self._statistics.increment_visited(PruningTypes.REVERSE_FUTILITY)
+            return beta
+
+        # --- Razoring ---
+        # At shallow depths, if the static eval is far below alpha, verify with
+        # a quiescence search. If qsearch confirms, return immediately.
+        razor_score = self._razoring(board, depth, alpha, in_check, zobrist_state)
+        if razor_score is not None:
+            return razor_score
+
         # --- Move ordering ---
-        # Good move ordering is essential for PVS — if the first move isn't the best,
+        # Good move ordering is essential for PVS - if the first move isn't the best,
         # we'll waste many re-searches in step 3.
         mo_heuristic = self._build_move_order_heuristic(board, depth)
         legal_moves = MoveOrderer.order_moves(mo_heuristic, board.legal_moves)
 
-        # Hash move: prepend the TT best move so it is always searched first.
+        # Hash move: move the TT best move to the front so it is searched first.
         # Searching the previously-best move first is the single most effective
-        # move-ordering technique — it reliably raises alpha early, causing more
+        # move-ordering technique - it reliably raises alpha early, causing more
         # beta cutoffs and dramatically shrinking the search tree.
-        if tt_best_move is not None and tt_best_move in legal_moves:
-            legal_moves = [tt_best_move] + [m for m in legal_moves if m != tt_best_move]
+        if tt_best_move is not None:
+            try:
+                idx = legal_moves.index(tt_best_move)
+                legal_moves[0], legal_moves[idx] = legal_moves[idx], legal_moves[0]
+            except ValueError:
+                pass
 
         # --- Checkmate / stalemate detection ---
         # If there are no legal moves the loop below will never run, leaving `value`
         # at -inf and causing the engine to mis-score forced-mate positions.
-        # - Checkmate: the side to move is in check with no escape → large loss.
+        # - Checkmate: the side to move is in check with no escape -> large loss.
         #   Scaling by `depth` makes the engine prefer faster mates over slower ones.
-        # - Stalemate: no legal moves but not in check → draw (0).
+        # - Stalemate: no legal moves but not in check -> draw (0).
         if not legal_moves:
-            return -MATE_SCORE + depth if board.is_check() else 0
+            return -MATE_SCORE + depth if in_check else 0
 
         # --- Check extension ---
         # If the side to move is currently in check, search 1 ply deeper at this node.
         # Check positions are tactically critical and typically have very few legal
         # replies, so the extra ply costs little but prevents missing forced mates.
-        in_check = board.is_check()
         extension = (
             1 if (self._searcher_config.enable_check_extensions and in_check) else 0
         )
@@ -164,17 +191,29 @@ class PVSSp(MiniMaxVariants):
         # --- Main search loop (PVS logic) ---
         for idx, move in enumerate(legal_moves):
             # Snapshot board state BEFORE pushing, for incremental Zobrist hashing.
-            previous_piece_from_square = (
-                board.piece_at(move.from_square) if zobrist_state else None
-            )
+            # Use piece_type_at + color_at and compute the Zobrist index directly,
+            # avoiding chess.Piece object creation (~600K __init__ calls eliminated).
+            if zobrist_state:
+                from_pt = board.piece_type_at(move.from_square)
+                from_color = board.color_at(move.from_square)
+                from_cpt = zobrist_piece_index(from_pt, from_color)
+            else:
+                from_cpt = -1
             capture = (
                 board.is_capture(move)
                 if self._searcher_config.enable_futility_pruning or zobrist_state
                 else False
             )
-            captured_piece = (
-                board.piece_at(move.to_square) if zobrist_state and capture else None
-            )
+            if zobrist_state and capture:
+                cap_pt = board.piece_type_at(move.to_square)
+                if cap_pt:
+                    captured_cpt = zobrist_piece_index(
+                        cap_pt, board.color_at(move.to_square)
+                    )
+                else:
+                    captured_cpt = -1  # en passant: captured pawn not on to_square
+            else:
+                captured_cpt = -1
 
             self._push(board, move)
 
@@ -193,8 +232,8 @@ class PVSSp(MiniMaxVariants):
                     board,
                     move,
                     zobrist_state,
-                    previous_piece_from_square,  # type: ignore
-                    captured_piece,
+                    from_cpt,
+                    captured_cpt,
                 )
                 if zobrist_state
                 else None
@@ -206,9 +245,9 @@ class PVSSp(MiniMaxVariants):
             # using a null window first. If that raises alpha, upgrade to full depth.
             # We skip LMR when:
             #   - The move is a capture (tactical, could be a winning exchange)
-            #   - The move gives check (gives check to opponent — verify with board.is_check() after push)
+            #   - The move gives check (gives check to opponent - verify with board.is_check() after push)
             #   - The move is a promotion (potentially very strong)
-            #   - We're near the leaves (depth < LMR_MIN_DEPTH) — too shallow to reduce safely
+            #   - We're near the leaves (depth < LMR_MIN_DEPTH) - too shallow to reduce safely
             lmr_reduction = 0
             if (
                 self._searcher_config.enable_lmr
@@ -220,7 +259,7 @@ class PVSSp(MiniMaxVariants):
             ):
                 # Reduction grows with depth and move index (deeper / later = more reduction).
                 # Reduction grows with both remaining depth and move index using a
-                # log×log formula (standard in modern engines like Stockfish/Ethereal).
+                # logxlog formula (standard in modern engines like Stockfish/Ethereal).
                 # Later moves at greater depth are reduced more aggressively.
                 lmr_reduction = max(1, int(math.log(depth) * math.log(idx + 1) / 2.0))
 
@@ -233,7 +272,7 @@ class PVSSp(MiniMaxVariants):
                 )
             else:
                 # Subsequent moves: null-window search, optionally at reduced depth.
-                # A null window [-alpha-1, -alpha] can only confirm fail-low (≤ alpha)
+                # A null window [-alpha-1, -alpha] can only confirm fail-low (<= alpha)
                 # or detect fail-high (> alpha), not the exact score.
                 child_value = -self._pvs(
                     board,
@@ -243,7 +282,7 @@ class PVSSp(MiniMaxVariants):
                     child_zobrist_state,
                 )
                 if lmr_reduction > 0 and child_value > alpha:
-                    # LMR failed high: the move looks promising — re-search at full depth
+                    # LMR failed high: the move looks promising - re-search at full depth
                     # with a null window to confirm before doing an expensive full-window search.
                     child_value = -self._pvs(
                         board,
@@ -253,7 +292,7 @@ class PVSSp(MiniMaxVariants):
                         child_zobrist_state,
                     )
                 if alpha < child_value < beta:
-                    # Null window failed high — this move might actually be the best.
+                    # Null window failed high - this move might actually be the best.
                     # Re-search with the full window to get the exact score.
                     child_value = -self._pvs(
                         board, depth - 1 + extension, -beta, -alpha, child_zobrist_state
@@ -335,21 +374,31 @@ class PVSSp(MiniMaxVariants):
             root_tt_move = self._transposition_table.get_best_move(
                 zobrist_state.zobrist_hash
             )
-            if root_tt_move is not None and root_tt_move in legal_moves:
-                legal_moves = [root_tt_move] + [
-                    m for m in legal_moves if m != root_tt_move
-                ]
+            if root_tt_move is not None:
+                try:
+                    idx = legal_moves.index(root_tt_move)
+                    legal_moves[0], legal_moves[idx] = legal_moves[idx], legal_moves[0]
+                except ValueError:
+                    pass
 
         for idx, move in enumerate(legal_moves):
             # Snapshot before push for incremental Zobrist hashing.
-            previous_piece_from_square = (
-                board.piece_at(move.from_square) if zobrist_state else None
-            )
-            captured_piece = (
-                board.piece_at(move.to_square)
-                if zobrist_state and board.is_capture(move)
-                else None
-            )
+            if zobrist_state:
+                from_pt = board.piece_type_at(move.from_square)
+                from_color = board.color_at(move.from_square)
+                from_cpt = zobrist_piece_index(from_pt, from_color)
+                if board.is_capture(move):
+                    cap_pt = board.piece_type_at(move.to_square)
+                    captured_cpt = (
+                        zobrist_piece_index(cap_pt, board.color_at(move.to_square))
+                        if cap_pt
+                        else -1
+                    )
+                else:
+                    captured_cpt = -1
+            else:
+                from_cpt = -1
+                captured_cpt = -1
 
             self._push(board, move)
 
@@ -358,8 +407,8 @@ class PVSSp(MiniMaxVariants):
                     board,
                     move,
                     zobrist_state,
-                    previous_piece_from_square,  # type: ignore
-                    captured_piece,
+                    from_cpt,
+                    captured_cpt,
                 )
                 if zobrist_state
                 else None
@@ -404,19 +453,3 @@ class PVSSp(MiniMaxVariants):
             )
 
         return value, best_move
-
-    def search(
-        self, board: Board, timeout: Optional[float] = None
-    ) -> Tuple[float, chess.Move]:
-        """
-        Finds the best move (and associated score) via PVS and iterative deepening.
-
-        :param board: The current chess board position.
-        :type board: Board
-        :return: The best score and move based on the search.
-        :param timeout: Time in seconds until we stop the search, returning the best depth if we timeout.
-        :type timeout: Optional[float]
-        :rtype: Tuple[float, Move]
-        """
-        score, move = self._iterative_deepening_search(board, timeout)
-        return score, move

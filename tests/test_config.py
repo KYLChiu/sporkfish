@@ -27,7 +27,7 @@ def test_create_from_yaml_config():
         ),
         (
             3,
-            SearchMode.NEGAMAX_LAZY_SMP,
+            SearchMode.PVS_SINGLE_PROCESS,
             True,
             {"move_order_mode": MoveOrderMode.MVV_LVA, "mvv_lva_weight": 20},
         ),

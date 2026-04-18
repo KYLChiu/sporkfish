@@ -1,8 +1,51 @@
 # Sporkfish
 
-[![Actions Status](https://github.com/KYLChiu/sporkfish/workflows/Prod/badge.svg)](https://github.com/KYLChiu/sporkfish/actions)
+[Actions Status](https://github.com/KYLChiu/sporkfish/workflows/Prod/badge.svg)](https://github.com/KYLChiu/sporkfish/actions)
 
 Sporkfish is a Python-based chess engine. Chess programming techniques, although numerous, are not always well-documented. This project aims to bridge that gap by offering clear, working, and accessible code, providing a resource for developers interested in understanding and implementing chess engine algorithms.
+
+```
+  a b c d e f g h
+8 ♜ ♞ ♝ ♛ ♚ ♝ ♞ ♜  8
+7 ♟ ♟ ♟ ♟ ♟ ♟ ♟ ♟  7
+6 · · · · · · · ·  6
+5 · · · · · · · ·  5
+4 · · · · · · · ·  4
+3 · · · · · · · ·  3
+2 ♙ ♙ ♙ ♙ ♙ ♙ ♙ ♙  2
+1 ♖ ♘ ♗ ♕ ♔ ♗ ♘ ♖  1
+  a b c d e f g h
+```
+
+**Move decision pipeline:**
+
+```
+            ┌─────────────────────────────────────────┐
+            │              Engine.best_move           │
+            └──────────┬─────────────┬────────────────┘
+                       │             │
+            ┌──────────▼──────┐  ┌───▼──────────────┐
+            │  Opening Book   │  │ Endgame Tablebase │
+            │  (PolyGlot .bin)│  │  (Syzygy .rtbw/z) │
+            └──────────┬──────┘  └───┬───────────────┘
+                       │  miss       │ miss
+                       └──────┬──────┘
+                              │
+                   ┌──────────▼──────────┐
+                   │   Searcher (PVS /   │
+                   │   Negamax + ID)     │
+                   └──────────┬──────────┘
+                              │
+              ┌───────────────┼───────────────┐
+              │               │               │
+   ┌──────────▼───┐  ┌────────▼──────┐  ┌────▼──────────────┐
+   │ Move Ordering│  │  Alpha-Beta   │  │    Evaluator      │
+   │  (MVV-LVA,   │  │  (LMR, NMP,   │  │  (PeSTO tapered   │
+   │  Killers,    │  │  futility,    │  │   eval + increm-  │
+   │  History,    │  │  delta, TT,   │  │   ental accum.)   │
+   │  Hash move)  │  │  aspiration)  │  └───────────────────┘
+   └──────────────┘  └───────────────┘
+```
 
 - - - -
 
@@ -24,18 +67,6 @@ Instructions:
 1. Make sure `Docker Desktop` is up and running.
 2. Open up the Command Palette and run `Dev Containers: Rebuild Container`
 3. The window should reload and you will see `[Dev Container]` in the URL bar as well as on the status bar bottom left of the window to indicate your setup is complete.
-
-### Using DevContainer with PyCharm
-
-Prerequisites:
-- [PyCharm](https://www.jetbrains.com/pycharm/download/)
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-
-Instructions:
-
-#TODO - Please see jetbrains docs, PyCharm setup is similar to VSCode
-
-https://www.jetbrains.com/help/pycharm/connect-to-devcontainer.html
 
 ### Using Github Codespace
 
@@ -77,16 +108,84 @@ Once you create a game via your bot account, the bot will automatically play. We
 
 - - - -
 
-## Principles
+## Features
 
-* Functional library: encourage free functions whilst avoiding mutable data unless the task specifically and inherently demands it (e.g. statistics, transposition table, board state).
-* Well documented: classes should always have docstrings. Where the code is complex, additional inline comments should be made.
+### How Negamax works
+
+Chess is a zero-sum game: whatever is good for White is equally bad for Black. **Negamax** exploits this by using a single recursive function for both sides — a node always evaluates positions from the *current player's* perspective and negates the child's score (which is from the opponent's perspective).
+
+```
+negamax(pos, depth, α, β):
+    if depth == 0: return evaluate(pos)          # leaf: static eval
+    for each move in ordered_moves(pos):
+        pos.push(move)
+        score = -negamax(pos, depth-1, -β, -α)   # flip & negate
+        pos.pop()
+        if score > α:
+            α = score                             # raise lower bound
+        if α >= β:
+            return α                              # β-cutoff: prune branch
+    return α
+```
+
+Traced through a 3-ply tree (depth 2, White to move at root):
+
+```
+depth 2 (White, maximise)          root  α=-∞  β=+∞
+                                  /                  \
+depth 1 (Black, maximise      A  α=-∞  β=+∞       B  α=-∞  β=-3
+         from Black's POV)   / \                  / \
+depth 0 (leaves)            a₁  a₂              b₁  b₂
+                           +5   +3              -7   +9
+
+Step-by-step:
+
+  1. Evaluate a₁ = +5  → score = -(+5) = -5 at A, α_A = -5
+  2. Evaluate a₂ = +3  → score = -(+3) = -3 at A, α_A = -3
+     A returns -3  (best Black can guarantee in this sub-tree)
+
+  3. At root: score = -(-3) = +3, α_root = +3
+
+  4. Start node B with α=-∞, β = -(α_root) = -3
+     Evaluate b₁ = -7  → score = -(-7) = +7 at B, α_B = +7
+     α_B(+7) >= β_B(-3)  →  ✂ PRUNE b₂ (beta cutoff!)
+     B returns +7
+
+  5. At root: score = -(+7) = -7,  -7 < α_root(+3) → no improvement.
+     Root returns +3 and picks move A.
+
+  Result: root = +3 via move A, b₂ was never evaluated.
+
+  ✂ = pruned (the opponent would never allow this line)
+```
+
+**Alpha-beta pruning** prunes the tree by maintaining a window `[α, β]`:
+- `α` — the best score the current player is *guaranteed* so far (lower bound).
+- `β` — the best score the opponent is *guaranteed* so far (upper bound).
+
+When `α ≥ β`, the opponent would never allow this line, so the branch is cut.
+
+In deeper trees, good move ordering means roughly half the nodes
+can be pruned, effectively **doubling the searchable depth** for the same time budget.
+
+Sporkfish enhances plain negamax with:
+
+| Technique | Benefit |
+|---|---|
+| **Principal Variation Search (PVS)** | Search first move with full window; use cheap null-window for the rest |
+| **Iterative Deepening** | Search depth 1→N; earlier results seed move ordering for later depths |
+| **Aspiration Windows** | Narrow the root window around the previous iteration's score |
+| **Null-move pruning** | Pass a turn; if still above β, prune (opponent can't recover) |
+| **Futility / delta pruning** | Skip near-leaf moves that can't possibly raise α |
+| **Check extensions** | Add 1 extra ply when the side to move is in check |
+| **Late Move Reduction (LMR)** | Reduce depth for quiet moves ordered late (unlikely to be best) |
+| **Quiescence search** | Extend on captures only until position is "quiet" before evaluating |
+| **Transposition table (TT)** | Cache (Zobrist hash → score) to avoid re-searching repeated positions |
+| **Move ordering** | MVV-LVA + killer moves + history heuristic + TT hash move |
 
 - - - -
 
-## Features
-
-Search:
+## Search features
 
 * [Negamax with fail-soft alpha-beta pruning](https://www.cs.cornell.edu/courses/cs312/2002sp/lectures/rec21.htm)
 * [Principal variation search](https://en.wikipedia.org/wiki/Principal_variation_search)
@@ -163,12 +262,5 @@ Slow tests are not run on CI. Developers should run these before raising PRs by 
 ```
 python3 -m pytest -sv --runslow
 ```
-
-### Sphinx auto docstring generation (with Github Copilot and devcontainer)
-
-This may or may not work depending if Copilot is happy on that day. ***Simply ask Copilot to generate your class with Sphinx docstrings.*** If that does not work, you could try:
-1. Implement your class or function with type hints.
-2. Add a template Sphinx docstring at the class level, i.e. above `__init__` function. This can be done using `Ctrl + Shift + 2` (Windows, Linux) or `Command + Shift + 2` (Mac). Add ":param:" in your string if it isn't auto generated.
-3. Using the Command Pallete, select "Github Copilot: Generate Docs" while your text cursor is inside the template Sphinx docstring. ***It should auto generate Sphinx docs for the entire class/function.***
 
 - - - -

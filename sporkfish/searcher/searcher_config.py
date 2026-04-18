@@ -7,7 +7,6 @@ from sporkfish.searcher.move_ordering.move_order_config import MoveOrderConfig
 
 class SearchMode(Enum):
     NEGAMAX_SINGLE_PROCESS = "NEGAMAX_SINGLE_PROCESS"
-    NEGAMAX_LAZY_SMP = "NEGAMAX_LAZY_SMP"
     PVS_SINGLE_PROCESS = "PVS_SINGLE_PROCESS"
 
 
@@ -61,6 +60,7 @@ class SearcherConfig(Configurable):
         enable_aspiration_windows: bool = True,
         enable_check_extensions: bool = True,
         enable_lmr: bool = True,
+        enable_reverse_futility_pruning: bool = True,
     ) -> None:
         self.max_depth = max_depth
 
@@ -84,7 +84,7 @@ class SearcherConfig(Configurable):
         self.enable_aspiration_windows = enable_aspiration_windows
 
         # Check extensions: when the side to move is in check, the position is
-        # critical — extend the search by 1 ply so the engine sees escape/refutations.
+        # critical - extend the search by 1 ply so the engine sees escape/refutations.
         # Positions in check typically have very few legal moves so the cost is small.
         self.enable_check_extensions = enable_check_extensions
 
@@ -93,3 +93,9 @@ class SearcherConfig(Configurable):
         # only upgrade to full depth if the reduced search raises alpha.
         # Effectively gives ~1 extra ply of search for free.
         self.enable_lmr = enable_lmr
+
+        # Reverse futility pruning (static null-move pruning): at shallow depths,
+        # if the static eval is already well above beta by a margin, the position
+        # is so good that a full search is unlikely to change the result - prune.
+        # Much cheaper than null-move pruning (no recursive search call).
+        self.enable_reverse_futility_pruning = enable_reverse_futility_pruning

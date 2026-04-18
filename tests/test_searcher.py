@@ -97,8 +97,8 @@ class TestConsistency:
         board_a.push(move_no_tt)
         board_b = init_board(fen_string)
         board_b.push(move_tt)
-        score_a, _ = searcher_with_fen(board_a.board.fen(), max(1, max_depth - 1))
-        score_b, _ = searcher_with_fen(board_b.board.fen(), max(1, max_depth - 1))
+        score_a, _ = searcher_with_fen(board_a.fen(), max(1, max_depth - 1))
+        score_b, _ = searcher_with_fen(board_b.fen(), max(1, max_depth - 1))
         assert score_a == score_b, (
             f"TT found a non-equivalent move: {move_tt} (score={score_b}) "
             f"vs non-TT {move_no_tt} (score={score_a})"

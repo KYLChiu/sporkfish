@@ -5,6 +5,18 @@ from sporkfish.searcher.move_ordering.move_order_heuristic import MoveOrderHeuri
 
 
 class MvvLvaHeuristic(MoveOrderHeuristic):
+    """
+    Most Valuable Victim - Least Valuable Aggressor (MVV-LVA) move ordering.
+
+    Prioritises captures that win the most material: capturing a queen with a
+    pawn scores higher than capturing a pawn with a queen.  The table encodes
+    victim x attacker scores so the comparison is a single array lookup with no
+    arithmetic at query time.
+
+    King captures are assigned 0 (the king can never legally be captured).
+    Scores are integers in [10, 55]; higher = more desirable.
+    """
+
     # Columns: attacker P, N, B, R, Q, K
     _MVV_LVA = [
         [15, 14, 13, 12, 11, 10],  # victim P
@@ -32,11 +44,9 @@ class MvvLvaHeuristic(MoveOrderHeuristic):
 
         if (
             self._board.is_capture(move)
-            and (captured_piece := self._board.piece_at(move.to_square))
-            and (moving_piece := self._board.piece_at(move.from_square))
+            and (captured_type := self._board.piece_type_at(move.to_square))
+            and (moving_type := self._board.piece_type_at(move.from_square))
         ):
-            return MvvLvaHeuristic._MVV_LVA[captured_piece.piece_type - 1][
-                moving_piece.piece_type - 1
-            ]
+            return MvvLvaHeuristic._MVV_LVA[captured_type - 1][moving_type - 1]
         else:
             return 0

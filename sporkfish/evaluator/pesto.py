@@ -5,6 +5,55 @@ import chess
 from sporkfish.board.board import Board
 from sporkfish.evaluator.evaluator import Evaluator
 
+# Pre-computed king zone: for each square, the set of squares forming
+# the "king ring" (king + one rank forward). Indexed [color][square].
+_KING_ZONE: tuple = tuple(
+    tuple(
+        chess.SquareSet(
+            chess.BB_SQUARES[sq]
+            | (chess.BB_SQUARES[sq] << 8 if color else chess.BB_SQUARES[sq] >> 8)
+        ).mirror()
+        if False
+        # dummy – real computation below
+        # For a king on sq, the zone is the 3x3 area centred on sq
+        # plus the 3 squares one rank towards the enemy.
+        else chess.SquareSet(
+            sum(
+                chess.BB_SQUARES[s]
+                for s in range(64)
+                if abs(chess.square_file(s) - chess.square_file(sq)) <= 1
+                and (
+                    # same rank or one rank toward enemy
+                    (chess.square_rank(s) - chess.square_rank(sq))
+                    in ((0, 1, 2) if color else (0, -1, -2))
+                )
+            )
+        )
+        for sq in range(64)
+    )
+    for color in (True, False)  # WHITE=True, BLACK=False
+)
+
+# Pre-computed file masks for fast open-file detection.
+_FILE_MASKS = tuple(0x0101010101010101 << f for f in range(8))
+
+# Pre-computed "adjacent files + same file" mask for passed pawn detection.
+# Index by file (0-7).
+_ADJ_FILE_MASKS = tuple(
+    _FILE_MASKS[f]
+    | (_FILE_MASKS[f - 1] if f > 0 else 0)
+    | (_FILE_MASKS[f + 1] if f < 7 else 0)
+    for f in range(8)
+)
+
+# Pre-computed rank masks: all bits set at rank r and above (for white) / below (for black).
+# _RANKS_ABOVE[r] = mask of all squares on ranks > r (used for white passed pawn check).
+# _RANKS_BELOW[r] = mask of all squares on ranks < r (used for black passed pawn check).
+_RANKS_ABOVE = tuple(
+    (~((1 << ((r + 1) * 8)) - 1)) & 0xFFFFFFFFFFFFFFFF for r in range(8)
+)
+_RANKS_BELOW = tuple((1 << (r * 8)) - 1 for r in range(8))
+
 
 class Pesto(Evaluator):
     """
@@ -175,9 +224,9 @@ class Pesto(Evaluator):
 
     # fmt : on
 
-    # Piece-Square tables ordered by piece_type-1 (PAWN=0 … KING=5).
+    # Piece-Square tables ordered by piece_type-1 (PAWN=0 ... KING=5).
     # Using tuples instead of {chess.PieceType: table} dicts eliminates enum.__hash__
-    # in the hot evaluate loop — piece_type is an IntEnum so integer subtraction and
+    # in the hot evaluate loop - piece_type is an IntEnum so integer subtraction and
     # direct tuple indexing is much faster than a dict lookup.
     MG_PESTO = (
         MG_PAWN,
@@ -198,8 +247,14 @@ class Pesto(Evaluator):
     )
 
     # Game-phase weights in the same order (PAWN=0, KNIGHT=1, BISHOP=1, ROOK=2, QUEEN=4, KING=0).
+    # The maximum total phase value is 2*(0+3+3+4+8+0) = 48, but Stockfish convention
+    # caps at 24 and uses half the per-piece weights shown above.  These weights come
+    # from the original PeSTO reference implementation.
     PHASES = (0, 1, 1, 2, 4, 0)
 
+    # Flat square indices 0-63. White squares use a vertically flipped index so
+    # that row 0 of each PST corresponds to white's back rank (rank 1 in chess
+    # notation), matching the visual layout of the tables above.
     SQUARES = [i for i in range(64)]
     VERTICALLY_FLIPPED_SQUARES = [i ^ 56 for i in range(64)]
 
@@ -250,10 +305,123 @@ class Pesto(Evaluator):
             mg_score = mg_black - mg_white
             eg_score = eg_black - eg_white
 
+        # Tapered evaluation: interpolate linearly between the middlegame and
+        # endgame scores based on the remaining material on the board.
+        # phase counts piece material (capped at 24 = full middlegame).
+        # As pieces are traded off, mg_phase decreases and eg_phase increases,
+        # smoothly shifting the evaluation towards endgame PST values.
         mg_phase = min(24, phase)
         eg_phase = 24 - mg_phase
 
-        return ((mg_score * mg_phase) + (eg_score * eg_phase)) / 24
+        pesto = ((mg_score * mg_phase) + (eg_score * eg_phase)) / 24
+
+        # King safety only matters in middlegame (phase > 6 means enough pieces).
+        if mg_phase > 6:
+            ks = self._king_safety(board)
+            # Scale king safety by middlegame fraction so it fades in endgame.
+            pesto += ks * mg_phase / 24
+
+        # Passed pawn bonus applies in all phases but scales towards endgame.
+        pp = self._passed_pawns(board)
+        # Weight more heavily in endgame (where passed pawns matter most).
+        return pesto + pp * (0.5 + 0.5 * eg_phase / 24)
+
+    @staticmethod
+    def _king_safety(board: Board) -> float:
+        """Compute king safety bonus for the side to move.
+
+        Cheap heuristic: pawn shield + open file penalty near king.
+        Returns a score from the perspective of the side to move (positive = good).
+        """
+        stm = board.turn
+        opp = not stm
+
+        own_king_sq = board.king(stm)
+        opp_king_sq = board.king(opp)
+        if own_king_sq is None or opp_king_sq is None:
+            return 0.0
+
+        own_pawn_bb = int(board.pieces_mask(chess.PAWN, stm))
+        opp_pawn_bb = int(board.pieces_mask(chess.PAWN, opp))
+
+        own_zone_bb = int(_KING_ZONE[stm][own_king_sq])
+        opp_zone_bb = int(_KING_ZONE[opp][opp_king_sq])
+
+        # Pawn shield: count friendly pawns in king zone
+        own_shield = (own_pawn_bb & own_zone_bb).bit_count()
+        opp_shield = (opp_pawn_bb & opp_zone_bb).bit_count()
+        shield_score = (own_shield - opp_shield) * 8
+
+        # Open file near king: penalty if the file the king is on (or adjacent)
+        # has no friendly pawn. Only check up to 3 files around the king.
+        all_pawns = own_pawn_bb | opp_pawn_bb
+
+        own_open_penalty = 0
+        own_kf = chess.square_file(own_king_sq)
+        for f in range(max(0, own_kf - 1), min(8, own_kf + 2)):
+            file_mask = _FILE_MASKS[f]
+            if not (own_pawn_bb & file_mask):
+                own_open_penalty += 5
+                if not (all_pawns & file_mask):
+                    own_open_penalty += 10
+
+        opp_open_penalty = 0
+        opp_kf = chess.square_file(opp_king_sq)
+        for f in range(max(0, opp_kf - 1), min(8, opp_kf + 2)):
+            file_mask = _FILE_MASKS[f]
+            if not (opp_pawn_bb & file_mask):
+                opp_open_penalty += 5
+                if not (all_pawns & file_mask):
+                    opp_open_penalty += 10
+
+        return shield_score + (opp_open_penalty - own_open_penalty)
+
+    # Per-rank passed pawn bonus (index = rank 0-7).
+    # Rank 0/1 are impossible for a real pawn; higher ranks = closer to promotion.
+    _PASSED_PAWN_BONUS = (0, 5, 10, 20, 35, 60, 100, 0)
+
+    @staticmethod
+    def _passed_pawns(board: Board) -> float:
+        """Compute passed pawn bonus from the perspective of the side to move.
+
+        A pawn is passed if no enemy pawn can block or capture it on the way
+        to promotion (no enemy pawn on same file or adjacent files ahead).
+        """
+        stm = board.turn
+        opp = not stm
+
+        own_pawns = int(board.pieces_mask(chess.PAWN, stm))
+        opp_pawns = int(board.pieces_mask(chess.PAWN, opp))
+
+        bonus = 0.0
+        pp_bonus = Pesto._PASSED_PAWN_BONUS
+        adj = _ADJ_FILE_MASKS
+        above = _RANKS_ABOVE
+        below = _RANKS_BELOW
+
+        # Check own passed pawns
+        bb = own_pawns
+        while bb:
+            sq = (bb & -bb).bit_length() - 1
+            bb &= bb - 1
+            f = sq & 7
+            r = sq >> 3
+            ahead_mask = above[r] if stm else below[r]
+            if not (opp_pawns & adj[f] & ahead_mask):
+                bonus += pp_bonus[r if stm else 7 - r]
+
+        # Check opponent passed pawns
+        bb = opp_pawns
+        while bb:
+            sq = (bb & -bb).bit_length() - 1
+            bb &= bb - 1
+            f = sq & 7
+            r = sq >> 3
+            ahead_mask = above[r] if opp else below[r]
+            if not (own_pawns & adj[f] & ahead_mask):
+                bonus -= pp_bonus[r if opp else 7 - r]
+
+        return bonus
 
     def init_from_board(self, board: Board) -> None:
         """Initialise (or re-initialise) the incremental accumulator from the board."""
@@ -339,12 +507,12 @@ class PestoAccumulator:
         self.phase = phase
         self._stack.clear()
 
-    def _update(self, sign: int, sq: int, piece: chess.Piece) -> None:
+    def _update(self, sign: int, sq: int, piece_type: int, color: bool) -> None:
         """Add (sign=+1) or remove (sign=-1) a piece's PST contribution."""
-        pt_idx = piece.piece_type - 1
-        mg_delta = sign * Pesto.MG_PESTO[pt_idx][sq ^ 56 if piece.color else sq]
-        eg_delta = sign * Pesto.EG_PESTO[pt_idx][sq ^ 56 if piece.color else sq]
-        if piece.color:
+        pt_idx = piece_type - 1
+        mg_delta = sign * Pesto.MG_PESTO[pt_idx][sq ^ 56 if color else sq]
+        eg_delta = sign * Pesto.EG_PESTO[pt_idx][sq ^ 56 if color else sq]
+        if color:
             self.mg_white += mg_delta
             self.eg_white += eg_delta
         else:
@@ -365,6 +533,9 @@ class PestoAccumulator:
 
         Null moves (``chess.Move.null()``) push a sentinel onto the stack so that
         ``on_pop`` remains balanced, but no piece scores change.
+
+        Uses piece_type_at/color_at instead of piece_at to avoid creating
+        chess.Piece objects (eliminates ~600K Piece.__init__ calls per search).
         """
         self._save()
         if move == chess.Move.null():
@@ -372,37 +543,34 @@ class PestoAccumulator:
 
         from_sq = move.from_square
         to_sq = move.to_square
-        moving_piece = board.piece_at(from_sq)
-        captured_piece = board.piece_at(to_sq)
+        moving_type = board.piece_type_at(from_sq)
+        moving_color = board.color_at(from_sq)
 
-        self._update(-1, from_sq, moving_piece)
+        self._update(-1, from_sq, moving_type, moving_color)
 
-        if captured_piece:
-            self._update(-1, to_sq, captured_piece)
+        captured_type = board.piece_type_at(to_sq)
+        if captured_type:
+            captured_color = board.color_at(to_sq)
+            self._update(-1, to_sq, captured_type, captured_color)
 
         if board.is_en_passant(move):
             ep_sq = chess.square(chess.square_file(to_sq), chess.square_rank(from_sq))
-            self._update(-1, ep_sq, chess.Piece(chess.PAWN, not moving_piece.color))
+            self._update(-1, ep_sq, chess.PAWN, not moving_color)
 
-        dest_piece = (
-            chess.Piece(move.promotion, moving_piece.color)
-            if move.promotion
-            else moving_piece
-        )
-        self._update(+1, to_sq, dest_piece)
+        dest_type = move.promotion if move.promotion else moving_type
+        self._update(+1, to_sq, dest_type, moving_color)
 
-        # Castling: king moves two files — also relocate the rook.
+        # Castling: king moves two files - also relocate the rook.
         if (
-            moving_piece.piece_type == chess.KING
+            moving_type == chess.KING
             and abs(chess.square_file(to_sq) - chess.square_file(from_sq)) == 2
         ):
             rank = chess.square_rank(from_sq)
             kingside = chess.square_file(to_sq) == 6
             rook_from = chess.square(7 if kingside else 0, rank)
             rook_to = chess.square(5 if kingside else 3, rank)
-            rook = chess.Piece(chess.ROOK, moving_piece.color)
-            self._update(-1, rook_from, rook)
-            self._update(+1, rook_to, rook)
+            self._update(-1, rook_from, chess.ROOK, moving_color)
+            self._update(+1, rook_to, chess.ROOK, moving_color)
 
     def on_pop(self) -> None:
         """Restore accumulators after a move is undone.  Must be called *after* pop."""

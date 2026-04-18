@@ -45,23 +45,18 @@ class TimeManager:
         """
 
         # -------------------------- Basic strategy for time management --------------------------
-        """
-        Outline of the basic strategy for time management in chess.
-
-        The strategy involves allocating tw * time + iw * increment for searching the move.
-        By default, time_weight (tw) is set to 0.1, and increment_weight (iw) is set to 0.01.
-
-        Quick analysis without increment:
-        We get to make (1.0 - 0.1)^n * S number of (half) moves, where S = start_time in seconds.
-        To reach 1 second:
-        (0.9)^n * S < 1
-        n > ln (1/S) / ln 0.9
-
-        Assuming a blitz game of 5 mins (S = 300), we can make 54 half moves before reaching 1 second.
-        Assuming a bullet game of 1 min (S = 60), we can make 38 half moves before reaching 1 second.
-
-        In the future, more sophisticated methods can be investigated.
-        """
+        # Allocate tw * time + iw * increment per move.
+        # By default, time_weight (tw) = 0.1, increment_weight (iw) = 0.01.
+        #
+        # Quick analysis without increment (assuming tw=0.1):
+        #   Time remaining after n half-moves: (1 - 0.1)^n * S = 0.9^n * S
+        #   Half-moves before reaching 1 second: n > ln(1/S) / ln(0.9)
+        #
+        #   Blitz (S=300s): ~54 half-moves before reaching 1 second.
+        #   Bullet (S=60s):  ~38 half-moves before reaching 1 second.
+        #
+        # More sophisticated time management (e.g. volatility-based allocation) can
+        # be investigated in future.
         return (
             self._config.time_weight * time + self._config.increment_weight * increment
         )

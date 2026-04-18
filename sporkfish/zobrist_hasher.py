@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Optional
 
 import chess
 import numpy as np
@@ -11,6 +10,18 @@ _INT64_MAX_VAL = np.iinfo(np.int64).max
 
 # Sentinel for "no en-passant file" — plain Python int (faster than np.int8 in hot path).
 _NO_EP_FILE = 127
+
+
+def zobrist_piece_index(piece_type: int, color: bool) -> int:
+    """
+    Compute the Zobrist table index for a piece, matching chess.Piece.__hash__
+    but without creating a Piece object.
+
+    White: piece_type - 1  (0-5)
+    Black: piece_type + 5  (6-11)
+    """
+    return (piece_type - 1) if color else (piece_type + 5)
+
 
 # TODO: we may revisit this in future as people claim this can affect collision chances
 np.random.seed(10101010)
@@ -135,8 +146,8 @@ class ZobristHasher:
         board: Board,
         move: chess.Move,
         prev_state: ZobristStateInfo,
-        previous_from_square_piece: chess.Piece,
-        captured_piece: Optional[chess.Piece],
+        from_cpt: int,
+        captured_cpt: int,
     ) -> ZobristStateInfo:
         """
         Compute the Zobrist hash incrementally after a move.
@@ -147,28 +158,33 @@ class ZobristHasher:
         :param board: The chess board *after* the move has been applied.
         :param move: The move that was just made.
         :param prev_state: Zobrist state *before* the move.
-        :param previous_from_square_piece: The piece that moved (queried before push).
-        :param captured_piece: The captured piece, or None.
+        :param from_cpt: Colored piece type index (0-11) of the moving piece,
+                         matching chess.Piece.__hash__: (piece_type - 1) for white,
+                         (piece_type + 5) for black.
+        :param captured_cpt: Colored piece type index of the captured piece,
+                             or -1 if no capture.
         :return: Updated ZobristStateInfo.
         :rtype: ZobristStateInfo
         """
         from_sq = move.from_square
         to_sq = move.to_square
-        from_cpt = hash(previous_from_square_piece)
 
         # For promotions the piece type on to_sq differs from the moving piece.
-        to_cpt = hash(board.piece_at(move.to_square)) if move.promotion else from_cpt
+        if move.promotion:
+            from_color = from_cpt < 6  # True if white
+            to_cpt = (move.promotion - 1) if from_color else (move.promotion + 5)
+        else:
+            to_cpt = from_cpt
 
         ep_file = ZobristHasher._parse_ep_file(board)
         castling_rights = ZobristHasher._parse_castling_rights(board)
 
-        # All operations in plain Python int space — no numpy scalar overhead.
         pk = _PIECE_KEYS
         h = int(prev_state.zobrist_hash)
         h ^= pk[from_sq][from_cpt]  # remove piece from source square
         h ^= pk[to_sq][to_cpt]  # place piece on destination square
-        if captured_piece:
-            h ^= pk[to_sq][hash(captured_piece)]  # remove captured piece
+        if captured_cpt >= 0:
+            h ^= pk[to_sq][captured_cpt]  # remove captured piece
 
         h ^= _TURN_KEY  # flip side to move
 

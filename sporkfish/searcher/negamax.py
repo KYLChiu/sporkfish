@@ -10,7 +10,10 @@ from sporkfish.searcher.searcher_config import SearcherConfig
 from sporkfish.statistics import NodeTypes, PruningTypes
 from sporkfish.statistics import TranspositionTable as TranspositionTableNodeType
 from sporkfish.transposition_table import TranspositionTable
-from sporkfish.zobrist_hasher import ZobristStateInfo
+from sporkfish.zobrist_hasher import (
+    ZobristStateInfo,
+    zobrist_piece_index,
+)
 
 # A score large enough to represent checkmate but below infinity, so aspiration
 # windows and TT comparisons behave correctly. The engine subtracts `depth` from
@@ -78,7 +81,7 @@ class NegamaxSp(MiniMaxVariants):
             return self._quiescence(board, 4, alpha, beta, zobrist_state)
 
         # --- Transposition table (TT) probe ---
-        # The TT maps Zobrist hashes → previously computed scores.
+        # The TT maps Zobrist hashes -> previously computed scores.
         # A hit may let us avoid re-searching this position entirely, or at least
         # tighten the alpha/beta window so we prune more aggressively below.
         # We also extract the stored best move for hash-move ordering.
@@ -88,28 +91,27 @@ class NegamaxSp(MiniMaxVariants):
                 zobrist_state.zobrist_hash, depth
             )
         ):
-            # add test
             self._statistics.increment_visited(
                 TranspositionTableNodeType.TRANSPOSITITON_TABLE
             )
 
-            # Tuple layout: (depth, score, flag, best_move) — see TranspositionTable constants
+            # Tuple layout: (depth, score, flag, best_move) - see TranspositionTable constants
             tt_score = tt_entry[TranspositionTable._SCORE]  # type: ignore
             tt_flag = tt_entry[TranspositionTable._FLAG]
             if tt_flag == TranspositionTable.EXACT:
-                # Score is reliable within the full window — return immediately.
+                # Score is reliable within the full window - return immediately.
                 return tt_score
             elif tt_flag == TranspositionTable.LOWER_BOUND:
                 # Search failed high (beta cutoff occurred). Score is a lower bound.
-                # Raise alpha — we know we can do at least this well.
+                # Raise alpha - we know we can do at least this well.
                 alpha = max(alpha, tt_score)
             elif tt_flag == TranspositionTable.UPPER_BOUND:
                 # Search failed low (never exceeded alpha). Score is an upper bound.
-                # Lower beta — the opponent can hold us to at most this.
+                # Lower beta - the opponent can hold us to at most this.
                 beta = min(beta, tt_score)
 
             # After tightening the window, check if it collapsed (alpha >= beta).
-            # If so, the TT score is sufficient — no need to search further.
+            # If so, the TT score is sufficient - no need to search further.
             if alpha >= beta:
                 return tt_score
 
@@ -126,13 +128,34 @@ class NegamaxSp(MiniMaxVariants):
         # --- Null move pruning ---
         # Try passing (making no move). If the resulting position is still so good that
         # beta is exceeded, the current position is likely too good for the opponent to
-        # allow — prune this branch. Disabled in zugzwang-prone endgames.
+        # allow - prune this branch. Disabled in zugzwang-prone endgames.
         if self._searcher_config.enable_null_move_pruning and self._null_move_pruning(
             board, depth, alpha, beta, self._negamax
         ):
-            # add test
+            # TODO: add coverage test for null-move pruning path
             self._statistics.increment_visited(PruningTypes.NULL_MOVE)
             return beta
+
+        # Cache is_check() - used by stalemate detection, check extension,
+        # and reverse futility pruning guard.
+        in_check = board.is_check()
+
+        # --- Reverse futility pruning ---
+        # At shallow depths, if the static eval already exceeds beta by a margin,
+        # a full search is very unlikely to drop below beta - prune immediately.
+        if (
+            self._searcher_config.enable_reverse_futility_pruning
+            and self._reverse_futility_pruning(board, depth, beta, in_check)
+        ):
+            self._statistics.increment_visited(PruningTypes.REVERSE_FUTILITY)
+            return beta
+
+        # --- Razoring ---
+        # At shallow depths, if the static eval is far below alpha, verify with
+        # a quiescence search. If qsearch confirms, return immediately.
+        razor_score = self._razoring(board, depth, alpha, in_check, zobrist_state)
+        if razor_score is not None:
+            return razor_score
 
         # --- Move ordering ---
         # Searching the best moves first dramatically improves pruning efficiency.
@@ -140,22 +163,25 @@ class NegamaxSp(MiniMaxVariants):
         mo_heuristic = self._build_move_order_heuristic(board, depth)
         legal_moves = MoveOrderer.order_moves(mo_heuristic, board.legal_moves)
 
-        # Hash move: prepend the TT best move so it is always searched first.
-        if tt_best_move is not None and tt_best_move in legal_moves:
-            legal_moves = [tt_best_move] + [m for m in legal_moves if m != tt_best_move]
+        # Hash move: move the TT best move to the front so it is searched first.
+        if tt_best_move is not None:
+            try:
+                idx = legal_moves.index(tt_best_move)
+                legal_moves[0], legal_moves[idx] = legal_moves[idx], legal_moves[0]
+            except ValueError:
+                pass
 
         # --- Checkmate / stalemate detection ---
         # If there are no legal moves the loop below will never run, leaving `value`
         # at -inf and causing the engine to mis-score forced-mate positions.
-        # - Checkmate: the side to move is in check with no escape → large loss.
+        # - Checkmate: the side to move is in check with no escape -> large loss.
         #   Scaling by `depth` makes the engine prefer faster mates over slower ones.
-        # - Stalemate: no legal moves but not in check → draw (0).
+        # - Stalemate: no legal moves but not in check -> draw (0).
         if not legal_moves:
-            return -MATE_SCORE + depth if board.is_check() else 0
+            return -MATE_SCORE + depth if in_check else 0
 
         # --- Check extension ---
         # If the side to move is currently in check, search 1 ply deeper at this node.
-        in_check = board.is_check()
         extension = (
             1 if (self._searcher_config.enable_check_extensions and in_check) else 0
         )
@@ -166,19 +192,27 @@ class NegamaxSp(MiniMaxVariants):
         # --- Main search loop ---
         for move in legal_moves:
             # Snapshot board state BEFORE pushing the move.
-            # The TT hash is updated incrementally: we need the piece that was on
-            # from_square (the moving piece) and any piece on to_square (the capture).
-            previous_piece_from_square = (
-                board.piece_at(move.from_square) if zobrist_state else None
-            )
+            # Use piece_type_at + color_at to avoid chess.Piece object creation.
+            if zobrist_state:
+                from_pt = board.piece_type_at(move.from_square)
+                from_color = board.color_at(move.from_square)
+                from_cpt = zobrist_piece_index(from_pt, from_color)
+            else:
+                from_cpt = -1
             capture = (
                 board.is_capture(move)
                 if self._searcher_config.enable_futility_pruning or zobrist_state
                 else False
             )
-            captured_piece = (
-                board.piece_at(move.to_square) if zobrist_state and capture else None
-            )
+            if zobrist_state and capture:
+                cap_pt = board.piece_type_at(move.to_square)
+                captured_cpt = (
+                    zobrist_piece_index(cap_pt, board.color_at(move.to_square))
+                    if cap_pt
+                    else -1
+                )
+            else:
+                captured_cpt = -1
 
             self._push(board, move)
 
@@ -190,7 +224,7 @@ class NegamaxSp(MiniMaxVariants):
             ):
                 self._pop(board)
 
-                # add test
+                # TODO: add coverage test for futility pruning path
                 self._statistics.increment_visited(PruningTypes.FUTILITY)
                 continue
 
@@ -201,8 +235,8 @@ class NegamaxSp(MiniMaxVariants):
                     board,
                     move,
                     zobrist_state,
-                    previous_piece_from_square,  # type: ignore
-                    captured_piece,
+                    from_cpt,
+                    captured_cpt,
                 )
                 if zobrist_state
                 else None
@@ -225,7 +259,7 @@ class NegamaxSp(MiniMaxVariants):
             alpha = max(alpha, value)
 
             if alpha >= beta:
-                # Beta cutoff: this position is too good — the opponent won't allow it.
+                # Beta cutoff: this position is too good - the opponent won't allow it.
                 # Record the move in killer/history tables to prioritise it in sibling
                 # nodes (where the same refutation likely applies).
                 self._statistics.increment_visited(PruningTypes.ALPHA_BETA)
@@ -235,9 +269,9 @@ class NegamaxSp(MiniMaxVariants):
 
         # --- TT store ---
         # Determine what kind of bound the returned `value` represents:
-        #   LOWER_BOUND: we hit beta — value is a lower bound (could be higher).
-        #   UPPER_BOUND: value never exceeded original_alpha — it's an upper bound.
-        #   EXACT:       value is within [original_alpha, beta] — it's exact.
+        #   LOWER_BOUND: we hit beta - value is a lower bound (could be higher).
+        #   UPPER_BOUND: value never exceeded original_alpha - it's an upper bound.
+        #   EXACT:       value is within [original_alpha, beta] - it's exact.
         if zobrist_state:
             if value >= beta:
                 flag = TranspositionTable.LOWER_BOUND
@@ -295,22 +329,31 @@ class NegamaxSp(MiniMaxVariants):
             root_tt_move = self._transposition_table.get_best_move(
                 zobrist_state.zobrist_hash
             )
-            if root_tt_move is not None and root_tt_move in legal_moves:
-                legal_moves = [root_tt_move] + [
-                    m for m in legal_moves if m != root_tt_move
-                ]
+            if root_tt_move is not None:
+                try:
+                    idx = legal_moves.index(root_tt_move)
+                    legal_moves[0], legal_moves[idx] = legal_moves[idx], legal_moves[0]
+                except ValueError:
+                    pass
 
         for move in legal_moves:
-            # Snapshot the moving piece and any captured piece before pushing,
-            # so the incremental Zobrist hash can XOR them in/out correctly.
-            previous_piece_from_square = (
-                board.piece_at(move.from_square) if zobrist_state else None
-            )
-            captured_piece = (
-                board.piece_at(move.to_square)
-                if zobrist_state and board.is_capture(move)
-                else None
-            )
+            # Snapshot before push for incremental Zobrist hashing.
+            if zobrist_state:
+                from_pt = board.piece_type_at(move.from_square)
+                from_color = board.color_at(move.from_square)
+                from_cpt = zobrist_piece_index(from_pt, from_color)
+                if board.is_capture(move):
+                    cap_pt = board.piece_type_at(move.to_square)
+                    captured_cpt = (
+                        zobrist_piece_index(cap_pt, board.color_at(move.to_square))
+                        if cap_pt
+                        else -1
+                    )
+                else:
+                    captured_cpt = -1
+            else:
+                from_cpt = -1
+                captured_cpt = -1
 
             self._push(board, move)
 
@@ -320,8 +363,8 @@ class NegamaxSp(MiniMaxVariants):
                     board,
                     move,
                     zobrist_state,
-                    previous_piece_from_square,  # type: ignore
-                    captured_piece,
+                    from_cpt,
+                    captured_cpt,
                 )
                 if zobrist_state
                 else None
@@ -356,20 +399,3 @@ class NegamaxSp(MiniMaxVariants):
             )
 
         return value, best_move
-
-    def search(
-        self, board: Board, timeout: Optional[float] = None
-    ) -> Tuple[float, chess.Move]:
-        """
-        Finds the best move (and associated score) via negamax and iterative deepening.
-
-        :param board: The current chess board position.
-        :type board: Board
-        :param timeout: Time in seconds until we stop the search, returning the best depth if we timeout.
-        :type timeout: Optional[float]
-
-        :return: The best score and associated move based on the search.
-        :rtype: Tuple[float, Move]
-        """
-        score, move = self._iterative_deepening_search(board, timeout)
-        return score, move

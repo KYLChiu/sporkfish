@@ -7,6 +7,18 @@ from .move_order_heuristic import MoveOrderHeuristic
 
 
 class HistoryHeuristic(MoveOrderHeuristic):
+    """
+    History heuristic for move ordering.
+
+    Tracks how often each quiet move has historically caused an alpha-beta cutoff
+    across the entire search tree, weighted by depth^2 (deeper cutoffs are more
+    significant).  Moves with a high history score are placed earlier in the move
+    list so they are searched first.
+
+    Unlike killer moves (which are scoped per depth), history scores are global
+    and accumulate across all depths and positions during a single search.
+    """
+
     def __init__(self, board: Board, history_table: Dict[chess.Move, int]) -> None:
         MoveOrderHeuristic.__init__(self)
         self._board = board

@@ -29,34 +29,30 @@ class LichessBot(ABC):
 
     def _get_best_move(
         self,
-        color: int,
-        time: Optional[float] = None,
-        increment: Optional[float] = None,
+        wtime: Optional[float] = None,
+        btime: Optional[float] = None,
+        winc: Optional[float] = None,
+        binc: Optional[float] = None,
     ) -> str:
         """
         Get the best move for the bot using the Sporkfish engine.
 
-        :param color: Player color. 0 for white and 1 for black.
-        :type color: int
-        :param time: Time (in ms) left for player.
-        :type time: Optional[float]
-        :param increment: Increment (in ms) for player.
-        :type increment: Optional[float]
+        :param wtime: White time remaining in seconds.
+        :param btime: Black time remaining in seconds.
+        :param winc: White increment in seconds.
+        :param binc: Black increment in seconds.
 
-        :return: The UCI command to send but without the best move.
+        :return: The best move in UCI notation.
         :rtype: str
         """
         command = "go"
 
-        if time is not None and increment is not None:
-            time_ms = time * 1000
-            inc_ms = increment * 1000
-            time_command = (
-                f" wtime {time_ms} winc {inc_ms}"
-                if not bool(color)
-                else f" btime {time_ms} binc {inc_ms}"
-            )
-            command += time_command
+        if wtime is not None and btime is not None:
+            command += f" wtime {wtime * 1000} btime {btime * 1000}"
+            if winc is not None:
+                command += f" winc {winc * 1000}"
+            if binc is not None:
+                command += f" binc {binc * 1000}"
 
         response = self._sporkfish.send_command(command)
 
@@ -70,7 +66,10 @@ class LichessBot(ABC):
         :param moves: A sequence of chess moves.
         :type moves: str
         """
-        self._sporkfish.send_command(f"position startpos moves {moves}")
+        if moves.strip():
+            self._sporkfish.send_command(f"position startpos moves {moves}")
+        else:
+            self._sporkfish.send_command("position startpos")
 
     @abstractmethod
     def run(self) -> None:

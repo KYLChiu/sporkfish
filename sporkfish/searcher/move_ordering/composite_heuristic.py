@@ -15,6 +15,18 @@ from sporkfish.searcher.move_ordering.mvv_lva_heuristic import MvvLvaHeuristic
 class CompositeHeuristic(
     MvvLvaHeuristic, KillerMoveHeuristic, HistoryHeuristic, MoveOrderHeuristic
 ):
+    """
+    Combines MVV-LVA, killer move and history heuristics into a single score.
+
+    Each component is weighted by a configurable coefficient (default: 3 / 2 / 1).
+    The combined score is used to sort moves before searching, with higher scores
+    tried first.  Captures are scored by MVV-LVA only; quiet moves receive killer
+    and history bonuses on top.
+
+    The three sub-heuristics share a single ``is_capture`` call per move to avoid
+    redundant board queries (previously responsible for 3x the hot-path overhead).
+    """
+
     def __init__(
         self,
         board: Board,
@@ -50,22 +62,19 @@ class CompositeHeuristic(
 
         # Compute is_capture once and share it across all three sub-heuristics.
         # Previously each sub-heuristic called board.is_capture() independently,
-        # costing 3× the ~62k is_capture calls seen in profiling.
+        # costing 3x the ~62k is_capture calls seen in profiling.
         is_cap = self._board.is_capture(move)
 
         # MVV-LVA: reward captures by most-valuable-victim / least-valuable-aggressor.
         mvv_lva = 0.0
-        if (
-            is_cap
-            and (captured_piece := self._board.piece_at(move.to_square))
-            and (moving_piece := self._board.piece_at(move.from_square))
-        ):
-            mvv_lva = (
-                self._w_mvv_lva
-                * MvvLvaHeuristic._MVV_LVA[captured_piece.piece_type - 1][
-                    moving_piece.piece_type - 1
-                ]
-            )
+        if is_cap:
+            captured_type = self._board.piece_type_at(move.to_square)
+            moving_type = self._board.piece_type_at(move.from_square)
+            if captured_type and moving_type:
+                mvv_lva = (
+                    self._w_mvv_lva
+                    * MvvLvaHeuristic._MVV_LVA[captured_type - 1][moving_type - 1]
+                )
 
         # Killer move and history heuristics only apply to quiet (non-capture) moves.
         if is_cap:

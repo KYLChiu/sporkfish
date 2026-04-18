@@ -8,7 +8,7 @@ class TranspositionTable:
     LOWER_BOUND = 1
     UPPER_BOUND = 2
 
-    # Tuple layout: (depth, score, flag, best_move) — faster than a dict.
+    # Tuple layout: (depth, score, flag, best_move) - faster than a dict.
     # best_move is the move that produced `score`; stored for hash-move ordering.
     _DEPTH = 0
     _SCORE = 1
