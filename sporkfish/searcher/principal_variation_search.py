@@ -130,33 +130,15 @@ class PVSSp(MiniMaxVariants):
             self._statistics.increment_visited(PruningTypes.NULL_MOVE)
             return beta
 
-        # Cache is_check() - used by stalemate detection, check extension,
-        # and reverse futility pruning guard.
+        # Cache is_check() - used by stalemate detection and check extension.
         in_check = board.is_check()
-
-        # --- Static eval (computed once, shared by RFP and razoring) ---
-        # Both reverse futility pruning and razoring need a static eval. Computing
-        # it once here avoids up to 2 redundant evaluate() calls per node.
-        # Skipped when in check (eval is unreliable) and when neither technique is
-        # active (depth too high for RFP / razoring thresholds).
-        static_eval = (
-            self._evaluator.evaluate(board)
-            if not in_check
-            and (
-                self._searcher_config.enable_reverse_futility_pruning
-                or depth <= 2  # razoring threshold
-            )
-            else 0.0
-        )
 
         # --- Reverse futility pruning ---
         # At shallow depths, if the static eval already exceeds beta by a margin,
         # a full search is very unlikely to drop below beta - prune immediately.
         if (
             self._searcher_config.enable_reverse_futility_pruning
-            and self._reverse_futility_pruning(
-                board, depth, beta, in_check, static_eval
-            )
+            and self._reverse_futility_pruning(board, depth, beta, in_check)
         ):
             self._statistics.increment_visited(PruningTypes.REVERSE_FUTILITY)
             return beta
@@ -164,9 +146,7 @@ class PVSSp(MiniMaxVariants):
         # --- Razoring ---
         # At shallow depths, if the static eval is far below alpha, verify with
         # a quiescence search. If qsearch confirms, return immediately.
-        razor_score = self._razoring(
-            board, depth, alpha, in_check, zobrist_state, static_eval
-        )
+        razor_score = self._razoring(board, depth, alpha, in_check, zobrist_state)
         if razor_score is not None:
             return razor_score
 

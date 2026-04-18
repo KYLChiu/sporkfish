@@ -484,7 +484,6 @@ class MiniMaxVariants(Searcher, ABC):
         depth: int,
         beta: float,
         in_check: bool,
-        static_eval: float,
     ) -> bool:
         """
         Reverse futility pruning (static null-move pruning).
@@ -499,11 +498,11 @@ class MiniMaxVariants(Searcher, ABC):
         :param depth: Remaining search depth.
         :param beta: The upper bound of the search window.
         :param in_check: Whether the side to move is in check.
-        :param static_eval: Pre-computed static evaluation of the position.
         :return: True if the position should be pruned.
         """
         rfp_max_depth = 3
         if depth >= 2 and depth <= rfp_max_depth and not in_check:
+            static_eval = self._evaluator.evaluate(board)
             margin = depth * self._pawn_value
             if static_eval - margin >= beta:
                 return True
@@ -516,7 +515,6 @@ class MiniMaxVariants(Searcher, ABC):
         alpha: float,
         in_check: bool,
         zobrist_state,
-        static_eval: float,
     ) -> Optional[float]:
         """
         Razoring: at shallow depths, if static eval + margin is below alpha,
@@ -529,11 +527,11 @@ class MiniMaxVariants(Searcher, ABC):
         :param alpha: The lower bound of the search window.
         :param in_check: Whether the side to move is in check.
         :param zobrist_state: Zobrist hash state for TT (passed to quiescence).
-        :param static_eval: Pre-computed static evaluation of the position.
         :return: The qsearch score if razoring succeeds, None otherwise.
         """
         razor_max_depth = 2
         if depth <= razor_max_depth and not in_check:
+            static_eval = self._evaluator.evaluate(board)
             margin = depth * self._pawn_value
             if static_eval + margin < alpha:
                 q_score = self._quiescence(board, 4, alpha, alpha + 1, zobrist_state)
