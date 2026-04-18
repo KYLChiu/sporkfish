@@ -59,6 +59,8 @@ class SearcherConfig(Configurable):
         enable_delta_pruning: bool = True,
         enable_transposition_table: bool = False,
         enable_aspiration_windows: bool = True,
+        enable_check_extensions: bool = True,
+        enable_lmr: bool = True,
     ) -> None:
         self.max_depth = max_depth
         # TODO: register the constructor function in yaml loader instead.
@@ -78,3 +80,12 @@ class SearcherConfig(Configurable):
         self.enable_delta_pruning = enable_delta_pruning
         self.enable_transposition_table = enable_transposition_table
         self.enable_aspiration_windows = enable_aspiration_windows
+        # Check extensions: when the side to move is in check, the position is
+        # critical — extend the search by 1 ply so the engine sees escape/refutations.
+        # Positions in check typically have very few legal moves so the cost is small.
+        self.enable_check_extensions = enable_check_extensions
+        # Late Move Reduction (LMR): quiet moves ordered late in the list are
+        # statistically unlikely to be best. Search them at reduced depth first;
+        # only upgrade to full depth if the reduced search raises alpha.
+        # Effectively gives ~1 extra ply of search for free.
+        self.enable_lmr = enable_lmr

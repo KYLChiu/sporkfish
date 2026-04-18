@@ -139,5 +139,11 @@ class TestCompositeHeuristic:
         ]
         composite_heuristic = CompositeHeuristic(board, killer_moves, {}, 1)
 
-        for value in composite_heuristic._move_order_weights.values():
+        # _move_order_weights was replaced by plain float attributes to eliminate
+        # enum.__hash__ overhead from dict lookups in the hot evaluate() path.
+        for value in (
+            composite_heuristic._w_mvv_lva,
+            composite_heuristic._w_killer,
+            composite_heuristic._w_history,
+        ):
             assert isinstance(value, float)

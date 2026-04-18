@@ -59,19 +59,12 @@ def _en_passant_hash(board_hash: np.int64, en_passant_file: np.int8) -> np.int64
 
 
 @njit(cache=True, nogil=True)
-def _castling_hash(board_hash: np.int64, castling_rights: np.ndarray) -> np.int64:
-    num_castle_rights = len(castling_rights)
-    assert (
-        num_castle_rights == 4
-    ), f"There should only be 4 castling rights to check, 2 for black, 2 for white, but got {num_castle_rights}."
-
-    # This transforms the castling rights from an array of 4 bools
-    # into an int from [0, 15].
-    castling_keys_idx = 0
-    for idx in range(num_castle_rights):
-        if castling_rights[idx]:
-            castling_keys_idx += 1 << idx
-    return board_hash ^ _CASTLING_KEYS[castling_keys_idx]  # type: ignore
+def _castling_hash(board_hash: np.int64, castling_rights_int: np.int8) -> np.int64:
+    # castling_rights_int is a pre-computed 4-bit integer (0–15):
+    #   bit 0 = white kingside, bit 1 = white queenside,
+    #   bit 2 = black kingside, bit 3 = black queenside.
+    # Indexing directly avoids the array-iteration loop in the original version.
+    return board_hash ^ _CASTLING_KEYS[castling_rights_int]  # type: ignore
 
 
 @njit(cache=True, nogil=True)
@@ -80,14 +73,40 @@ def _full_zobrist_hash(
     colored_piece_types: np.ndarray,
     board_turn: bool,
     en_passant_file: np.int64,
-    castling_rights: np.ndarray,
+    castling_rights_int: np.int8,
 ) -> np.int64:
-    # Here we send all the colored_piece types for all pieces which exist on all the board
     board_hash = _aggregate_piece_hash(np.int64(0), squares, colored_piece_types)
     board_hash = _conditional_turn_hash(board_hash, board_turn)
     board_hash = _en_passant_hash(board_hash, en_passant_file)
-    board_hash = _castling_hash(board_hash, castling_rights)
+    board_hash = _castling_hash(board_hash, castling_rights_int)
     return board_hash  # type: ignore
+
+
+# Scalar variants of _aggregate_piece_hash to avoid np.array() construction
+# in the hot incremental_zobrist_hash path.  Profile showed np.array() was
+# called ~18k times; replacing it with direct XOR eliminates that overhead.
+@njit(cache=True, nogil=True)
+def _xor_pieces_2(
+    h: np.int64,
+    sq0: np.int8,
+    pt0: np.int8,
+    sq1: np.int8,
+    pt1: np.int8,
+) -> np.int64:
+    return h ^ _PIECE_KEYS[sq0, pt0] ^ _PIECE_KEYS[sq1, pt1]  # type: ignore
+
+
+@njit(cache=True, nogil=True)
+def _xor_pieces_3(
+    h: np.int64,
+    sq0: np.int8,
+    pt0: np.int8,
+    sq1: np.int8,
+    pt1: np.int8,
+    sq2: np.int8,
+    pt2: np.int8,
+) -> np.int64:
+    return h ^ _PIECE_KEYS[sq0, pt0] ^ _PIECE_KEYS[sq1, pt1] ^ _PIECE_KEYS[sq2, pt2]  # type: ignore
 
 
 @njit(cache=True, nogil=True)
@@ -97,8 +116,8 @@ def _incremental_zobrist_hash(
     colored_piece_types: np.ndarray,
     prev_en_passant_file: np.int8,
     curr_en_passant_file: np.int8,
-    prev_castling_rights: np.ndarray,
-    curr_castling_rights: np.ndarray,
+    prev_castling_rights_int: np.int8,
+    curr_castling_rights_int: np.int8,
 ) -> np.int64:
     # Here we send in only the colored_piece_types for the input move
     # If capturing, the original piece is sent in to be XOR'd out
@@ -111,12 +130,11 @@ def _incremental_zobrist_hash(
     # We do pairwise hashes for en passant and castling, based on the previous and current rights.
     # The first one XOR's away the previous rights and the second adds the current rights.
     # If previous_rights == current_rights then we obtain the same result as before.
-    # This is likely faster than checking if both arrays are the same (to be tested).
     board_hash = _en_passant_hash(board_hash, prev_en_passant_file)
     board_hash = _en_passant_hash(board_hash, curr_en_passant_file)
 
-    board_hash = _castling_hash(board_hash, prev_castling_rights)
-    board_hash = _castling_hash(board_hash, curr_castling_rights)
+    board_hash = _castling_hash(board_hash, prev_castling_rights_int)
+    board_hash = _castling_hash(board_hash, curr_castling_rights_int)
 
     return board_hash  # type: ignore
 
@@ -130,13 +148,17 @@ class ZobristStateInfo:
     :type zobrist_hash: np.int64
     :param ep_file: The file where en passant is possible
     :type ep_file: np.int8
-    :param castling_rights: An array representing castling rights.
-    :type castling_rights: np.ndarray
+    :param castling_rights: 4-bit integer encoding castling rights (0–15).
+        bit 0 = white kingside, bit 1 = white queenside,
+        bit 2 = black kingside, bit 3 = black queenside.
+        Stored as an int rather than np.ndarray to avoid array allocation on every
+        incremental hash update.
+    :type castling_rights: int
     """
 
     zobrist_hash: np.int64
     ep_file: np.int8
-    castling_rights: np.ndarray
+    castling_rights: int
 
 
 class ZobristHasher:
@@ -165,24 +187,28 @@ class ZobristHasher:
         )
 
     @staticmethod
-    def _parse_castling_rights(board: Board) -> np.ndarray:
+    def _parse_castling_rights(board: Board) -> int:
         """
-        Parse the castling rights from the given board.
+        Parse the castling rights from the given board as a 4-bit integer (0–15).
+
+        Encoding: bit 0 = white kingside, bit 1 = white queenside,
+                  bit 2 = black kingside, bit 3 = black queenside.
+
+        Returning a plain int instead of np.ndarray eliminates one np.array()
+        allocation per incremental hash call (profile showed ~12k np.array calls
+        just from castling rights).
 
         :param board: The chess board.
         :type board: Board
 
-        :return: An array representing castling rights.
-        :rtype: np.ndarray
+        :return: 4-bit integer encoding the four castling rights.
+        :rtype: int
         """
-        return np.array(  # type: ignore
-            [
-                board.has_kingside_castling_rights(chess.WHITE),
-                board.has_queenside_castling_rights(chess.WHITE),
-                board.has_kingside_castling_rights(chess.BLACK),
-                board.has_queenside_castling_rights(chess.BLACK),
-            ],
-            dtype=bool,
+        return (
+            int(board.has_kingside_castling_rights(chess.WHITE))
+            | (int(board.has_queenside_castling_rights(chess.WHITE)) << 1)
+            | (int(board.has_kingside_castling_rights(chess.BLACK)) << 2)
+            | (int(board.has_queenside_castling_rights(chess.BLACK)) << 3)
         )
 
     def full_zobrist_hash(self, board: Board) -> ZobristStateInfo:
@@ -241,37 +267,49 @@ class ZobristHasher:
         :return: An object containing the updated Zobrist hash value and other board state information.
         :rtype: ZobristStateInfo
         """
-        from_color_piece_type = hash(previous_from_square_piece)
+        from_color_piece_type = np.int8(hash(previous_from_square_piece))
+        to_sq = np.int8(move.to_square)
+        from_sq = np.int8(move.from_square)
 
-        # XOR out the previous from square piece
-        squares_list = [move.from_square]
-        colored_piece_types_list = [from_color_piece_type]
-
-        # XOR in the to square piece, piece type depending on if promoted or not
-        squares_list.append(move.to_square)
-        if move.promotion:
-            colored_piece_types_list.append(hash(board.piece_at(move.to_square)))
-        else:
-            colored_piece_types_list.append(from_color_piece_type)
-
-        # XOR out the captured piece if exists
-        if captured_piece:
-            squares_list.append(move.to_square)
-            colored_piece_types_list.append(hash(captured_piece))
-
-        squares = np.array(squares_list, dtype=np.int8)
-        colored_piece_types = np.array(colored_piece_types_list, dtype=np.int8)
+        # Determine the piece type XOR'd into to_square.
+        to_color_piece_type = (
+            np.int8(hash(board.piece_at(move.to_square)))
+            if move.promotion
+            else from_color_piece_type
+        )
 
         ep_file = ZobristHasher._parse_ep_file(board)
         castling_rights = ZobristHasher._parse_castling_rights(board)
 
-        zobrist_hash = _incremental_zobrist_hash(
-            prev_state.zobrist_hash,
-            squares,
-            colored_piece_types,
-            prev_state.ep_file,
-            ep_file,
-            prev_state.castling_rights,
-            castling_rights,
-        )
+        # Use scalar numba helpers (_xor_pieces_2 / _xor_pieces_3) to avoid
+        # building np.array([...]) lists for just 2-3 elements.
+        # Profile showed np.array() was called ~12k times from this path alone.
+        if captured_piece:
+            # 3 XORs: remove from_sq piece, add to_sq piece, remove captured piece.
+            zobrist_hash = _xor_pieces_3(
+                prev_state.zobrist_hash,
+                from_sq,
+                from_color_piece_type,
+                to_sq,
+                to_color_piece_type,
+                to_sq,
+                np.int8(hash(captured_piece)),
+            )
+        else:
+            # 2 XORs: remove from_sq piece, add to_sq piece.
+            zobrist_hash = _xor_pieces_2(
+                prev_state.zobrist_hash,
+                from_sq,
+                from_color_piece_type,
+                to_sq,
+                to_color_piece_type,
+            )
+
+        # XOR turn, en-passant and castling rights (pairwise to XOR out old and in new).
+        zobrist_hash = np.int64(zobrist_hash) ^ _TURN_KEY
+        zobrist_hash = _en_passant_hash(zobrist_hash, prev_state.ep_file)
+        zobrist_hash = _en_passant_hash(zobrist_hash, ep_file)
+        zobrist_hash = _castling_hash(zobrist_hash, np.int8(prev_state.castling_rights))
+        zobrist_hash = _castling_hash(zobrist_hash, np.int8(castling_rights))
+
         return ZobristStateInfo(zobrist_hash, ep_file, castling_rights)

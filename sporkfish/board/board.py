@@ -179,3 +179,39 @@ class Board(ABC):
         :rtype: bool
         """
         pass
+
+    @abstractmethod
+    def piece_map(self) -> Dict[chess.Square, chess.Piece]:
+        """
+        Return a mapping of all occupied squares to their pieces.
+        Faster than calling piece_at() for every square when iterating over all pieces.
+
+        :return: Dict mapping square index to chess.Piece for every occupied square.
+        :rtype: Dict[chess.Square, chess.Piece]
+        """
+        pass
+
+    @abstractmethod
+    def pieces(self, piece_type: chess.PieceType, color: chess.Color):
+        """
+        Return the set of squares occupied by pieces of the given type and color.
+        Uses bitboard operations internally — faster than piece_map() when iterating
+        a single piece type, because no Python dict is constructed.
+
+        :param piece_type: The type of piece (e.g. chess.PAWN).
+        :type piece_type: chess.PieceType
+        :param color: The color of the piece (chess.WHITE or chess.BLACK).
+        :type color: chess.Color
+        :return: An iterable of square indices where matching pieces sit.
+        """
+        pass
+
+    @abstractmethod
+    def generate_legal_captures(self):
+        """
+        Generate only the legal capture moves for the current position.
+        Faster than filtering board.legal_moves for captures in quiescence search.
+
+        :return: An iterable of legal capture moves.
+        """
+        pass

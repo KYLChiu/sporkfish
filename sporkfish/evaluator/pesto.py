@@ -175,32 +175,30 @@ class Pesto(Evaluator):
 
     # fmt : on
 
-    MG_PESTO = {
-        chess.PAWN: MG_PAWN,
-        chess.KNIGHT: MG_KNIGHT,
-        chess.BISHOP: MG_BISHOP,
-        chess.ROOK: MG_ROOK,
-        chess.QUEEN: MG_QUEEN,
-        chess.KING: MG_KING,
-    }
+    # Piece-Square tables ordered by piece_type-1 (PAWN=0 … KING=5).
+    # Using tuples instead of {chess.PieceType: table} dicts eliminates enum.__hash__
+    # in the hot evaluate loop — piece_type is an IntEnum so integer subtraction and
+    # direct tuple indexing is much faster than a dict lookup.
+    MG_PESTO = (
+        MG_PAWN,
+        MG_KNIGHT,
+        MG_BISHOP,
+        MG_ROOK,
+        MG_QUEEN,
+        MG_KING,
+    )
 
-    EG_PESTO = {
-        chess.PAWN: EG_PAWN,
-        chess.KNIGHT: EG_KNIGHT,
-        chess.BISHOP: EG_BISHOP,
-        chess.ROOK: EG_ROOK,
-        chess.QUEEN: EG_QUEEN,
-        chess.KING: EG_KING,
-    }
+    EG_PESTO = (
+        EG_PAWN,
+        EG_KNIGHT,
+        EG_BISHOP,
+        EG_ROOK,
+        EG_QUEEN,
+        EG_KING,
+    )
 
-    PHASES = {
-        chess.PAWN: 0,
-        chess.KNIGHT: 1,
-        chess.BISHOP: 1,
-        chess.ROOK: 2,
-        chess.QUEEN: 4,
-        chess.KING: 0,
-    }
+    # Game-phase weights in the same order (PAWN=0, KNIGHT=1, BISHOP=1, ROOK=2, QUEEN=4, KING=0).
+    PHASES = (0, 1, 1, 2, 4, 0)
 
     SQUARES = [i for i in range(64)]
     VERTICALLY_FLIPPED_SQUARES = [i ^ 56 for i in range(64)]
@@ -214,41 +212,53 @@ class Pesto(Evaluator):
         :return: The evaluation score.
         :rtype: float
         """
-
-        mg = {
-            chess.WHITE: 0,
-            chess.BLACK: 0,
-        }
-        eg = {
-            chess.WHITE: 0,
-            chess.BLACK: 0,
-        }
-
-        # Takes the vertically flipped square for white, take the initial square for black
-        # Assumes:
-        # - Chess board implements A1 as first element, H8 as last
-        # - Piece square table implements A8 as first element, H1 as last element
-        def flip(square: int, flipped_square: int, color: chess.Color) -> int:
-            return square if not color else flipped_square
-
+        # Local accumulators instead of {chess.WHITE: 0, chess.BLACK: 0} dicts.
+        # Eliminates two dict lookups per inner-loop iteration (enum key hashing).
+        mg_white = 0
+        mg_black = 0
+        eg_white = 0
+        eg_black = 0
         phase = 0
 
-        for square in self.SQUARES:
-            # square ^ 56 flips the board vertically to match alignment of PSQT
-            flipped_square = self.VERTICALLY_FLIPPED_SQUARES[square]
-            piece = board.piece_at(flipped_square)
-            if piece:
-                aligned_square = flip(square, flipped_square, piece.color)
-                mg[piece.color] += self.MG_PESTO[piece.piece_type][
-                    aligned_square
-                ]
-                eg[piece.color] += self.EG_PESTO[piece.piece_type][
-                    aligned_square
-                ]
-                phase += self.PHASES[piece.piece_type]
+        # Iterate over each piece type × color combination using bitboard-backed `pieces()`.
+        # This avoids constructing a Python dict (as piece_map() does) and instead walks
+        # each piece type's bitboard directly — much faster for sparse boards.
+        #
+        # PSQT alignment:
+        #   python-chess:  A1=0  … H8=63  (rank 1 first, rank 8 last)
+        #   Our tables:    A8=0  … H1=63  (rank 8 first, rank 1 last — standard PSQT layout)
+        #
+        #   XOR with 56 flips the rank (A1 ↔ A8), mapping chess squares to PSQT indices:
+        #     White pieces: index = chess_sq ^ 56   (flip so rank 1 maps to bottom of table)
+        #     Black pieces: index = chess_sq         (no flip; black reads table top-to-bottom)
+        for piece_type in chess.PIECE_TYPES:
+            # piece_type is 1-6; subtract 1 for 0-based tuple indexing.
+            pt_idx = piece_type - 1
+            mg_table = self.MG_PESTO[pt_idx]
+            eg_table = self.EG_PESTO[pt_idx]
+            phase_inc = self.PHASES[pt_idx]
 
-        mg_score = mg[board.turn] - mg[not board.turn]
-        eg_score = eg[board.turn] - eg[not board.turn]
+            # White pieces
+            for chess_sq in board.pieces(piece_type, chess.WHITE):
+                idx = chess_sq ^ 56  # flip rank to match PSQT orientation
+                mg_white += mg_table[idx]
+                eg_white += eg_table[idx]
+                phase += phase_inc
+
+            # Black pieces
+            for chess_sq in board.pieces(piece_type, chess.BLACK):
+                mg_black += mg_table[chess_sq]
+                eg_black += eg_table[chess_sq]
+                phase += phase_inc
+
+        # board.turn is True (WHITE) or False (BLACK).
+        # Use a branch instead of a dict lookup for the side-to-move perspective.
+        if board.turn:  # chess.WHITE
+            mg_score = mg_white - mg_black
+            eg_score = eg_white - eg_black
+        else:           # chess.BLACK
+            mg_score = mg_black - mg_white
+            eg_score = eg_black - eg_white
 
         mg_phase = min(24, phase)
         eg_phase = 24 - mg_phase

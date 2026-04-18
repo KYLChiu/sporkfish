@@ -216,74 +216,111 @@ class MiniMaxVariants(Searcher, ABC):
         zobrist_state: Optional[ZobristStateInfo],
     ) -> float:
         """
-        Perform a quiescence search to help alleviate the horizon effect and improve checking of tactical possibilities.
+        Quiescence search: resolves tactical sequences before applying the static evaluator.
 
-        Quiescence search is a variation of the standard search algorithm used in chess engines.
-        It is specifically designed to handle positions where the board state is highly dynamic, such as positions
-        with captures, checks, or threats. In such positions, the standard evaluation function may not accurately
-        reflect the true value of the position, leading to the horizon effect, where the search terminates prematurely
-        due to missing important tactical moves.
+        The *horizon effect* arises when the main search stops at a fixed depth mid-capture:
+        e.g. we see a queen capture but don't see the recapture on the next ply, making the
+        position look falsely great. Quiescence search fixes this by extending the search
+        only on captures (and checks in some engines) until the position is "quiet" —
+        i.e. no more captures are available — before calling the static evaluator.
+
+        *Stand-pat pruning*: Before searching captures, we compute the static eval
+        (`stand_pat`). If even without making any capture we already beat beta, we prune
+        immediately (the opponent wouldn't allow this position). If stand_pat > alpha,
+        we raise alpha — we can always "stand pat" and accept the current score.
 
         :param board: The current state of the chess board.
         :type board: Board
-        :param depth: The maximum recursion limit.
+        :param depth: Maximum recursion depth for quiescence (limits capture chains).
+                      We cap at 4 to prevent rare infinite loops on mutually recapturable positions.
         :type depth: int
-        :param alpha: The lower bound of the search window.
+        :param alpha: Lower bound: best score secured by the current player.
         :type alpha: float
-        :param beta: The upper bound of the search window.
+        :param beta: Upper bound: best score secured by the opponent.
         :type beta: float
+        :param zobrist_state: Incremental Zobrist hash state for TT lookups. None if TT is disabled.
+        :type zobrist_state: Optional[ZobristStateInfo]
 
-        :return: The evaluated score after quiescence search.
+        :return: The evaluated score after resolving all captures (from current player's POV).
         :rtype: float
         """
-
-        # Probe the transposition table for an existing entry
-        # We treat all cases as depth 0, so essentially as an static evaluation
+        # --- Transposition table probe ---
+        # Quiescence results are cached at depth=0 (they represent a "quiet" eval).
+        # The same bound-type logic as the main search applies here.
         if zobrist_state and (
             tt_entry := self._transposition_table.probe(zobrist_state.zobrist_hash, 0)
         ):
             self._statistics.increment_visited(
                 TranspositionTableNodeType.TRANSPOSITITON_TABLE
             )
-            return tt_entry["score"]  # type: ignore
+            # Tuple layout: (depth, score, flag) — see TranspositionTable._DEPTH/SCORE/FLAG
+            tt_score = tt_entry[TranspositionTable._SCORE]  # type: ignore
+            tt_flag = tt_entry[TranspositionTable._FLAG]
+            if tt_flag == TranspositionTable.EXACT:
+                return tt_score
+            elif tt_flag == TranspositionTable.LOWER_BOUND:
+                alpha = max(alpha, tt_score)
+            elif tt_flag == TranspositionTable.UPPER_BOUND:
+                beta = min(beta, tt_score)
+            if alpha >= beta:
+                return tt_score
+
+        # Capture alpha AFTER TT probe (which may have raised it).
+        original_alpha = alpha
 
         self._statistics.increment_visited(NodeTypes.QUIESCENSE)
 
+        # --- Stand-pat score ---
+        # Static evaluation of the current position without making any move.
+        # The current player can always "do nothing" — so this is a guaranteed lower bound.
         stand_pat = self._evaluator.evaluate(board)
 
+        # Hit the depth cap: return static eval without searching captures.
         if depth == 0:
             return stand_pat
 
+        # --- Stand-pat pruning ---
+        # If stand_pat already beats beta, the opponent won't allow this line.
         if stand_pat >= beta:
             self._statistics.increment_visited(PruningTypes.ALPHA_BETA)
             return beta
 
+        # Raise alpha if the current position (without any capture) is already
+        # better than what we've assumed as our lower bound.
         if alpha < stand_pat:
             alpha = stand_pat
 
+        # --- Search captures only ---
+        # Filter legal moves to captures and order them (e.g. MVV-LVA: capture large
+        # pieces with small pieces first, as those are most likely to be good).
+        # generate_legal_captures() is faster than filtering board.legal_moves because
+        # python-chess generates captures directly from bitboards, skipping quiet moves entirely.
         mo_heuristic = self._build_move_order_heuristic(board, depth)
         legal_moves = MoveOrderer.order_moves(
-            mo_heuristic, (move for move in board.legal_moves if board.is_capture(move))
+            mo_heuristic, board.generate_legal_captures()
         )
 
         for move in legal_moves:
-            # delta pruning
+            # --- Delta pruning ---
+            # If even capturing the most valuable piece on the board can't bring the
+            # score close to alpha, skip the move. Avoids searching hopeless captures.
             if self._searcher_config.enable_delta_pruning and self._delta_pruning(
                 board, move, stand_pat, alpha
             ):
                 self._statistics.increment_visited(PruningTypes.DELTA)
                 continue
 
-            # Get the piece from the originating square and the captured piece
-            # Existence of captured piece is guaranteed in quiescence search
+            # Snapshot the moving piece and captured piece BEFORE pushing the move,
+            # so the incremental Zobrist hash can XOR them out and in correctly.
             previous_piece_from_square = (
                 board.piece_at(move.from_square) if zobrist_state else None
             )
+            # In quiescence we only search captures, so a captured piece always exists.
             captured_piece = board.piece_at(move.to_square) if zobrist_state else None
 
             board.push(move)
 
-            # Update the Zobrist hash
+            # Compute the child's incremental Zobrist hash.
             child_zobrist_state = (
                 self._zobrist_hash.incremental_zobrist_hash(
                     board,
@@ -295,19 +332,35 @@ class MiniMaxVariants(Searcher, ABC):
                 if zobrist_state
                 else None
             )
+            # Recurse into the child. Negate because child evaluates from opponent's POV.
             score = -self._quiescence(
                 board, depth - 1, -beta, -alpha, child_zobrist_state
             )
             board.pop()
 
             if score >= beta:
+                # Beta cutoff: store as LOWER_BOUND (actual value may be higher).
+                if zobrist_state:
+                    self._transposition_table.store(
+                        zobrist_state.zobrist_hash,
+                        0,
+                        score,
+                        TranspositionTable.LOWER_BOUND,
+                    )
                 return beta
 
             if score > alpha:
                 alpha = score
 
-            if zobrist_state:
-                self._transposition_table.store(zobrist_state.zobrist_hash, 0, score)
+        # --- TT store ---
+        # If alpha was never raised above original_alpha, every move failed low:
+        # the score is an upper bound. Otherwise it's exact (best capture was found).
+        if zobrist_state:
+            if alpha <= original_alpha:
+                flag = TranspositionTable.UPPER_BOUND
+            else:
+                flag = TranspositionTable.EXACT
+            self._transposition_table.store(zobrist_state.zobrist_hash, 0, alpha, flag)
 
         return alpha
 

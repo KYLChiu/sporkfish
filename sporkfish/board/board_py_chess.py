@@ -168,3 +168,36 @@ class BoardPyChess(Board):
         :rtype: bool
         """
         return self.board.has_kingside_castling_rights(color)
+
+    def piece_map(self) -> dict:
+        """
+        Return a mapping of all occupied squares to their pieces.
+        Delegates to python-chess which builds this efficiently from bitboards.
+
+        :return: Dict mapping square index to chess.Piece for every occupied square.
+        :rtype: dict
+        """
+        return self.board.piece_map()
+
+    def pieces(self, piece_type: chess.PieceType, color: chess.Color):
+        """
+        Return the SquareSet of all squares holding a piece of the given type and color.
+        python-chess stores these as 64-bit integers (bitboards), so this is a single
+        bitwise AND — no Python dict is built, making it much faster than piece_map()
+        when iterating one piece type at a time.
+
+        :param piece_type: e.g. chess.PAWN, chess.KNIGHT, ...
+        :param color: chess.WHITE or chess.BLACK
+        :return: Iterable of square indices (ints) for matching pieces.
+        """
+        return self.board.pieces(piece_type, color)
+
+    def generate_legal_captures(self):
+        """
+        Generate only the legal capture moves for the current position.
+        python-chess generates these directly from bitboards, avoiding the cost
+        of generating all legal moves and then filtering.
+
+        :return: An iterable of legal capture moves.
+        """
+        return self.board.generate_legal_captures()

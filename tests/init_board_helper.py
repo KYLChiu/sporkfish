@@ -59,6 +59,8 @@ def searcher_with_fen(
     enable_delta_pruning=False,
     enable_transposition_table=False,
     enable_aspiration_windows=False,
+    enable_check_extensions=False,
+    enable_lmr=False,
     move_order_config=MoveOrderConfig(move_order_mode=MoveOrderMode.MVV_LVA),
 ):
     board = BoardFactory.create(board_type=BoardPyChess)
@@ -71,6 +73,8 @@ def searcher_with_fen(
             enable_delta_pruning=enable_delta_pruning,
             enable_transposition_table=enable_transposition_table,
             enable_aspiration_windows=enable_aspiration_windows,
+            enable_check_extensions=enable_check_extensions,
+            enable_lmr=enable_lmr,
             move_order_config=move_order_config,
         ),
         evaluator=evaluator(),
