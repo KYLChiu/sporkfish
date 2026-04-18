@@ -74,6 +74,7 @@ class PVSSp(MiniMaxVariants):
         :returns: The evaluation score of the current board position (current player's POV).
         :rtype: float
         """
+
         # best score seen so far at this node; starts at -inf (no move seen yet)
         value = -float("inf")
 
@@ -95,6 +96,7 @@ class PVSSp(MiniMaxVariants):
             self._statistics.increment_visited(
                 TranspositionTableNodeType.TRANSPOSITITON_TABLE
             )
+
             # Tuple layout: (depth, score, flag, best_move) — see TranspositionTable constants
             tt_score = tt_entry[TranspositionTable._SCORE]  # type: ignore
             tt_flag = tt_entry[TranspositionTable._FLAG]
@@ -106,6 +108,7 @@ class PVSSp(MiniMaxVariants):
                 beta = min(beta, tt_score)
             if alpha >= beta:
                 return tt_score
+
             # Extract best move for hash-move ordering even when we can't cut off.
             tt_best_move = tt_entry[TranspositionTable._BEST_MOVE]  # type: ignore
 
@@ -129,6 +132,7 @@ class PVSSp(MiniMaxVariants):
         # we'll waste many re-searches in step 3.
         mo_heuristic = self._build_move_order_heuristic(board, depth)
         legal_moves = MoveOrderer.order_moves(mo_heuristic, board.legal_moves)
+
         # Hash move: prepend the TT best move so it is always searched first.
         # Searching the previously-best move first is the single most effective
         # move-ordering technique — it reliably raises alpha early, causing more
@@ -172,14 +176,14 @@ class PVSSp(MiniMaxVariants):
                 board.piece_at(move.to_square) if zobrist_state and capture else None
             )
 
-            board.push(move)
+            self._push(board, move)
 
             # --- Futility pruning ---
             # Skip quiet moves near the leaves that can't possibly raise alpha.
             if self._searcher_config.enable_futility_pruning and self._futility_pruning(
                 board, depth, capture, move, alpha
             ):
-                board.pop()
+                self._pop(board)
                 self._statistics.increment_visited(PruningTypes.FUTILITY)
                 continue
 
@@ -255,7 +259,7 @@ class PVSSp(MiniMaxVariants):
                         board, depth - 1 + extension, -beta, -alpha, child_zobrist_state
                     )
 
-            board.pop()
+            self._pop(board)
 
             if child_value > value:
                 value = child_value
@@ -323,6 +327,7 @@ class PVSSp(MiniMaxVariants):
         original_alpha = alpha
         mo_heuristic = self._build_move_order_heuristic(board, depth)
         legal_moves = MoveOrderer.order_moves(mo_heuristic, board.legal_moves)
+
         # At the root, use the TT best move from the previous ID iteration for
         # ordering. This ensures the hash move is tried first even at depth 1
         # of each new iteration, where no TT probe score can cut off.
@@ -346,7 +351,7 @@ class PVSSp(MiniMaxVariants):
                 else None
             )
 
-            board.push(move)
+            self._push(board, move)
 
             child_zobrist_state = (
                 self._zobrist_hash.incremental_zobrist_hash(
@@ -374,7 +379,7 @@ class PVSSp(MiniMaxVariants):
                         board, depth - 1, -beta, -alpha, child_zobrist_state
                     )
 
-            board.pop()
+            self._pop(board)
 
             if value < child_value:
                 value = child_value

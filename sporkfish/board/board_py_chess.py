@@ -3,17 +3,11 @@ from typing import Any, Dict, Optional
 import chess
 
 from sporkfish.board.board import Board
-from sporkfish.evaluator.pesto import PestoAccumulator
 
 
 class BoardPyChess(Board):
     """
     This class implements the abstract methods defined in the Board ABC using python-chess.
-
-    Maintains a :class:`~sporkfish.evaluator.pesto.PestoAccumulator` so that
-    :class:`~sporkfish.evaluator.pesto.Pesto` can evaluate in O(1).  Any custom board
-    implementation achieves the same by creating its own accumulator — no PST logic
-    needs to live in the board itself.
     """
 
     def __init__(self) -> None:
@@ -21,42 +15,37 @@ class BoardPyChess(Board):
         Initialize a new chess board using the python-chess library.
         """
         self.board = chess.Board()
-        self._pesto_accum = PestoAccumulator(self)
 
     # --- Board mutators ---
     def push(self, move: chess.Move) -> None:
         """
-        Apply the given move to the board and update the PeSTO accumulator.
+        Apply the given move to the board.
 
         :param move: The move to be applied.
         :type move: chess.Move
         """
-        self._pesto_accum.on_push(self, move)
         self.board.push(move)
 
     def pop(self) -> None:
         """
-        Undo the last move on the board and restore the PeSTO accumulator.
+        Undo the last move on the board.
         """
         self.board.pop()
-        self._pesto_accum.on_pop()
 
     def reset(self) -> None:
         """
         Reset the board to its initial state.
         """
         self.board.reset()
-        self._pesto_accum.init_from_board(self)
 
     def push_uci(self, move: str) -> None:
         """
         Apply the move specified in Universal Chess Interface (UCI) format to the board.
-        Routes through ``push`` so the accumulator stays in sync.
 
         :param move: UCI-formatted move string.
         :type move: str
         """
-        self.push(chess.Move.from_uci(move))
+        self.board.push_uci(move)
 
     # --- Board information ---
     @property
@@ -77,7 +66,6 @@ class BoardPyChess(Board):
         :type fen: str
         """
         self.board.set_fen(fen)
-        self._pesto_accum.init_from_board(self)
 
     def set_epd(self, epd: str) -> Dict[str, Any]:
         """
@@ -88,9 +76,7 @@ class BoardPyChess(Board):
         :return: The epd info (e.g. containing best move) for the board.
         :rtype: Dict[str, Any]
         """
-        result = self.board.set_epd(epd)
-        self._pesto_accum.init_from_board(self)
-        return result
+        return self.board.set_epd(epd)
 
     @property
     def ep_square(self) -> Optional[chess.Square]:

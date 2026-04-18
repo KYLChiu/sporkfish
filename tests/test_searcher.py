@@ -271,6 +271,7 @@ class TestNegamax:
             value = max(value, child_value)
 
             alpha = max(alpha, value)
+
             # Mirror negamax: stop searching once we exceed the upper bound.
             if alpha >= beta:
                 break

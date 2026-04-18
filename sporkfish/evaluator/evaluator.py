@@ -38,3 +38,31 @@ class Evaluator(ABC):
         :rtype: float
         """
         pass
+
+    def on_push(self, board: Board, move: chess.Move) -> None:
+        """
+        Called immediately *before* a move is pushed onto the board.
+
+        Override in stateful evaluators (e.g. incremental PeSTO) to update
+        cached scores.  The default implementation is a no-op so that simple
+        evaluators require no changes.
+        """
+        pass
+
+    def on_pop(self) -> None:
+        """
+        Called immediately *after* a move is popped from the board.
+
+        Override in stateful evaluators to restore cached scores.
+        The default implementation is a no-op.
+        """
+        pass
+
+    def init_from_board(self, board: Board) -> None:
+        """
+        Initialise any cached state from a fresh board position.
+
+        Called once at the start of each search iteration (after deepcopy).
+        Override in stateful evaluators.  The default implementation is a no-op.
+        """
+        pass

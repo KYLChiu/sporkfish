@@ -66,6 +66,7 @@ class NegamaxSp(MiniMaxVariants):
         :returns: The evaluation score of the current board position (from current player's POV).
         :rtype: float
         """
+
         # best score seen so far at this node; starts at -inf (no move seen yet)
         value = -float("inf")
 
@@ -91,6 +92,7 @@ class NegamaxSp(MiniMaxVariants):
             self._statistics.increment_visited(
                 TranspositionTableNodeType.TRANSPOSITITON_TABLE
             )
+
             # Tuple layout: (depth, score, flag, best_move) — see TranspositionTable constants
             tt_score = tt_entry[TranspositionTable._SCORE]  # type: ignore
             tt_flag = tt_entry[TranspositionTable._FLAG]
@@ -105,10 +107,12 @@ class NegamaxSp(MiniMaxVariants):
                 # Search failed low (never exceeded alpha). Score is an upper bound.
                 # Lower beta — the opponent can hold us to at most this.
                 beta = min(beta, tt_score)
+
             # After tightening the window, check if it collapsed (alpha >= beta).
             # If so, the TT score is sufficient — no need to search further.
             if alpha >= beta:
                 return tt_score
+
             # Extract best move for hash-move ordering even when we can't cut off.
             tt_best_move = tt_entry[TranspositionTable._BEST_MOVE]  # type: ignore
 
@@ -135,6 +139,7 @@ class NegamaxSp(MiniMaxVariants):
         # A good move found early raises alpha quickly, causing more beta cutoffs later.
         mo_heuristic = self._build_move_order_heuristic(board, depth)
         legal_moves = MoveOrderer.order_moves(mo_heuristic, board.legal_moves)
+
         # Hash move: prepend the TT best move so it is always searched first.
         if tt_best_move is not None and tt_best_move in legal_moves:
             legal_moves = [tt_best_move] + [m for m in legal_moves if m != tt_best_move]
@@ -175,7 +180,7 @@ class NegamaxSp(MiniMaxVariants):
                 board.piece_at(move.to_square) if zobrist_state and capture else None
             )
 
-            board.push(move)
+            self._push(board, move)
 
             # --- Futility pruning ---
             # Near the leaves (depth 1-2), if a quiet move's static eval is so far
@@ -183,7 +188,8 @@ class NegamaxSp(MiniMaxVariants):
             if self._searcher_config.enable_futility_pruning and self._futility_pruning(
                 board, depth, capture, move, alpha
             ):
-                board.pop()
+                self._pop(board)
+
                 # add test
                 self._statistics.increment_visited(PruningTypes.FUTILITY)
                 continue
@@ -209,11 +215,12 @@ class NegamaxSp(MiniMaxVariants):
                 board, depth - 1 + extension, -beta, -alpha, child_zobrist_state
             )
 
-            board.pop()
+            self._pop(board)
 
             if child_value > value:
                 value = child_value
                 best_move_for_tt = move
+
             # Raise alpha if we found a better move for the current player.
             alpha = max(alpha, value)
 
@@ -282,6 +289,7 @@ class NegamaxSp(MiniMaxVariants):
         original_alpha = alpha
         mo_heuristic = self._build_move_order_heuristic(board, depth)
         legal_moves = MoveOrderer.order_moves(mo_heuristic, board.legal_moves)
+
         # At the root, use the TT best move from the previous ID iteration for ordering.
         if zobrist_state:
             root_tt_move = self._transposition_table.get_best_move(
@@ -304,7 +312,7 @@ class NegamaxSp(MiniMaxVariants):
                 else None
             )
 
-            board.push(move)
+            self._push(board, move)
 
             # Update the Zobrist hash incrementally for the child position.
             child_zobrist_state = (
@@ -318,12 +326,13 @@ class NegamaxSp(MiniMaxVariants):
                 if zobrist_state
                 else None
             )
+
             # Recurse with negated window (child sees the opponent's perspective).
             child_value = -self._negamax(
                 board, depth - 1, -beta, -alpha, child_zobrist_state
             )
 
-            board.pop()
+            self._pop(board)
 
             if value < child_value:
                 value = child_value

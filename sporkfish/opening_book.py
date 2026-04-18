@@ -54,6 +54,7 @@ class OpeningBook:
         :return: Absolute path to the resource.
         :rtype: str
         """
+
         # PyInstaller creates a temp folder and stores path in _MEIPASS
         if hasattr(sys, "_MEIPASS"):
             base_path = sys._MEIPASS

@@ -21,6 +21,7 @@ class TestEvaluator:
         # White king at e6 = chess square 44, PSQT index = 44 ^ 56 = 20
         white_mg_score = ev.MG_KING[44 ^ 56]
         white_eg_score = ev.EG_KING[44 ^ 56]
+
         # Black king at c4 = chess square 26, PSQT index = 26
         black_mg_score = ev.MG_KING[26]
         black_eg_score = ev.EG_KING[26]
@@ -35,9 +36,11 @@ class TestEvaluator:
         # White king at e6 = chess square 44, PSQT index = 44 ^ 56 = 20
         white_mg_score = ev.MG_KING[44 ^ 56]
         white_eg_score = ev.EG_KING[44 ^ 56]
+
         # Black king at c5 = chess square 34, PSQT index = 34
         black_mg_score = ev.MG_KING[34]
         black_eg_score = ev.EG_KING[34]
+
         # Black pawn at c4 = chess square 26, PSQT index = 26
         black_mg_score += ev.MG_PAWN[26]
         black_eg_score += ev.EG_PAWN[26]

@@ -91,6 +91,7 @@ class Board(ABC):
 
     @property
     @abstractmethod
+
     # NB: this returns any because we don't have a set type for legal moves in our own board implementation.
     # We will revisit this after it's been implemented.
     def legal_moves(self) -> Any:

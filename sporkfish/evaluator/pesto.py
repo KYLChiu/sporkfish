@@ -203,29 +203,29 @@ class Pesto(Evaluator):
     SQUARES = [i for i in range(64)]
     VERTICALLY_FLIPPED_SQUARES = [i ^ 56 for i in range(64)]
 
+    def __init__(self) -> None:
+        self._accum: Optional["PestoAccumulator"] = None
+
     def evaluate(self, board: Board) -> float:
         """
         Evaluate the chess position based on material and piece-square tables.
 
-        If the board exposes a ``_pesto_accum`` attribute (a :class:`PestoAccumulator`)
-        the result is computed in O(1) from its cached scores.  Otherwise a full O(pieces)
-        scan is performed as a fallback so that any board implementation works correctly
-        without modification.
+        If ``init_from_board`` has been called (i.e. the searcher is driving
+        incremental updates via ``on_push``/``on_pop``), the result is O(1).
+        Otherwise a full O(pieces) scan is performed as a fallback.
 
         :param board: The current chess board position.
         :type board: Board
         :return: The evaluation score.
         :rtype: float
         """
-        accum: Optional[PestoAccumulator] = getattr(board, "_pesto_accum", None)
-        if accum is not None:
-            mg_white = accum.mg_white
-            mg_black = accum.mg_black
-            eg_white = accum.eg_white
-            eg_black = accum.eg_black
-            phase = accum.phase
+        if self._accum is not None:
+            mg_white = self._accum.mg_white
+            mg_black = self._accum.mg_black
+            eg_white = self._accum.eg_white
+            eg_black = self._accum.eg_black
+            phase = self._accum.phase
         else:
-            # Full O(pieces) scan — fallback for boards without incremental tracking.
             mg_white = mg_black = eg_white = eg_black = 0
             phase = 0
             for piece_type in chess.PIECE_TYPES:
@@ -254,6 +254,18 @@ class Pesto(Evaluator):
         eg_phase = 24 - mg_phase
 
         return ((mg_score * mg_phase) + (eg_score * eg_phase)) / 24
+
+    def init_from_board(self, board: Board) -> None:
+        """Initialise (or re-initialise) the incremental accumulator from the board."""
+        self._accum = PestoAccumulator(board)
+
+    def on_push(self, board: Board, move: chess.Move) -> None:
+        if self._accum is not None:
+            self._accum.on_push(board, move)
+
+    def on_pop(self) -> None:
+        if self._accum is not None:
+            self._accum.on_pop()
 
     def piece_values(self) -> Dict[chess.PieceType, float]:
         """
@@ -327,25 +339,23 @@ class PestoAccumulator:
         self.phase = phase
         self._stack.clear()
 
-    def _add(self, sq: int, piece: chess.Piece) -> None:
+    def _update(self, sign: int, sq: int, piece: chess.Piece) -> None:
+        """Add (sign=+1) or remove (sign=-1) a piece's PST contribution."""
         pt_idx = piece.piece_type - 1
-        if piece.color:  # chess.WHITE == True
-            self.mg_white += Pesto.MG_PESTO[pt_idx][sq ^ 56]
-            self.eg_white += Pesto.EG_PESTO[pt_idx][sq ^ 56]
-        else:
-            self.mg_black += Pesto.MG_PESTO[pt_idx][sq]
-            self.eg_black += Pesto.EG_PESTO[pt_idx][sq]
-        self.phase += Pesto.PHASES[pt_idx]
-
-    def _remove(self, sq: int, piece: chess.Piece) -> None:
-        pt_idx = piece.piece_type - 1
+        mg_delta = sign * Pesto.MG_PESTO[pt_idx][sq ^ 56 if piece.color else sq]
+        eg_delta = sign * Pesto.EG_PESTO[pt_idx][sq ^ 56 if piece.color else sq]
         if piece.color:
-            self.mg_white -= Pesto.MG_PESTO[pt_idx][sq ^ 56]
-            self.eg_white -= Pesto.EG_PESTO[pt_idx][sq ^ 56]
+            self.mg_white += mg_delta
+            self.eg_white += eg_delta
         else:
-            self.mg_black -= Pesto.MG_PESTO[pt_idx][sq]
-            self.eg_black -= Pesto.EG_PESTO[pt_idx][sq]
-        self.phase -= Pesto.PHASES[pt_idx]
+            self.mg_black += mg_delta
+            self.eg_black += eg_delta
+        self.phase += sign * Pesto.PHASES[pt_idx]
+
+    def _save(self) -> None:
+        self._stack.append(
+            (self.mg_white, self.mg_black, self.eg_white, self.eg_black, self.phase)
+        )
 
     def on_push(self, board: Board, move: chess.Move) -> None:
         """
@@ -356,67 +366,43 @@ class PestoAccumulator:
         Null moves (``chess.Move.null()``) push a sentinel onto the stack so that
         ``on_pop`` remains balanced, but no piece scores change.
         """
-        # Null moves (used by null-move pruning) have no piece to move — save state
-        # unchanged so on_pop still balances, then return.
+        self._save()
         if move == chess.Move.null():
-            self._stack.append(
-                (
-                    self.mg_white,
-                    self.mg_black,
-                    self.eg_white,
-                    self.eg_black,
-                    self.phase,
-                )
-            )
             return
 
         from_sq = move.from_square
         to_sq = move.to_square
         moving_piece = board.piece_at(from_sq)
         captured_piece = board.piece_at(to_sq)
-        is_ep = board.is_en_passant(move)
-        # Castling detection: king moves two files left or right.
-        is_castle = (
-            moving_piece.piece_type == chess.KING
-            and abs(chess.square_file(to_sq) - chess.square_file(from_sq)) == 2
-        )
 
-        self._stack.append(
-            (
-                self.mg_white,
-                self.mg_black,
-                self.eg_white,
-                self.eg_black,
-                self.phase,
-            )
-        )
-
-        self._remove(from_sq, moving_piece)
+        self._update(-1, from_sq, moving_piece)
 
         if captured_piece:
-            self._remove(to_sq, captured_piece)
+            self._update(-1, to_sq, captured_piece)
 
-        if is_ep:
+        if board.is_en_passant(move):
             ep_sq = chess.square(chess.square_file(to_sq), chess.square_rank(from_sq))
-            self._remove(ep_sq, chess.Piece(chess.PAWN, not moving_piece.color))
+            self._update(-1, ep_sq, chess.Piece(chess.PAWN, not moving_piece.color))
 
-        # Place the piece (promoted type if applicable).
-        if move.promotion:
-            self._add(to_sq, chess.Piece(move.promotion, moving_piece.color))
-        else:
-            self._add(to_sq, moving_piece)
+        dest_piece = (
+            chess.Piece(move.promotion, moving_piece.color)
+            if move.promotion
+            else moving_piece
+        )
+        self._update(+1, to_sq, dest_piece)
 
-        if is_castle:
+        # Castling: king moves two files — also relocate the rook.
+        if (
+            moving_piece.piece_type == chess.KING
+            and abs(chess.square_file(to_sq) - chess.square_file(from_sq)) == 2
+        ):
             rank = chess.square_rank(from_sq)
-            if chess.square_file(to_sq) == 6:  # kingside
-                rook_from = chess.square(7, rank)
-                rook_to = chess.square(5, rank)
-            else:  # queenside
-                rook_from = chess.square(0, rank)
-                rook_to = chess.square(3, rank)
+            kingside = chess.square_file(to_sq) == 6
+            rook_from = chess.square(7 if kingside else 0, rank)
+            rook_to = chess.square(5 if kingside else 3, rank)
             rook = chess.Piece(chess.ROOK, moving_piece.color)
-            self._remove(rook_from, rook)
-            self._add(rook_to, rook)
+            self._update(-1, rook_from, rook)
+            self._update(+1, rook_to, rook)
 
     def on_pop(self) -> None:
         """Restore accumulators after a move is undone.  Must be called *after* pop."""

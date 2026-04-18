@@ -91,6 +91,16 @@ class MiniMaxVariants(Searcher, ABC):
     def evaluator(self) -> Evaluator:
         return self._evaluator
 
+    def _push(self, board: Board, move: chess.Move) -> None:
+        """Notify the evaluator then apply the move."""
+        self._evaluator.on_push(board, move)
+        board.push(move)
+
+    def _pop(self, board: Board) -> None:
+        """Undo the move then notify the evaluator."""
+        board.pop()
+        self._evaluator.on_pop()
+
     def _build_move_order_heuristic(
         self, board: Board, depth: int
     ) -> MoveOrderHeuristic:
@@ -138,6 +148,7 @@ class MiniMaxVariants(Searcher, ABC):
         :param depth: The depth of the search.
         :type depth: int
         """
+
         # TODO: do we need to check if captures here too?
         if self._killer_moves:
             self._killer_moves[depth].pop()
@@ -160,6 +171,7 @@ class MiniMaxVariants(Searcher, ABC):
             # Increment score for moves that cause cutoff
             if move in self._history_table:
                 self._history_table[move] += increment
+
             # Initialize score for new moves
             else:
                 self._history_table[move] = increment
@@ -244,6 +256,7 @@ class MiniMaxVariants(Searcher, ABC):
         :return: The evaluated score after resolving all captures (from current player's POV).
         :rtype: float
         """
+
         # --- Transposition table probe ---
         # Quiescence results are cached at depth=0 (they represent a "quiet" eval).
         # The same bound-type logic as the main search applies here.
@@ -253,6 +266,7 @@ class MiniMaxVariants(Searcher, ABC):
             self._statistics.increment_visited(
                 TranspositionTableNodeType.TRANSPOSITITON_TABLE
             )
+
             # Tuple layout: (depth, score, flag) — see TranspositionTable._DEPTH/SCORE/FLAG
             tt_score = tt_entry[TranspositionTable._SCORE]  # type: ignore
             tt_flag = tt_entry[TranspositionTable._FLAG]
@@ -315,10 +329,11 @@ class MiniMaxVariants(Searcher, ABC):
             previous_piece_from_square = (
                 board.piece_at(move.from_square) if zobrist_state else None
             )
+
             # In quiescence we only search captures, so a captured piece always exists.
             captured_piece = board.piece_at(move.to_square) if zobrist_state else None
 
-            board.push(move)
+            self._push(board, move)
 
             # Compute the child's incremental Zobrist hash.
             child_zobrist_state = (
@@ -332,11 +347,12 @@ class MiniMaxVariants(Searcher, ABC):
                 if zobrist_state
                 else None
             )
+
             # Recurse into the child. Negate because child evaluates from opponent's POV.
             score = -self._quiescence(
                 board, depth - 1, -beta, -alpha, child_zobrist_state
             )
-            board.pop()
+            self._pop(board)
 
             if score >= beta:
                 # Beta cutoff: store as LOWER_BOUND (actual value may be higher).
@@ -386,16 +402,18 @@ class MiniMaxVariants(Searcher, ABC):
         :return: True if the null move leads to a beta cutoff, indicating a possible pruning opportunity.
         :rtype: bool
         """
+
         # TODO: add zugzwang check
         # Will make depth_reduction_factor configurable later
         depth_reduction_factor = 3
         in_check = board.is_check()
         if depth >= depth_reduction_factor and not in_check:
             null_move_depth = depth - depth_reduction_factor
-            board.push(chess.Move.null())
+            self._push(board, chess.Move.null())
+
             # TODO: check if too expensive to calculate Zobrist state here
             value = -search_func(board, null_move_depth, -beta, -alpha, None)
-            board.pop()
+            self._pop(board)
             if value >= beta:
                 return True
         return False
@@ -471,6 +489,7 @@ class MiniMaxVariants(Searcher, ABC):
         :return: True if the position can be pruned due to delta margin checks, False otherwise.
         :rtype: bool
         """
+
         # Assumes the input move is already a capturing move
         # This is valid when called in quiescence search
         captured_piece = (
@@ -554,6 +573,7 @@ class MiniMaxVariants(Searcher, ABC):
 
         for depth in range(1, self._max_depth + 1):
             new_board = copy.deepcopy(board)
+            self._evaluator.init_from_board(new_board)
 
             self._statistics.reset_visited()
 
@@ -575,6 +595,7 @@ class MiniMaxVariants(Searcher, ABC):
                     )
                 )
                 break
+
             # Else move onto next depth, unless we have no more time already.
             else:
                 score, move = new_score, new_move

@@ -89,6 +89,7 @@ class LichessBotBerserk(LichessBot):
         :param state: The current state of the game.
         :type state: Any
         """
+
         # Check if it's the player's turn based on the number of moves and color
         if len(prev_moves.split()) & 1 == color:
             self._set_position(prev_moves)
@@ -150,6 +151,7 @@ class LichessBotBerserk(LichessBot):
                             except Exception as e:
                                 logging.error(f"Error claiming victory: {e}")
                                 break
+
                         # Otherwise, keep polling
                     else:
                         break

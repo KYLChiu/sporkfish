@@ -13,6 +13,7 @@ class TestZobristHashFull:
 
         zh2 = ZobristHasher()
         hash2 = zh2.full_zobrist_hash(board).zobrist_hash
+
         # Make sure internal hashes are equivalent (i.e. we seeded the random numbers) by checking the final hash.
         # Also check the final hashes are the same for the same board
         assert hash1 == hash2

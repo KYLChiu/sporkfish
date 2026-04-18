@@ -77,9 +77,7 @@ class ZobristHasher:
         Return the en-passant file as a plain Python int, or _NO_EP_FILE if none.
         """
         return (
-            int(chess.square_file(board.ep_square))
-            if board.ep_square
-            else _NO_EP_FILE
+            int(chess.square_file(board.ep_square)) if board.ep_square else _NO_EP_FILE
         )
 
     @staticmethod
@@ -159,11 +157,7 @@ class ZobristHasher:
         from_cpt = hash(previous_from_square_piece)
 
         # For promotions the piece type on to_sq differs from the moving piece.
-        to_cpt = (
-            hash(board.piece_at(move.to_square))
-            if move.promotion
-            else from_cpt
-        )
+        to_cpt = hash(board.piece_at(move.to_square)) if move.promotion else from_cpt
 
         ep_file = ZobristHasher._parse_ep_file(board)
         castling_rights = ZobristHasher._parse_castling_rights(board)
@@ -172,7 +166,7 @@ class ZobristHasher:
         pk = _PIECE_KEYS
         h = int(prev_state.zobrist_hash)
         h ^= pk[from_sq][from_cpt]  # remove piece from source square
-        h ^= pk[to_sq][to_cpt]      # place piece on destination square
+        h ^= pk[to_sq][to_cpt]  # place piece on destination square
         if captured_piece:
             h ^= pk[to_sq][hash(captured_piece)]  # remove captured piece
 

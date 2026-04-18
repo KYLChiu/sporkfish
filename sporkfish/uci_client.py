@@ -142,6 +142,7 @@ class UCIClient:
                         assert (
                             len(tokens) >= idx + 3
                         ), "wtime or btime given in go string but no time or increment values passed."
+
                         # Convert to ms -> s
                         time = float(tokens[idx + 1]) / 1000.0
                         increment = float(tokens[idx + 3]) / 1000.0

@@ -47,6 +47,7 @@ class CompositeHeuristic(
         :return: A floating-point value representing the composite evaluation of the move.
         :rtype: float
         """
+
         # Compute is_capture once and share it across all three sub-heuristics.
         # Previously each sub-heuristic called board.is_capture() independently,
         # costing 3× the ~62k is_capture calls seen in profiling.

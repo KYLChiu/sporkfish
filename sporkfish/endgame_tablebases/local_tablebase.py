@@ -58,6 +58,7 @@ class LocalTablebase(EndgameTablebase):
         :return: Absolute path to the resource.
         :rtype: str
         """
+
         # PyInstaller creates a temp folder and stores path in _MEIPASS
         if hasattr(sys, "_MEIPASS"):
             base_path = sys._MEIPASS
@@ -147,17 +148,21 @@ class LocalTablebase(EndgameTablebase):
         :return: The best resulting DTZ value, based on condition of the category.
         :rtype: int
         """
+
         # We want to save our blessed loss as quickly as possible
         if category == LocalTablebase._DTZCategory.BLESSED_LOSS:
             return max(dtz, best_dtz)
+
         # We want make the unconditional loss last as long as possible, in case they run out of time
         elif category == LocalTablebase._DTZCategory.UNCONDITIONAL_LOSS:
             return min(dtz, best_dtz)
         elif category == LocalTablebase._DTZCategory.UNCONDITIONAL_DRAW:
             return 0
+
         # We want to unconditionally win as quickly as possible
         elif category == LocalTablebase._DTZCategory.UNCONDITIONAL_WIN:
             return min(dtz, best_dtz)
+
         # We want to extend our cursed win as much as possible, in case they run out of time
         elif category == LocalTablebase._DTZCategory.CURSED_WIN:
             return max(dtz, best_dtz)
@@ -228,6 +233,7 @@ class LocalTablebase(EndgameTablebase):
             )
             for move in board.legal_moves:
                 cboard.push(move)
+
                 # Refer to https://python-chess.readthedocs.io/en/latest/syzygy.html
                 # Probe the opponents DTZ, after our legal move.
                 # Our DTZ is the inversion of that.
