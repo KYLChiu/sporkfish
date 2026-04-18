@@ -326,6 +326,111 @@ class Pesto(Evaluator):
         # Weight more heavily in endgame (where passed pawns matter most).
         return pesto + pp * (0.5 + 0.5 * eg_phase / 24)
 
+    # Bishop pair bonus (centipawns). Standard across engines (~25-35cp).
+    _BISHOP_PAIR_BONUS = 30.0
+
+    # Doubled pawn penalty per doubled pawn (centipawns).
+    _DOUBLED_PAWN_PENALTY = 15.0
+
+    # Isolated pawn penalty per isolated pawn (centipawns).
+    _ISOLATED_PAWN_PENALTY = 12.0
+
+    @staticmethod
+    def _bishop_pair(board: Board) -> float:
+        """Return the bishop-pair bonus from the perspective of the side to move.
+
+        Having both bishops on opposite coloured squares is a well-known positional
+        advantage (~30cp), particularly in open positions.  We simply count bishops
+        for each side - the bonus applies only when a side owns 2+ bishops.
+
+        Bishops on opposite colours control different squares, giving better coverage
+        of the board and making it harder for the opponent to blockade positions.
+        This bonus is minor but consistent and adds up over many positions.
+        """
+        stm = board.turn
+        opp = not stm
+
+        # Count bishops for each side. pieces_mask returns a bitboard;
+        # bit_count() efficiently counts set bits via CPU instruction (POPCNT on modern hardware).
+        own_bishops = int(board.pieces_mask(chess.BISHOP, stm)).bit_count()
+        opp_bishops = int(board.pieces_mask(chess.BISHOP, opp)).bit_count()
+
+        # Apply bonus only if side has 2 or more bishops (which must be on opposite colours).
+        own_bonus = Pesto._BISHOP_PAIR_BONUS if own_bishops >= 2 else 0.0
+        opp_bonus = Pesto._BISHOP_PAIR_BONUS if opp_bishops >= 2 else 0.0
+
+        # Return differential: our bonus minus opponent's bonus.
+        return own_bonus - opp_bonus
+
+    @staticmethod
+    def _pawn_structure(board: Board) -> float:
+        """Return a pawn structure score from the perspective of the side to move.
+
+        Penalises two common structural weaknesses using **loop-free** bitboard
+        arithmetic — no Python for-loop, so overhead per evaluate() call is O(1):
+
+        * **Doubled pawns** - two own pawns on the same file.
+        * **Isolated pawns** - a pawn with no friendly pawns on adjacent files.
+
+        Algorithm (same logic for own and opponent):
+        1. Fold all 8 ranks of the pawn bitboard into a single 8-bit file-occupancy
+           mask: ``occ = pawns | (pawns>>8) | ... | (pawns>>56) & 0xFF``.
+           Bit f of ``occ`` is 1 iff at least one pawn occupies file f.
+        2. Doubled count = total_pawns - num_occupied_files (every pawn beyond the
+           first on a file contributes exactly 1 to this difference).
+        3. Isolated files: ``isolated_occ = occ & ~((occ<<1)|(occ>>1)) & 0xFF``.
+           Expand back to 64-bit via ``isolated_occ * 0x0101010101010101`` (replicates
+           the 8-bit pattern to every rank), then AND with the pawn bitboard to count
+           actual isolated pawns (handles doubled isolated pawns correctly).
+        """
+        stm = board.turn
+        opp = not stm
+        own_pawns = int(board.pieces_mask(chess.PAWN, stm))
+        opp_pawns = int(board.pieces_mask(chess.PAWN, opp))
+
+        def _penalties(pawns: int) -> float:
+            if not pawns:
+                return 0.0
+
+            # --- File occupancy folding (O(1) bitboard trick) ---
+            # Reduce all 8 ranks to a single byte showing which files have pawns.
+            # Each right-shift by 8 moves the next rank into position, then OR combines.
+            # After 4 shifts: pawns on any rank are visible in bits 0-7 (the bottom byte).
+            occ = pawns | (pawns >> 8)      # Combine ranks 0-1
+            occ |= occ >> 16                 # Combine ranks 0-3
+            occ |= occ >> 32                 # Combine all 8 ranks
+            occ &= 0xFF                      # Mask to only the 8-bit file occupancy
+            # occ[f] = 1 iff file f has at least one pawn (could be multiple)
+
+            # --- Doubled pawn count ---
+            # total_pawns - num_files_occupied = number of "extra" pawns beyond
+            # the first on each file. This is exactly the doubled pawn count.
+            num_doubled = pawns.bit_count() - occ.bit_count()
+
+            # --- Isolated pawn detection (loop-free via replication) ---
+            # Step 1: Find isolated FILES (files with no neighbours that also have pawns).
+            adj = ((occ << 1) | (occ >> 1)) & 0xFF  # 8-bit mask of files with pawn-supporting neighbours
+            isolated_occ = occ & ~adj                 # 8-bit: set iff file has pawns but no adjacent file has pawns
+
+            # Step 2: Expand the 8-bit isolated-file mask back to 64-bit board.
+            # Multiplying an 8-bit value by 0x0101010101010101 replicates it across
+            # all 8 bytes, creating a 64-bit mask with entire columns lit up.
+            # This is the "magic multiply" trick used in bitboard magics.
+            isolated_bb = (isolated_occ * 0x0101010101010101) & 0xFFFFFFFFFFFFFFFF
+
+            # Step 3: Count actual isolated pawns (pawns on isolated files).
+            # Handles doubled isolated pawns correctly (if 2 pawns are isolated, both count).
+            num_isolated = (pawns & isolated_bb).bit_count()
+
+            # Return total structural penalty (doubled + isolated).
+            return (
+                num_doubled * Pesto._DOUBLED_PAWN_PENALTY
+                + num_isolated * Pesto._ISOLATED_PAWN_PENALTY
+            )
+
+        # Score from the perspective of side to move: opponent's penalties minus own.
+        return _penalties(opp_pawns) - _penalties(own_pawns)
+
     @staticmethod
     def _king_safety(board: Board) -> float:
         """Compute king safety bonus for the side to move.

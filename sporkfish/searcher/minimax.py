@@ -91,6 +91,10 @@ class MiniMaxVariants(Searcher, ABC):
             else None
         )
 
+        # Cache pawn value to avoid repeated dict lookups in hot paths.
+        self._pawn_value = evaluator.piece_values()[chess.PAWN]
+        self._pawn_value_half = self._pawn_value // 2
+
     @property
     def evaluator(self) -> Evaluator:
         return self._evaluator
@@ -204,7 +208,7 @@ class MiniMaxVariants(Searcher, ABC):
         """
         if self._searcher_config.enable_aspiration_windows and depth > 1:
             # We leave configuration for window_size to another PR
-            window_size = self.evaluator.piece_values()[chess.PAWN] // 2
+            window_size = self._pawn_value_half
             alpha = prev_score - window_size
             beta = prev_score + window_size
             score, move = self._start_search_from_root(
@@ -470,11 +474,7 @@ class MiniMaxVariants(Searcher, ABC):
         ):
             # TODO: consider using different futility margins
             # Half a pawn margin is very aggressive
-            if (
-                self._evaluator.evaluate(board)
-                + depth * self.evaluator.piece_values()[chess.PAWN] // 2
-                <= alpha
-            ):
+            if self._evaluator.evaluate(board) + depth * self._pawn_value_half <= alpha:
                 return True
         return False
 
@@ -484,6 +484,7 @@ class MiniMaxVariants(Searcher, ABC):
         depth: int,
         beta: float,
         in_check: bool,
+        static_eval: float,
     ) -> bool:
         """
         Reverse futility pruning (static null-move pruning).
@@ -498,12 +499,13 @@ class MiniMaxVariants(Searcher, ABC):
         :param depth: Remaining search depth.
         :param beta: The upper bound of the search window.
         :param in_check: Whether the side to move is in check.
+        :param static_eval: Pre-computed static evaluation of the position.
         :return: True if the position should be pruned.
         """
         rfp_max_depth = 3
         if depth >= 2 and depth <= rfp_max_depth and not in_check:
-            margin = depth * self._evaluator.piece_values()[chess.PAWN]
-            if self._evaluator.evaluate(board) - margin >= beta:
+            margin = depth * self._pawn_value
+            if static_eval - margin >= beta:
                 return True
         return False
 
@@ -514,6 +516,7 @@ class MiniMaxVariants(Searcher, ABC):
         alpha: float,
         in_check: bool,
         zobrist_state,
+        static_eval: float,
     ) -> Optional[float]:
         """
         Razoring: at shallow depths, if static eval + margin is below alpha,
@@ -526,12 +529,13 @@ class MiniMaxVariants(Searcher, ABC):
         :param alpha: The lower bound of the search window.
         :param in_check: Whether the side to move is in check.
         :param zobrist_state: Zobrist hash state for TT (passed to quiescence).
+        :param static_eval: Pre-computed static evaluation of the position.
         :return: The qsearch score if razoring succeeds, None otherwise.
         """
         razor_max_depth = 2
         if depth <= razor_max_depth and not in_check:
-            margin = depth * self._evaluator.piece_values()[chess.PAWN]
-            if self._evaluator.evaluate(board) + margin < alpha:
+            margin = depth * self._pawn_value
+            if static_eval + margin < alpha:
                 q_score = self._quiescence(board, 4, alpha, alpha + 1, zobrist_state)
                 if q_score < alpha:
                     return q_score
@@ -644,16 +648,20 @@ class MiniMaxVariants(Searcher, ABC):
         score = -float("inf")
         move = chess.Move.null()
 
-        for depth in range(1, self._max_depth + 1):
-            new_board = copy.deepcopy(board)
-            self._evaluator.init_from_board(new_board)
+        # Deep-copy the board once before the ID loop. Each depth iteration
+        # reuses the same copy - push/pop guarantees the board is restored to
+        # the root position at the end of every search, so re-copying per depth
+        # is unnecessary and was paying deepcopy cost O(max_depth) times.
+        search_board = copy.deepcopy(board)
+        self._evaluator.init_from_board(search_board)
 
+        for depth in range(1, self._max_depth + 1):
             self._statistics.reset_visited()
 
             time_left = timeout
             new_score, new_move, elapsed, error_code = self._timeoutable_search(
                 timeout=time_left,
-                board_to_search=new_board,
+                board_to_search=search_board,
                 depth=depth,
                 prev_score=score,
             )
