@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Optional
 
 import chess
 
@@ -207,52 +207,42 @@ class Pesto(Evaluator):
         """
         Evaluate the chess position based on material and piece-square tables.
 
+        If the board exposes a ``_pesto_accum`` attribute (a :class:`PestoAccumulator`)
+        the result is computed in O(1) from its cached scores.  Otherwise a full O(pieces)
+        scan is performed as a fallback so that any board implementation works correctly
+        without modification.
+
         :param board: The current chess board position.
         :type board: Board
         :return: The evaluation score.
         :rtype: float
         """
-        # Local accumulators instead of {chess.WHITE: 0, chess.BLACK: 0} dicts.
-        # Eliminates two dict lookups per inner-loop iteration (enum key hashing).
-        mg_white = 0
-        mg_black = 0
-        eg_white = 0
-        eg_black = 0
-        phase = 0
+        accum: Optional[PestoAccumulator] = getattr(board, "_pesto_accum", None)
+        if accum is not None:
+            mg_white = accum.mg_white
+            mg_black = accum.mg_black
+            eg_white = accum.eg_white
+            eg_black = accum.eg_black
+            phase = accum.phase
+        else:
+            # Full O(pieces) scan — fallback for boards without incremental tracking.
+            mg_white = mg_black = eg_white = eg_black = 0
+            phase = 0
+            for piece_type in chess.PIECE_TYPES:
+                pt_idx = piece_type - 1
+                mg_table = self.MG_PESTO[pt_idx]
+                eg_table = self.EG_PESTO[pt_idx]
+                phase_inc = self.PHASES[pt_idx]
+                for chess_sq in board.pieces(piece_type, chess.WHITE):
+                    idx = chess_sq ^ 56
+                    mg_white += mg_table[idx]
+                    eg_white += eg_table[idx]
+                    phase += phase_inc
+                for chess_sq in board.pieces(piece_type, chess.BLACK):
+                    mg_black += mg_table[chess_sq]
+                    eg_black += eg_table[chess_sq]
+                    phase += phase_inc
 
-        # Iterate over each piece type × color combination using bitboard-backed `pieces()`.
-        # This avoids constructing a Python dict (as piece_map() does) and instead walks
-        # each piece type's bitboard directly — much faster for sparse boards.
-        #
-        # PSQT alignment:
-        #   python-chess:  A1=0  … H8=63  (rank 1 first, rank 8 last)
-        #   Our tables:    A8=0  … H1=63  (rank 8 first, rank 1 last — standard PSQT layout)
-        #
-        #   XOR with 56 flips the rank (A1 ↔ A8), mapping chess squares to PSQT indices:
-        #     White pieces: index = chess_sq ^ 56   (flip so rank 1 maps to bottom of table)
-        #     Black pieces: index = chess_sq         (no flip; black reads table top-to-bottom)
-        for piece_type in chess.PIECE_TYPES:
-            # piece_type is 1-6; subtract 1 for 0-based tuple indexing.
-            pt_idx = piece_type - 1
-            mg_table = self.MG_PESTO[pt_idx]
-            eg_table = self.EG_PESTO[pt_idx]
-            phase_inc = self.PHASES[pt_idx]
-
-            # White pieces
-            for chess_sq in board.pieces(piece_type, chess.WHITE):
-                idx = chess_sq ^ 56  # flip rank to match PSQT orientation
-                mg_white += mg_table[idx]
-                eg_white += eg_table[idx]
-                phase += phase_inc
-
-            # Black pieces
-            for chess_sq in board.pieces(piece_type, chess.BLACK):
-                mg_black += mg_table[chess_sq]
-                eg_black += eg_table[chess_sq]
-                phase += phase_inc
-
-        # board.turn is True (WHITE) or False (BLACK).
-        # Use a branch instead of a dict lookup for the side-to-move perspective.
         if board.turn:  # chess.WHITE
             mg_score = mg_white - mg_black
             eg_score = eg_white - eg_black
@@ -282,3 +272,158 @@ class Pesto(Evaluator):
         :rtype: float
         """
         return self.DELTA
+
+
+class PestoAccumulator:
+    """
+    Board-independent incremental PeSTO score tracker.
+
+    Any board implementation can opt into O(1) evaluation by:
+
+    1. Creating an instance in ``__init__``: ``self._pesto_accum = PestoAccumulator(self)``
+    2. Calling ``on_push(board, move)`` *before* applying the move.
+    3. Calling ``on_pop()`` *after* undoing the move.
+    4. Calling ``init_from_board(board)`` after any wholesale position change
+       (``set_fen``, ``reset``, ``set_epd``).
+
+    :class:`Pesto` automatically uses the accumulator when ``board._pesto_accum`` exists.
+    """
+
+    __slots__ = ("mg_white", "mg_black", "eg_white", "eg_black", "phase", "_stack")
+
+    def __init__(self, board: Board) -> None:
+        self.mg_white: float = 0.0
+        self.mg_black: float = 0.0
+        self.eg_white: float = 0.0
+        self.eg_black: float = 0.0
+        self.phase: int = 0
+        self._stack: list = []
+        self.init_from_board(board)
+
+    def init_from_board(self, board: Board) -> None:
+        """Recompute accumulators from scratch for the current position."""
+        mg_w = mg_b = eg_w = eg_b = 0.0
+        phase = 0
+        MG = Pesto.MG_PESTO
+        EG = Pesto.EG_PESTO
+        PH = Pesto.PHASES
+        for pt in chess.PIECE_TYPES:
+            pt_idx = pt - 1
+            mg_t = MG[pt_idx]
+            eg_t = EG[pt_idx]
+            ph = PH[pt_idx]
+            for sq in board.pieces(pt, chess.WHITE):
+                mg_w += mg_t[sq ^ 56]
+                eg_w += eg_t[sq ^ 56]
+                phase += ph
+            for sq in board.pieces(pt, chess.BLACK):
+                mg_b += mg_t[sq]
+                eg_b += eg_t[sq]
+                phase += ph
+        self.mg_white = mg_w
+        self.mg_black = mg_b
+        self.eg_white = eg_w
+        self.eg_black = eg_b
+        self.phase = phase
+        self._stack.clear()
+
+    def _add(self, sq: int, piece: chess.Piece) -> None:
+        pt_idx = piece.piece_type - 1
+        if piece.color:  # chess.WHITE == True
+            self.mg_white += Pesto.MG_PESTO[pt_idx][sq ^ 56]
+            self.eg_white += Pesto.EG_PESTO[pt_idx][sq ^ 56]
+        else:
+            self.mg_black += Pesto.MG_PESTO[pt_idx][sq]
+            self.eg_black += Pesto.EG_PESTO[pt_idx][sq]
+        self.phase += Pesto.PHASES[pt_idx]
+
+    def _remove(self, sq: int, piece: chess.Piece) -> None:
+        pt_idx = piece.piece_type - 1
+        if piece.color:
+            self.mg_white -= Pesto.MG_PESTO[pt_idx][sq ^ 56]
+            self.eg_white -= Pesto.EG_PESTO[pt_idx][sq ^ 56]
+        else:
+            self.mg_black -= Pesto.MG_PESTO[pt_idx][sq]
+            self.eg_black -= Pesto.EG_PESTO[pt_idx][sq]
+        self.phase -= Pesto.PHASES[pt_idx]
+
+    def on_push(self, board: Board, move: chess.Move) -> None:
+        """
+        Update accumulators for ``move``.  Must be called *before* the underlying
+        board applies the move so that ``board.piece_at`` still reflects the
+        pre-move state.
+
+        Null moves (``chess.Move.null()``) push a sentinel onto the stack so that
+        ``on_pop`` remains balanced, but no piece scores change.
+        """
+        # Null moves (used by null-move pruning) have no piece to move — save state
+        # unchanged so on_pop still balances, then return.
+        if move == chess.Move.null():
+            self._stack.append(
+                (
+                    self.mg_white,
+                    self.mg_black,
+                    self.eg_white,
+                    self.eg_black,
+                    self.phase,
+                )
+            )
+            return
+
+        from_sq = move.from_square
+        to_sq = move.to_square
+        moving_piece = board.piece_at(from_sq)
+        captured_piece = board.piece_at(to_sq)
+        is_ep = board.is_en_passant(move)
+        # Castling detection: king moves two files left or right.
+        is_castle = (
+            moving_piece.piece_type == chess.KING
+            and abs(chess.square_file(to_sq) - chess.square_file(from_sq)) == 2
+        )
+
+        self._stack.append(
+            (
+                self.mg_white,
+                self.mg_black,
+                self.eg_white,
+                self.eg_black,
+                self.phase,
+            )
+        )
+
+        self._remove(from_sq, moving_piece)
+
+        if captured_piece:
+            self._remove(to_sq, captured_piece)
+
+        if is_ep:
+            ep_sq = chess.square(chess.square_file(to_sq), chess.square_rank(from_sq))
+            self._remove(ep_sq, chess.Piece(chess.PAWN, not moving_piece.color))
+
+        # Place the piece (promoted type if applicable).
+        if move.promotion:
+            self._add(to_sq, chess.Piece(move.promotion, moving_piece.color))
+        else:
+            self._add(to_sq, moving_piece)
+
+        if is_castle:
+            rank = chess.square_rank(from_sq)
+            if chess.square_file(to_sq) == 6:  # kingside
+                rook_from = chess.square(7, rank)
+                rook_to = chess.square(5, rank)
+            else:  # queenside
+                rook_from = chess.square(0, rank)
+                rook_to = chess.square(3, rank)
+            rook = chess.Piece(chess.ROOK, moving_piece.color)
+            self._remove(rook_from, rook)
+            self._add(rook_to, rook)
+
+    def on_pop(self) -> None:
+        """Restore accumulators after a move is undone.  Must be called *after* pop."""
+        (
+            self.mg_white,
+            self.mg_black,
+            self.eg_white,
+            self.eg_black,
+            self.phase,
+        ) = self._stack.pop()
