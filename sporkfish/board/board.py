@@ -18,7 +18,7 @@ class Board(Protocol):
     def push_uci(self, move: str) -> None:
         ...
 
-    def pop(self) -> None:
+    def pop(self) -> chess.Move:
         ...
 
     def reset(self) -> None:
@@ -61,6 +61,12 @@ class Board(Protocol):
     def is_check(self) -> bool:
         ...
 
+    def is_game_over(self, *, claim_draw: bool = False) -> bool:
+        ...
+
+    def outcome(self, *, claim_draw: bool = False) -> Optional[chess.Outcome]:
+        ...
+
     def fen(self) -> str:
         ...
 
@@ -76,5 +82,18 @@ class Board(Protocol):
     def pieces(self, piece_type: chess.PieceType, color: chess.Color) -> Any:
         ...
 
+    def pieces_mask(self, piece_type: chess.PieceType, color: chess.Color) -> int:
+        ...
+
+    def king(self, color: chess.Color) -> Optional[chess.Square]:
+        ...
+
+    @property
+    def move_stack(self) -> Any:
+        ...
+
     def generate_legal_captures(self) -> Any:
+        ...
+
+    def copy(self, *, stack: bool = True) -> Any:
         ...

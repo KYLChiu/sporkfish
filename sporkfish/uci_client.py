@@ -4,7 +4,8 @@ from enum import Enum, auto
 
 from config import load_config
 from sporkfish.board.board import Board
-from sporkfish.board.board_factory import BoardFactory, BoardPyChess
+from sporkfish.board.board_bitboard import BoardBitboard
+from sporkfish.board.board_factory import BoardFactory
 from sporkfish.endgame_tablebases.composite_tablebase import CompositeTablebase
 from sporkfish.endgame_tablebases.endgame_tablebase_config import EndgameTablebaseConfig
 from sporkfish.engine import Engine
@@ -183,7 +184,7 @@ class UCIClient:
                 load_config().get("TimeManagerConfig")  # type: ignore
             )
         )
-        self._board = BoardFactory.create(BoardPyChess)
+        self._board = BoardFactory.create(BoardBitboard)
         if response_mode is UCIClient.UCIProtocol.ResponseMode.RETURN:
             response = self.send_command("uci")
             assert "uciok" in response, "UCIClient failed to initialize correctly."

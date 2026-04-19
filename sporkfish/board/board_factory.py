@@ -1,6 +1,7 @@
 from typing import Type
 
 from sporkfish.board.board import Board
+from sporkfish.board.board_bitboard import BoardBitboard
 from sporkfish.board.board_py_chess import BoardPyChess
 
 
@@ -20,6 +21,8 @@ class BoardFactory:
         :rtype: Board
         :raises TypeError: If the specified board type is not supported by BoardFactory.
         """
+        if board_type is BoardBitboard:
+            return BoardBitboard()
         if board_type is BoardPyChess:
             return BoardPyChess()
         raise TypeError(

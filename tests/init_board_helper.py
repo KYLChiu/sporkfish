@@ -1,4 +1,5 @@
-from sporkfish.board.board_factory import Board, BoardFactory, BoardPyChess
+from sporkfish.board.board_bitboard import BoardBitboard
+from sporkfish.board.board_factory import Board, BoardFactory
 from sporkfish.evaluator.evaluator_config import EvaluatorConfig, EvaluatorMode
 from sporkfish.evaluator.evaluator_factory import EvaluatorFactory
 from sporkfish.evaluator.pesto import Pesto
@@ -36,7 +37,7 @@ def init_board(fen_string: str) -> Board:
     Initialise chess board using FEN string
     https://www.dailychess.com/chess/chess-fen-viewer.php
     """
-    board = BoardFactory.create(BoardPyChess)
+    board = BoardFactory.create(BoardBitboard)
     board.set_fen(fen_string)
     return board
 
@@ -63,7 +64,7 @@ def searcher_with_fen(
     enable_lmr=False,
     move_order_config=MoveOrderConfig(move_order_mode=MoveOrderMode.MVV_LVA),
 ):
-    board = BoardFactory.create(board_type=BoardPyChess)
+    board = BoardFactory.create(board_type=BoardBitboard)
     s = SearcherFactory.create(
         SearcherConfig(
             max_depth,
