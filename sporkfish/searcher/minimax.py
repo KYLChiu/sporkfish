@@ -10,7 +10,6 @@ import stopit
 from sporkfish.board.board import Board
 from sporkfish.evaluator.evaluator import Evaluator
 from sporkfish.searcher.move_ordering.composite_heuristic import CompositeHeuristic
-from sporkfish.searcher.move_ordering.counter_move_heuristic import CounterMoveHeuristic
 from sporkfish.searcher.move_ordering.history_heuristic import HistoryHeuristic
 from sporkfish.searcher.move_ordering.killer_move_heuristic import KillerMoveHeuristic
 from sporkfish.searcher.move_ordering.move_order_config import MoveOrderMode
