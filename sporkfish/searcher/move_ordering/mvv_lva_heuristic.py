@@ -1,7 +1,10 @@
+from typing import Dict, Optional
+
 import chess
 
 from sporkfish.board.board import Board
 from sporkfish.searcher.move_ordering.move_order_heuristic import MoveOrderHeuristic
+from sporkfish.searcher.see import static_exchange_eval
 
 
 class MvvLvaHeuristic(MoveOrderHeuristic):
@@ -27,9 +30,14 @@ class MvvLvaHeuristic(MoveOrderHeuristic):
         [0, 0, 0, 0, 0, 0],  # victim K
     ]
 
-    def __init__(self, board: Board) -> None:
+    def __init__(
+        self,
+        board: Board,
+        piece_values: Optional[Dict[chess.PieceType, float]] = None,
+    ) -> None:
         MoveOrderHeuristic.__init__(self)
         self._board = board
+        self._piece_values = piece_values
 
     def evaluate(self, move: chess.Move) -> float:
         """
@@ -47,6 +55,12 @@ class MvvLvaHeuristic(MoveOrderHeuristic):
             and (captured_type := self._board.piece_type_at(move.to_square))
             and (moving_type := self._board.piece_type_at(move.from_square))
         ):
-            return MvvLvaHeuristic._MVV_LVA[captured_type - 1][moving_type - 1]
+            mvv_lva = MvvLvaHeuristic._MVV_LVA[captured_type - 1][moving_type - 1]
+            if self._piece_values is None:
+                return mvv_lva
+
+            # SEE dominates ordering between winning/losing captures.
+            see = static_exchange_eval(self._board, move, self._piece_values)
+            return see * 100.0 + mvv_lva
         else:
             return 0

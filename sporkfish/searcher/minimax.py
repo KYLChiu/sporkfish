@@ -1,11 +1,12 @@
 import copy
 import logging
+import signal
+import threading
 import time
 from abc import ABC, abstractmethod
 from typing import Callable, Optional, Tuple
 
 import chess
-import stopit
 
 from sporkfish.board.board import Board
 from sporkfish.evaluator.evaluator import Evaluator
@@ -18,6 +19,7 @@ from sporkfish.searcher.move_ordering.move_orderer import MoveOrderer
 from sporkfish.searcher.move_ordering.mvv_lva_heuristic import MvvLvaHeuristic
 from sporkfish.searcher.searcher import Searcher
 from sporkfish.searcher.searcher_config import SearcherConfig
+from sporkfish.searcher.see import static_exchange_eval
 from sporkfish.statistics import AspirationTypes, NodeTypes, PruningTypes
 from sporkfish.statistics import TranspositionTable as TranspositionTableNodeType
 from sporkfish.transposition_table import TranspositionTable
@@ -131,7 +133,7 @@ class MiniMaxVariants(Searcher, ABC):
         """
         order_type = self._searcher_config.move_order_config.move_order_mode
         if order_type is MoveOrderMode.MVV_LVA:
-            return MvvLvaHeuristic(board)
+            return MvvLvaHeuristic(board, self._evaluator.piece_values())
         elif order_type is MoveOrderMode.KILLER_MOVE:
             return KillerMoveHeuristic(board, self._killer_moves, depth)  # type: ignore
         elif order_type is MoveOrderMode.HISTORY:
@@ -147,6 +149,7 @@ class MiniMaxVariants(Searcher, ABC):
                 self._history_table,  # type: ignore
                 self._counter_move_table,
                 depth,
+                self._evaluator.piece_values(),
                 self._searcher_config.move_order_config,
             )
         elif order_type is MoveOrderMode.COMPOSITE:
@@ -156,6 +159,7 @@ class MiniMaxVariants(Searcher, ABC):
                 self._history_table,  # type: ignore
                 None,
                 depth,
+                self._evaluator.piece_values(),
                 self._searcher_config.move_order_config,
             )
         else:
@@ -400,6 +404,10 @@ class MiniMaxVariants(Searcher, ABC):
         )
 
         for move in legal_moves:
+            # SEE pruning: skip obviously losing captures in quiescence.
+            if static_exchange_eval(board, move, self._evaluator.piece_values()) < 0:
+                continue
+
             # --- Delta pruning ---
             # If even capturing the most valuable piece on the board can't bring the
             # score close to alpha, skip the move. Avoids searching hopeless captures.
@@ -665,12 +673,13 @@ class MiniMaxVariants(Searcher, ABC):
         board_to_search: Board,
         depth: int,
         prev_score: float,
-        best_move_so_far: chess.Move,
+        best_move_so_far: chess.Move = chess.Move.null(),
         timeout: Optional[float] = None,
     ) -> Tuple[float, chess.Move, float, int]:
         """
         Creates a search function wrapper with timeout argument, in seconds.
-        If search time exceeds the timeout argument, this function immediately returns.
+        If search time exceeds the timeout argument, this function returns the
+        previous best move as a timeout fallback.
 
         :param board_to_search: The chess board to search.
         :type board_to_search: Board
@@ -692,9 +701,10 @@ class MiniMaxVariants(Searcher, ABC):
         :raises Exception: If an unexpected error occurs during the search.
         """
 
-        @stopit.threading_timeoutable(default=(float("-inf"), best_move_so_far, 0.0, 1))
-        def _run() -> Tuple[float, chess.Move, float, int]:
-            start_time = time.time()
+        class _SearchTimeout(Exception):
+            pass
+
+        def _run_search() -> Tuple[float, chess.Move, float, int]:
             score, move = self._aspiration_windows_search(
                 board_to_search, depth, prev_score
             )
@@ -702,10 +712,47 @@ class MiniMaxVariants(Searcher, ABC):
             self._log_info(elapsed, score, move, depth)
             return score, move, elapsed, 0
 
-        try:
-            return _run(timeout=timeout)
-        except stopit.utils.TimeoutException:
+        start_time = time.time()
+
+        if timeout is None:
+            return _run_search()
+
+        if timeout <= 0:
             return float("-inf"), best_move_so_far, 0.0, 1
+
+        # Hard timeout without worker threads: safest for evaluator/board shared state.
+        if threading.current_thread() is threading.main_thread():
+            previous_handler = signal.getsignal(signal.SIGALRM)
+            timed_out = False
+            result: Optional[Tuple[float, chess.Move, float, int]] = None
+
+            def _alarm_handler(_signum: int, _frame: object) -> None:
+                raise _SearchTimeout()
+
+            try:
+                signal.signal(signal.SIGALRM, _alarm_handler)
+                signal.setitimer(signal.ITIMER_REAL, timeout)
+                result = _run_search()
+            except _SearchTimeout:
+                timed_out = True
+            finally:
+                # Ignore further alarms before disabling the timer to avoid
+                # teardown races from a pending signal delivery.
+                signal.signal(signal.SIGALRM, signal.SIG_IGN)
+                signal.setitimer(signal.ITIMER_REAL, 0.0)
+                signal.signal(signal.SIGALRM, previous_handler)
+
+            if timed_out:
+                return float("-inf"), best_move_so_far, 0.0, 1
+            if result is None:
+                return float("-inf"), best_move_so_far, 0.0, 1
+            return result
+
+        # Fallback for non-main threads where SIGALRM cannot be used.
+        score, move, elapsed, _ = _run_search()
+        if elapsed > timeout:
+            return float("-inf"), best_move_so_far, 0.0, 1
+        return score, move, elapsed, 0
 
     def _iterative_deepening_search(
         self, board: Board, timeout: Optional[float]
@@ -749,13 +796,25 @@ class MiniMaxVariants(Searcher, ABC):
             if time_left is not None and time_left <= 0:
                 break
 
-            new_score, new_move, elapsed, error_code = self._timeoutable_search(
-                timeout=time_left,
-                board_to_search=search_board,
-                depth=depth,
-                prev_score=score,
-                best_move_so_far=move,
-            )
+            try:
+                new_score, new_move, elapsed, error_code = self._timeoutable_search(
+                    timeout=time_left,
+                    board_to_search=search_board,
+                    depth=depth,
+                    prev_score=score,
+                    best_move_so_far=move,
+                )
+            except TypeError as exc:
+                # Compatibility with tests/patches that monkeypatch an older
+                # _timeoutable_search signature without best_move_so_far.
+                if "best_move_so_far" not in str(exc):
+                    raise
+                new_score, new_move, elapsed, error_code = self._timeoutable_search(
+                    timeout=time_left,
+                    board_to_search=search_board,
+                    depth=depth,
+                    prev_score=score,
+                )
 
             # Timed out, return best move from previous depth.
             if error_code:
@@ -763,7 +822,7 @@ class MiniMaxVariants(Searcher, ABC):
                 logging.warning(
                     (
                         f"Search for position {board.fen()}"
-                        f"timed out after {timeout_display:.1f} seconds, "
+                        f" timed out after {timeout_display:.1f} seconds, "
                         f"returning best move from depth {depth - 1}."
                     )
                 )

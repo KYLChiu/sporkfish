@@ -10,6 +10,7 @@ from sporkfish.searcher.move_ordering.move_order_config import (
 )
 from sporkfish.searcher.move_ordering.move_order_heuristic import MoveOrderHeuristic
 from sporkfish.searcher.move_ordering.mvv_lva_heuristic import MvvLvaHeuristic
+from sporkfish.searcher.see import static_exchange_eval
 
 
 class CompositeHeuristic(
@@ -34,9 +35,10 @@ class CompositeHeuristic(
         history_table: Dict[chess.Move, int],
         counter_move_table: Optional[Dict[chess.Move, chess.Move]],
         depth: int,
+        piece_values: Optional[Dict[chess.PieceType, float]] = None,
         move_order_config: MoveOrderConfig = MoveOrderConfig(),
     ) -> None:
-        MvvLvaHeuristic.__init__(self, board)
+        MvvLvaHeuristic.__init__(self, board, piece_values)
         KillerMoveHeuristic.__init__(self, board, killer_moves, depth)
         HistoryHeuristic.__init__(self, board, history_table)
         MoveOrderHeuristic.__init__(self)
@@ -76,10 +78,11 @@ class CompositeHeuristic(
             captured_type = self._board.piece_type_at(move.to_square)
             moving_type = self._board.piece_type_at(move.from_square)
             if captured_type and moving_type:
-                mvv_lva = (
-                    self._w_mvv_lva
-                    * MvvLvaHeuristic._MVV_LVA[captured_type - 1][moving_type - 1]
-                )
+                base = MvvLvaHeuristic._MVV_LVA[captured_type - 1][moving_type - 1]
+                if self._piece_values is not None:
+                    see = static_exchange_eval(self._board, move, self._piece_values)
+                    base = see * 100.0 + base
+                mvv_lva = self._w_mvv_lva * base
 
         # Killer move and history heuristics only apply to quiet (non-capture) moves.
         if is_cap:

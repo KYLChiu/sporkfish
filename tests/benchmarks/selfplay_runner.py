@@ -1,6 +1,8 @@
 import argparse
 import copy
 import csv
+import datetime
+import json
 import logging
 import math
 import random
@@ -414,6 +416,10 @@ def run_match(
     seed: int,
     openings: List[str] | None,
     runner_overrides: List[str] | None = None,
+    enforce_gate: bool = False,
+    min_los: float = 0.95,
+    min_elo_ci_lower: float = 0.0,
+    run_id: str | None = None,
     show_progress: bool = True,
 ) -> int:
     """Run a complete self-play match and estimate Elo difference.
@@ -469,6 +475,7 @@ def run_match(
     out_dir.mkdir(parents=True, exist_ok=True)
     out_csv = out_dir / "selfplay_summary.csv"
     out_pgn = out_dir / "selfplay_games.pgn"
+    out_json = out_dir / "selfplay_metrics.json"
 
     if out_csv.exists():
         out_csv.unlink()
@@ -589,9 +596,71 @@ def run_match(
     print(f"Board Type:   {board_type.lower()}")
     print(f"CSV:          {out_csv}")
     print(f"PGN:          {out_pgn}")
+
+    gate_passed = bool(los >= min_los and elo_ci_lower >= min_elo_ci_lower)
+    decision = "pass" if gate_passed else "fail"
+    created_at_utc = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
+    effective_run_id = run_id or created_at_utc.strftime("%Y%m%dT%H%M%SZ")
+    if enforce_gate:
+        print()
+        print("QUALITY GATE")
+        print(f"Enabled:      yes")
+        print(
+            f"Thresholds:   LOS >= {min_los:.1%}, Elo CI lower >= {min_elo_ci_lower:+.1f}"
+        )
+        print(f"Status:       {'PASS' if gate_passed else 'FAIL'}")
+    else:
+        print()
+        print("QUALITY GATE")
+        print("Enabled:      no")
+        print(f"Would pass:   {'yes' if gate_passed else 'no'}")
+
+    summary_payload = {
+        "decision": decision,
+        "games": int(games),
+        "wins": int(wins),
+        "draws": int(draws),
+        "losses": int(losses),
+        "score": float(score),
+        "elo": float(elo),
+        "score_ci_lower": float(ci_lower_score),
+        "score_ci_upper": float(ci_upper_score),
+        "elo_ci_lower": float(elo_ci_lower),
+        "elo_ci_upper": float(elo_ci_upper),
+        "los": float(los),
+        "board_type": board_type.lower(),
+        "thresholds": {
+            "enforce_gate": bool(enforce_gate),
+            "min_los": float(min_los),
+            "min_elo_ci_lower": float(min_elo_ci_lower),
+            "gate_passed": bool(gate_passed),
+        },
+        "run": {
+            "run_id": str(effective_run_id),
+            "created_at_utc": created_at_utc.isoformat().replace("+00:00", "Z"),
+            "config_path": str(base_config_path),
+            "seed": int(seed),
+            "games": int(games),
+            "move_time_s": float(move_time_s),
+            "max_plies": int(max_plies),
+            "opening_count": int(len(openings_to_use)),
+            "baseline_overrides": list(baseline_overrides),
+            "candidate_overrides": list(candidate_overrides),
+            "runner_overrides": list(runner_overrides or []),
+        },
+        "paths": {
+            "csv": str(out_csv),
+            "pgn": str(out_pgn),
+        },
+    }
+    with out_json.open("w", encoding="utf-8") as fh:
+        json.dump(summary_payload, fh, indent=2, sort_keys=True)
+        fh.write("\n")
+    print(f"JSON:         {out_json}")
+    print(f"Run ID:       {effective_run_id}")
     print("=" * 80)
     print()
-    return 0
+    return 1 if enforce_gate and not gate_passed else 0
 
 
 def _parse_args() -> argparse.Namespace:
@@ -686,6 +755,34 @@ Examples:
         ),
     )
     parser.add_argument(
+        "--enforce-gate",
+        action="store_true",
+        help=(
+            "Fail with nonzero exit code if quality gate is not met. "
+            "Gate conditions: LOS >= --min-los and Elo CI lower bound >= --min-elo-ci-lower."
+        ),
+    )
+    parser.add_argument(
+        "--min-los",
+        type=float,
+        default=0.95,
+        help="Minimum LOS threshold for gate pass (default: 0.95).",
+    )
+    parser.add_argument(
+        "--min-elo-ci-lower",
+        type=float,
+        default=0.0,
+        help="Minimum lower bound of Elo CI for gate pass (default: 0.0).",
+    )
+    parser.add_argument(
+        "--run-id",
+        default=None,
+        help=(
+            "Optional run identifier for JSON artifact correlation across CI/PR runs. "
+            "If omitted, defaults to UTC timestamp like 20260419T123456Z."
+        ),
+    )
+    parser.add_argument(
         "--log-level",
         default="ERROR",
         help="Python logging level: DEBUG, INFO, WARNING, ERROR (default: ERROR)",
@@ -721,6 +818,10 @@ def main() -> int:
         seed=args.seed,
         openings=args.opening_fen,
         runner_overrides=args.runner_override,
+        enforce_gate=args.enforce_gate,
+        min_los=args.min_los,
+        min_elo_ci_lower=args.min_elo_ci_lower,
+        run_id=args.run_id,
         show_progress=not args.no_progress,
     )
 
