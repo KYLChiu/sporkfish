@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict
 
 import chess
 
@@ -71,7 +71,6 @@ class SimpleEval(Evaluator):
         """Passed pawn bonus from side to move perspective."""
         own_pawns = board.pieces(chess.PAWN, stm)
         opp_pawns = board.pieces(chess.PAWN, not stm)
-        opp_bb = int(board.pieces_mask(chess.PAWN, not stm))
 
         bonus = 0.0
         pp_bonus = SimpleEval._PASSED_PAWN_BONUS
