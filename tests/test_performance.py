@@ -1,11 +1,62 @@
-import pytest
-from init_board_helper import board_setup, searcher_with_fen
+from dataclasses import dataclass
+from typing import Iterable, List, Sequence, Tuple
 
+import pytest
+from benchmark_utils import (
+    run_profile_analytics,
+    run_search_once,
+    score_epd_suite,
+    write_csv_report,
+)
+from init_board_helper import board_setup, searcher_with_fen
+from test_bratko_kopec import epds as BK_EPDS_ALL
+
+from sporkfish.evaluator.pesto import Pesto
+from sporkfish.evaluator.simple import SimpleEval
 from sporkfish.searcher.move_ordering.move_order_config import (
     MoveOrderConfig,
     MoveOrderMode,
 )
 from sporkfish.searcher.searcher_config import SearchMode
+
+# Subset of Bratko-Kopec (12/24) to keep this reproducible test reasonably fast.
+BK_EPDS_SUBSET = tuple(epd for epd in BK_EPDS_ALL.split("\n") if epd.strip())[:12]
+
+
+@dataclass(frozen=True)
+class BenchmarkResult:
+    label: str
+    depth: int
+    elapsed_s: float
+    score: float
+    best_move: str
+    bk_hits: int
+    bk_total: int
+
+
+def _search_once(depth: int, evaluator) -> Tuple[float, float, str]:
+    fen = board_setup["black"]["mid"]
+    return run_search_once(fen, depth, evaluator)
+
+
+def _bk_score(depth: int, evaluator_cls, epds: Sequence[str]) -> Tuple[int, int]:
+    return score_epd_suite(epds, depth, evaluator_cls)
+
+
+def _write_perf_report(results: Iterable[BenchmarkResult], file_name: str) -> None:
+    rows = []
+    for row in results:
+        pct = 100.0 * row.bk_hits / row.bk_total if row.bk_total else 0.0
+        rows.append(
+            f"{row.label},{row.depth},{row.elapsed_s:.3f},{row.score:.2f},"
+            f"{row.best_move},{row.bk_hits},{row.bk_total},{pct:.1f}"
+        )
+    write_csv_report(
+        file_name,
+        "Evaluator depth tradeoff benchmark\n"
+        "label,depth,elapsed_s,score,best_move,bk_hits,bk_total,bk_pct",
+        rows,
+    )
 
 
 @pytest.mark.parametrize(
@@ -43,12 +94,9 @@ class TestPerformance:
             move_order_mode=MoveOrderMode.MVV_LVA
         ),
     ) -> None:
-        import cProfile
-        import pstats
-
-        profiler = cProfile.Profile()
-        profiler.enable()
-        searcher_with_fen(
+        run_profile_analytics(
+            test_name,
+            searcher_with_fen,
             fen,
             max_depth,
             search_mode=search_mode,
@@ -59,39 +107,6 @@ class TestPerformance:
             enable_aspiration_windows=enable_aspiration_windows,
             move_order_config=move_order_config,
         )
-        profiler.disable()
-        stats = pstats.Stats(profiler)
-
-        import os
-        import sys
-
-        test_name = (
-            test_name.replace("[", "_")
-            .replace("]", "_")
-            .replace(" ", "_")
-            .replace("/", "_")
-        )
-        perf_test_folder = "perf/"
-
-        if not os.path.exists(perf_test_folder):
-            os.mkdir(perf_test_folder)
-
-        with open(
-            os.path.join(perf_test_folder, f"{test_name}.txt"),
-            "w",
-        ) as f:
-            sys.stdout = f
-            print(
-                "------------------------------------------------------------------------------------------------"
-            )
-            print(f"FEN: {fen}")
-            stats = pstats.Stats(profiler)
-            stats.strip_dirs().sort_stats("tottime").print_stats()
-            print(
-                "------------------------------------------------------------------------------------------------"
-            )
-
-        sys.stdout = sys.__stdout__
 
     @pytest.mark.slow
     def test_perf_base(self, request_fixture, fen_string: str, max_depth: int) -> None:
@@ -107,7 +122,7 @@ class TestPerformance:
     ) -> None:
         self._run_perf_analytics(
             request_fixture.node.name,
-            search_mode=SearchMode.PVS,
+            search_mode=SearchMode.PVS_SINGLE_PROCESS,
             fen=fen_string,
             max_depth=max_depth,
         )
@@ -192,3 +207,54 @@ class TestPerformance:
             enable_delta_pruning=True,
             enable_aspiration_windows=True,
         )
+
+
+@pytest.mark.slow
+def test_perf_simple_vs_pesto_depth_tradeoff() -> None:
+    """
+    Persistent slow benchmark for evaluator-depth tradeoff.
+
+    Goal:
+    - Compare runtime and tactical quality (BK subset) between PeSTO and Simple eval.
+    - Answer whether running Simple much deeper gives a large practical gain.
+
+    Run with:
+    pytest -q tests/test_performance.py -k simple_vs_pesto_depth_tradeoff --runslow -s
+    """
+    scenarios = [
+        ("pesto", 7, Pesto()),
+        ("simple", 8, SimpleEval()),
+        ("simple", 9, SimpleEval()),
+    ]
+
+    results: List[BenchmarkResult] = []
+
+    for label, depth, evaluator in scenarios:
+        elapsed_s, score, best_move = _search_once(depth, evaluator)
+        bk_hits, bk_total = _bk_score(depth, evaluator.__class__, BK_EPDS_SUBSET)
+
+        row = BenchmarkResult(
+            label=label,
+            depth=depth,
+            elapsed_s=elapsed_s,
+            score=score,
+            best_move=best_move,
+            bk_hits=bk_hits,
+            bk_total=bk_total,
+        )
+        results.append(row)
+
+    _write_perf_report(results, "test_perf_simple_vs_pesto_depth_tradeoff.txt")
+
+    for row in results:
+        bk_pct = 100.0 * row.bk_hits / row.bk_total if row.bk_total else 0.0
+        print(
+            f"{row.label}@d{row.depth}: {row.elapsed_s:.3f}s "
+            f"mid-score={row.score:.2f} move={row.best_move} "
+            f"BK={row.bk_hits}/{row.bk_total} ({bk_pct:.1f}%)"
+        )
+
+    # Keep assertions robust/non-flaky: verify benchmark executed and produced sane values.
+    assert len(results) == 3
+    assert all(r.elapsed_s > 0 for r in results)
+    assert all(0 <= r.bk_hits <= r.bk_total for r in results)

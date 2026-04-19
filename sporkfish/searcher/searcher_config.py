@@ -42,7 +42,7 @@ class SearcherConfig(Configurable):
                                        of previously computed positions to avoid redundant
                                        computation.
     :type enable_transposition_table: bool
-    :param enable_aspiration_windows: Enable aspiration windows (default: True).
+    :param enable_aspiration_windows: Enable aspiration windows (default: False).
                                       Enables or disables aspiration windows, a technique
                                       used to focus the search around promising moves.
     :type enable_aspiration_windows: bool
@@ -57,10 +57,12 @@ class SearcherConfig(Configurable):
         enable_futility_pruning: bool = False,
         enable_delta_pruning: bool = True,
         enable_transposition_table: bool = False,
-        enable_aspiration_windows: bool = True,
+        enable_aspiration_windows: bool = False,
         enable_check_extensions: bool = True,
         enable_lmr: bool = True,
         enable_reverse_futility_pruning: bool = True,
+        enable_counter_move_heuristic: bool = False,
+        enable_conservative_rfp_margin: bool = False,
     ) -> None:
         self.max_depth = max_depth
 
@@ -99,3 +101,11 @@ class SearcherConfig(Configurable):
         # is so good that a full search is unlikely to change the result - prune.
         # Much cheaper than null-move pruning (no recursive search call).
         self.enable_reverse_futility_pruning = enable_reverse_futility_pruning
+
+        # Experimental: counter-move heuristic in composite move ordering.
+        # Kept off by default because benchmark impact is workload-dependent.
+        self.enable_counter_move_heuristic = enable_counter_move_heuristic
+
+        # Experimental: add a half-pawn safety term to reverse futility margin.
+        # Off by default to preserve historical behavior.
+        self.enable_conservative_rfp_margin = enable_conservative_rfp_margin

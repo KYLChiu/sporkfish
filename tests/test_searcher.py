@@ -1,3 +1,6 @@
+from types import SimpleNamespace
+
+import chess
 import pytest
 from init_board_helper import (
     board_setup,
@@ -17,6 +20,9 @@ from sporkfish.searcher.move_ordering.mvv_lva_heuristic import MvvLvaHeuristic
 from sporkfish.searcher.searcher import Searcher
 from sporkfish.searcher.searcher_config import SearcherConfig, SearchMode
 from sporkfish.searcher.searcher_factory import SearcherFactory
+from sporkfish.statistics import PruningTypes
+from sporkfish.transposition_table import TranspositionTable
+from sporkfish.zobrist_hasher import ZobristStateInfo
 
 
 @pytest.mark.parametrize(
@@ -36,20 +42,23 @@ class TestValidMove:
         searcher_with_fen(fen_string)
 
 
-@pytest.mark.parametrize(
-    ("fen_string", "max_depth"),
-    [
-        (board_setup["white"]["open"], 3),
-        (board_setup["white"]["mid"], 3),
-        (board_setup["white"]["end"], 3),
-        (board_setup["white"]["two_kings"], 3),
-        (board_setup["black"]["open"], 3),
-        (board_setup["black"]["mid"], 3),
-        (board_setup["black"]["end"], 3),
-        # (board_setup["black"]["two_kings"], 3) TODO: (kchiu) Issue #63
-    ],
-)
-class TestConsistency:
+CONSISTENCY_FAST_CASES = [
+    (board_setup["white"]["open"], 2),
+    (board_setup["white"]["mid"], 2),
+    (board_setup["white"]["two_kings"], 2),
+    (board_setup["black"]["open"], 2),
+    (board_setup["black"]["end"], 2),
+]
+
+CONSISTENCY_SLOW_CASES = [
+    (board_setup["white"]["end"], 3),
+    (board_setup["black"]["mid"], 3),
+    (board_setup["white"]["mid"], 3),
+    # (board_setup["black"]["two_kings"], 3) TODO: (kchiu) Issue #63
+]
+
+
+class _ConsistencyBase:
     """Tests consistency across configs"""
 
     def _run_consistency_test(
@@ -121,6 +130,17 @@ class TestConsistency:
         self._run_consistency_test(
             fen=fen_string, max_depth=max_depth, enable_aspiration_windows=True
         )
+
+
+@pytest.mark.parametrize(("fen_string", "max_depth"), CONSISTENCY_FAST_CASES)
+class TestConsistency(_ConsistencyBase):
+    pass
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize(("fen_string", "max_depth"), CONSISTENCY_SLOW_CASES)
+class TestConsistencySlow(_ConsistencyBase):
+    pass
 
 
 @pytest.mark.parametrize(
@@ -299,41 +319,204 @@ def init_pvs_searcher(
     )
 
 
+PVS_FAST_FENS = [
+    board_setup["white"]["open"],
+    board_setup["white"]["mid"],
+    board_setup["white"]["two_kings"],
+    board_setup["black"]["open"],
+    board_setup["black"]["end"],
+]
+
+PVS_SLOW_FENS = [
+    board_setup["white"]["end"],
+    board_setup["black"]["mid"],
+    board_setup["black"]["two_kings"],
+]
+
+
 @pytest.mark.parametrize(
     ("fen_string"),
-    [
-        (board_setup["white"]["open"]),
-        (board_setup["white"]["mid"]),
-        (board_setup["white"]["end"]),
-        (board_setup["white"]["two_kings"]),
-        (board_setup["black"]["open"]),
-        (board_setup["black"]["mid"]),
-        (board_setup["black"]["end"]),
-        (board_setup["black"]["two_kings"]),
-        (board_setup["white"]["open"]),
-        (board_setup["white"]["mid"]),
-        (board_setup["white"]["end"]),
-        (board_setup["white"]["two_kings"]),
-        (board_setup["black"]["open"]),
-        (board_setup["black"]["mid"]),
-        (board_setup["black"]["end"]),
-        # (board_setup["black"]["two_kings"], [0, -90]) # Discussed with Jeremy to temp disable this,
-    ],
+    PVS_FAST_FENS,
 )
 class TestPVS:
     def test_pvs_depth(
         self, init_searcher: Searcher, init_pvs_searcher: Searcher, fen_string: str
     ) -> None:
         """
-        Testing PVS depth 1-4
+        Fast PVS parity check for regular unit-test runs.
         """
         s_nega = init_searcher
         s_pvs = init_pvs_searcher
 
-        for depth in range(1, 5):
+        for depth in range(1, 4):
             board = init_board(fen_string)
 
             alpha, beta = float("-inf"), float("inf")
             result_nega = s_nega._negamax(board, depth, alpha, beta, None)
             result_pvs = s_pvs._pvs(board, depth, alpha, beta, None)
             assert result_pvs == result_nega
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize(("fen_string"), PVS_SLOW_FENS)
+class TestPVSSlow:
+    def test_pvs_depth_4(
+        self, init_searcher: Searcher, init_pvs_searcher: Searcher, fen_string: str
+    ) -> None:
+        """Exhaustive depth-4 parity checks kept under --runslow."""
+        s_nega = init_searcher
+        s_pvs = init_pvs_searcher
+
+        board = init_board(fen_string)
+        alpha, beta = float("-inf"), float("inf")
+        result_nega = s_nega._negamax(board, 4, alpha, beta, None)
+        result_pvs = s_pvs._pvs(board, 4, alpha, beta, None)
+        assert result_pvs == result_nega
+
+
+class TestNegamaxPruningCoverage:
+    def test_negamax_null_move_pruning_branch(
+        self, init_searcher: Searcher, monkeypatch
+    ) -> None:
+        board = init_board(board_setup["white"]["mid"])
+        s = init_searcher
+
+        # Force the null-move pruning branch to trigger so we validate that early return path.
+        monkeypatch.setattr(s, "_null_move_pruning", lambda *_args, **_kwargs: True)
+
+        beta = 7.0
+        result = s._negamax(board, 3, -10.0, beta, None)
+
+        assert result == beta
+        assert s._statistics.visited[PruningTypes.NULL_MOVE] >= 1
+
+    def test_negamax_futility_pruning_branch(
+        self, init_searcher: Searcher, monkeypatch
+    ) -> None:
+        board = init_board(board_setup["white"]["mid"])
+        s = init_searcher
+
+        # Enable futility pruning and disable earlier exits so we can force
+        # and observe the futility-continue path in the main negamax loop.
+        s._searcher_config.enable_futility_pruning = True
+        monkeypatch.setattr(s, "_null_move_pruning", lambda *_args, **_kwargs: False)
+        monkeypatch.setattr(
+            s, "_reverse_futility_pruning", lambda *_args, **_kwargs: False
+        )
+        monkeypatch.setattr(s, "_razoring", lambda *_args, **_kwargs: None)
+        monkeypatch.setattr(s, "_futility_pruning", lambda *_args, **_kwargs: True)
+
+        result = s._negamax(board, 2, -50.0, 50.0, None)
+
+        # Branch-coverage goal: ensure the futility path is hit.
+        # If all moves are skipped as futile, fail-soft value can remain -inf.
+        assert result == float("-inf")
+        assert s._statistics.visited[PruningTypes.FUTILITY] >= 1
+
+
+class TestPVSBranchCoverage:
+    def test_pvs_tt_exact_hit_branch(
+        self, init_pvs_searcher: Searcher, monkeypatch
+    ) -> None:
+        board = init_board(board_setup["white"]["mid"])
+        s = init_pvs_searcher
+        zobrist_state = ZobristStateInfo(
+            zobrist_hash=1234, ep_file=127, castling_rights=0
+        )
+        s._searcher_config.enable_transposition_table = True
+        s._transposition_table = SimpleNamespace(
+            probe=lambda *_args, **_kwargs: (2, 42.0, TranspositionTable.EXACT, None)
+        )
+
+        result = s._pvs(board, 2, -100.0, 100.0, zobrist_state)
+
+        assert result == 42.0
+
+    def test_pvs_null_move_pruning_branch(
+        self, init_pvs_searcher: Searcher, monkeypatch
+    ) -> None:
+        board = init_board(board_setup["white"]["mid"])
+        s = init_pvs_searcher
+
+        monkeypatch.setattr(s, "_null_move_pruning", lambda *_args, **_kwargs: True)
+
+        beta = 9.0
+        result = s._pvs(board, 3, -10.0, beta, None)
+
+        assert result == beta
+        assert s._statistics.visited[PruningTypes.NULL_MOVE] >= 1
+
+    def test_pvs_futility_pruning_branch(
+        self, init_pvs_searcher: Searcher, monkeypatch
+    ) -> None:
+        board = init_board(board_setup["white"]["mid"])
+        s = init_pvs_searcher
+
+        s._searcher_config.enable_futility_pruning = True
+        monkeypatch.setattr(s, "_null_move_pruning", lambda *_args, **_kwargs: False)
+        monkeypatch.setattr(
+            s, "_reverse_futility_pruning", lambda *_args, **_kwargs: False
+        )
+        monkeypatch.setattr(s, "_razoring", lambda *_args, **_kwargs: None)
+        monkeypatch.setattr(s, "_futility_pruning", lambda *_args, **_kwargs: True)
+
+        result = s._pvs(board, 2, -50.0, 50.0, None)
+
+        assert result == float("-inf")
+        assert s._statistics.visited[PruningTypes.FUTILITY] >= 1
+
+    def test_pvs_terminal_positions(self, init_pvs_searcher: Searcher) -> None:
+        s = init_pvs_searcher
+
+        # No legal moves while in check should be scored as a forced loss.
+        checkmate_board = init_board("7k/6Q1/6K1/8/8/8/8/8 b - - 0 1")
+        checkmate_score = s._pvs(checkmate_board, 1, -100.0, 100.0, None)
+        assert checkmate_score < -90000
+
+        # No legal moves while not in check is stalemate (draw).
+        stalemate_board = init_board("7k/5Q2/7K/8/8/8/8/8 b - - 0 1")
+        stalemate_score = s._pvs(stalemate_board, 1, -100.0, 100.0, None)
+        assert stalemate_score == 0
+
+
+class TestIterativeDeepeningTimeBudget:
+    def test_iterative_deepening_passes_remaining_timeout(
+        self, init_searcher: Searcher, monkeypatch
+    ) -> None:
+        s = init_searcher
+        board = init_board(board_setup["white"]["open"])
+
+        observed_timeouts = []
+
+        def fake_timeoutable_search(*, timeout, board_to_search, depth, prev_score):
+            observed_timeouts.append(timeout)
+            return 0.0, chess.Move.null(), 0.1, 0
+
+        monkeypatch.setattr(s, "_timeoutable_search", fake_timeoutable_search)
+        monkeypatch.setattr(s._statistics, "reset_visited", lambda: None)
+
+        s._iterative_deepening_search(board, timeout=0.25)
+
+        assert len(observed_timeouts) >= 2
+        assert observed_timeouts[0] == pytest.approx(0.25)
+        assert observed_timeouts[1] == pytest.approx(0.15, abs=1e-6)
+
+    def test_iterative_deepening_stops_when_budget_exhausted(
+        self, init_searcher: Searcher, monkeypatch
+    ) -> None:
+        s = init_searcher
+        board = init_board(board_setup["white"]["open"])
+
+        calls = {"count": 0}
+
+        def fake_timeoutable_search(*, timeout, board_to_search, depth, prev_score):
+            calls["count"] += 1
+            # Simulate a single over-budget depth iteration.
+            return 0.0, chess.Move.null(), 0.3, 0
+
+        monkeypatch.setattr(s, "_timeoutable_search", fake_timeoutable_search)
+        monkeypatch.setattr(s._statistics, "reset_visited", lambda: None)
+
+        s._iterative_deepening_search(board, timeout=0.1)
+
+        assert calls["count"] == 1

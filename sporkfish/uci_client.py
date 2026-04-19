@@ -146,7 +146,11 @@ class UCIClient:
                         # Convert to ms -> s
                         time = float(tokens[idx + 1]) / 1000.0
                         increment = float(tokens[idx + 3]) / 1000.0
-                        timeout = time_manager.get_timeout(time, increment)
+                        timeout = time_manager.get_timeout(
+                            time,
+                            increment,
+                            ply=len(board.move_stack),
+                        )
                         break
                     idx += 1
 

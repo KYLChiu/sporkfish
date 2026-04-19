@@ -10,6 +10,7 @@ import stopit
 from sporkfish.board.board import Board
 from sporkfish.evaluator.evaluator import Evaluator
 from sporkfish.searcher.move_ordering.composite_heuristic import CompositeHeuristic
+from sporkfish.searcher.move_ordering.counter_move_heuristic import CounterMoveHeuristic
 from sporkfish.searcher.move_ordering.history_heuristic import HistoryHeuristic
 from sporkfish.searcher.move_ordering.killer_move_heuristic import KillerMoveHeuristic
 from sporkfish.searcher.move_ordering.move_order_config import MoveOrderMode
@@ -18,7 +19,7 @@ from sporkfish.searcher.move_ordering.move_orderer import MoveOrderer
 from sporkfish.searcher.move_ordering.mvv_lva_heuristic import MvvLvaHeuristic
 from sporkfish.searcher.searcher import Searcher
 from sporkfish.searcher.searcher_config import SearcherConfig
-from sporkfish.statistics import NodeTypes, PruningTypes
+from sporkfish.statistics import AspirationTypes, NodeTypes, PruningTypes
 from sporkfish.statistics import TranspositionTable as TranspositionTableNodeType
 from sporkfish.transposition_table import TranspositionTable
 from sporkfish.zobrist_hasher import (
@@ -91,6 +92,10 @@ class MiniMaxVariants(Searcher, ABC):
             else None
         )
 
+        self._counter_move_table = (
+            dict() if self._searcher_config.enable_counter_move_heuristic else None
+        )
+
         # Cache pawn value to avoid repeated dict lookups in hot paths.
         self._pawn_value = evaluator.piece_values()[chess.PAWN]
         self._pawn_value_half = self._pawn_value // 2
@@ -132,11 +137,25 @@ class MiniMaxVariants(Searcher, ABC):
             return KillerMoveHeuristic(board, self._killer_moves, depth)  # type: ignore
         elif order_type is MoveOrderMode.HISTORY:
             return HistoryHeuristic(board, self._history_table)  # type: ignore
+        elif (
+            order_type is MoveOrderMode.COMPOSITE
+            and self._searcher_config.enable_counter_move_heuristic
+            and self._counter_move_table is not None
+        ):
+            return CompositeHeuristic(
+                board,
+                self._killer_moves,  # type: ignore
+                self._history_table,  # type: ignore
+                self._counter_move_table,
+                depth,
+                self._searcher_config.move_order_config,
+            )
         elif order_type is MoveOrderMode.COMPOSITE:
             return CompositeHeuristic(
                 board,
                 self._killer_moves,  # type: ignore
                 self._history_table,  # type: ignore
+                None,
                 depth,
                 self._searcher_config.move_order_config,
             )
@@ -146,7 +165,9 @@ class MiniMaxVariants(Searcher, ABC):
                 {type(order_type).__name__}."
             )
 
-    def _update_killer_moves(self, move: chess.Move, depth: int) -> None:
+    def _update_killer_moves(
+        self, move: chess.Move, depth: int, capture: bool = False
+    ) -> None:
         """
         Updates the killer move table.
         To be used inside a beta cutoff.
@@ -155,10 +176,13 @@ class MiniMaxVariants(Searcher, ABC):
         :type move: chess.Move
         :param depth: The depth of the search.
         :type depth: int
+        :param capture: Whether the move is a capture. Captures are skipped because
+                        MVV-LVA already orders them; polluting killers with captures
+                        reduces the table's effectiveness for quiet-move ordering.
+        :type capture: bool
         """
-
-        # TODO: do we need to check if captures here too?
-        if self._killer_moves:
+        # Only store quiet (non-capture) moves; captures are handled by MVV-LVA ordering.
+        if self._killer_moves and not capture:
             self._killer_moves[depth].pop()
             self._killer_moves[depth].insert(0, move)
 
@@ -184,6 +208,42 @@ class MiniMaxVariants(Searcher, ABC):
             else:
                 self._history_table[move] = increment
 
+    def _decay_history_table(self) -> None:
+        """
+        Decay history scores between iterative-deepening iterations.
+
+        Without decay, early-iteration cutoffs can dominate ordering even when
+        deeper searches disagree. A mild decay keeps useful signal while letting
+        newer evidence take precedence.
+        """
+        if not self._history_table:
+            return
+
+        # Keep integer arithmetic and prune dead entries to avoid unbounded growth.
+        stale_moves = []
+        for move, score in self._history_table.items():
+            decayed = (score * 9) // 10
+            if decayed > 0:
+                self._history_table[move] = decayed
+            else:
+                stale_moves.append(move)
+
+        for move in stale_moves:
+            del self._history_table[move]
+
+    def _update_counter_move_table(
+        self, board: Board, move: chess.Move, capture: bool = False
+    ) -> None:
+        if (
+            not self._searcher_config.enable_counter_move_heuristic
+            or self._counter_move_table is None
+            or capture
+            or not board.move_stack
+        ):
+            return
+
+        self._counter_move_table[board.move_stack[-1]] = move
+
     def _aspiration_windows_search(
         self,
         board_to_search: Board,
@@ -206,26 +266,44 @@ class MiniMaxVariants(Searcher, ABC):
         :return: A tuple containing the score and the best move found during the search.
         :rtype: Tuple[float, chess.Move]
         """
-        if self._searcher_config.enable_aspiration_windows and depth > 1:
-            # We leave configuration for window_size to another PR
-            window_size = self._pawn_value_half
-            alpha = prev_score - window_size
-            beta = prev_score + window_size
+        if not (self._searcher_config.enable_aspiration_windows and depth > 1):
+            return self._start_search_from_root(
+                board_to_search, depth, -float("inf"), float("inf")
+            )
+
+        # Start with a moderate window around the previous iteration's score and
+        # progressively widen on fail-low / fail-high. This avoids the expensive
+        # immediate fallback to a full-width re-search in the common near-miss case.
+        window_size = self._pawn_value
+        alpha = prev_score - window_size
+        beta = prev_score + window_size
+
+        # Keep retries bounded so pathological positions still terminate quickly.
+        for _ in range(3):
+            self._statistics.increment_visited(AspirationTypes.ATTEMPT)
             score, move = self._start_search_from_root(
                 board_to_search, depth, alpha, beta
             )
-            if score <= alpha or score >= beta:
-                logging.info(
-                    "Search score outside aspiration window bounds, doing a full search."
-                )
-                score, move = self._start_search_from_root(
-                    board_to_search, depth, -float("inf"), float("inf")
-                )
-        else:
-            score, move = self._start_search_from_root(
-                board_to_search, depth, -float("inf"), float("inf")
-            )
-        return score, move
+            if score <= alpha:
+                self._statistics.increment_visited(AspirationTypes.FAIL_LOW)
+                alpha -= window_size
+                window_size *= 2
+                continue
+            if score >= beta:
+                self._statistics.increment_visited(AspirationTypes.FAIL_HIGH)
+                beta += window_size
+                window_size *= 2
+                continue
+            self._statistics.increment_visited(AspirationTypes.IN_WINDOW)
+            return score, move
+
+        logging.info(
+            "Search score outside widened aspiration bounds, doing a full search."
+        )
+        self._statistics.increment_visited(AspirationTypes.FULL_FALLBACK)
+        return self._start_search_from_root(
+            board_to_search, depth, -float("inf"), float("inf")
+        )
 
     def _quiescence(
         self,
@@ -504,6 +582,8 @@ class MiniMaxVariants(Searcher, ABC):
         if depth >= 2 and depth <= rfp_max_depth and not in_check:
             static_eval = self._evaluator.evaluate(board)
             margin = depth * self._pawn_value
+            if self._searcher_config.enable_conservative_rfp_margin:
+                margin += self._pawn_value_half
             if static_eval - margin >= beta:
                 return True
         return False
@@ -652,11 +732,17 @@ class MiniMaxVariants(Searcher, ABC):
         # is unnecessary and was paying deepcopy cost O(max_depth) times.
         search_board = copy.deepcopy(board)
         self._evaluator.init_from_board(search_board)
+        time_left = timeout
 
         for depth in range(1, self._max_depth + 1):
             self._statistics.reset_visited()
+            # Allow newer cutoff evidence to outweigh stale history from shallow depths.
+            self._decay_history_table()
 
-            time_left = timeout
+            # When timed, pass the remaining budget into each deeper iteration.
+            if time_left is not None and time_left <= 0:
+                break
+
             new_score, new_move, elapsed, error_code = self._timeoutable_search(
                 timeout=time_left,
                 board_to_search=search_board,
@@ -666,10 +752,11 @@ class MiniMaxVariants(Searcher, ABC):
 
             # Timed out, return best move from previous depth.
             if error_code:
+                timeout_display = time_left if time_left is not None else 0.0
                 logging.warning(
                     (
                         f"Search for position {board.fen()}"
-                        f"timed out after {timeout:.1f} seconds, "
+                        f"timed out after {timeout_display:.1f} seconds, "
                         f"returning best move from depth {depth - 1}."
                     )
                 )
@@ -680,7 +767,7 @@ class MiniMaxVariants(Searcher, ABC):
                 score, move = new_score, new_move
                 if time_left is not None:
                     time_left -= elapsed
-                    if time_left <= 0:  # type: ignore
+                    if time_left <= 0:
                         break
 
         logging.info(f"End search for FEN {board.fen()}.")

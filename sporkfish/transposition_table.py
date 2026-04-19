@@ -1,7 +1,5 @@
 from typing import Dict, Optional, Tuple
 
-import numpy as np
-
 
 class TranspositionTable:
     EXACT = 0
@@ -15,18 +13,18 @@ class TranspositionTable:
     _FLAG = 2
     _BEST_MOVE = 3
 
-    def __init__(self, dct: Dict[np.int64, Tuple]) -> None:
+    def __init__(self, dct: Dict[int, Tuple]) -> None:
         """
         Initialize the TranspositionTable object.
 
         :param dct: A dictionary containing Zobrist hash keys and associated entries.
-        :type dct: Dict[np.int64, Tuple]
+        :type dct: Dict[int, Tuple]
         """
         self._table = dct
 
     def store(
         self,
-        zobrist_hash: np.int64,
+        zobrist_hash: int,
         depth: int,
         score: float,
         flag: int,
@@ -37,7 +35,7 @@ class TranspositionTable:
         Only stores if the existing entry depth is lower than the input one.
 
         :param zobrist_hash: The Zobrist hash value for the board position.
-        :type zobrist_hash: np.int64
+        :type zobrist_hash: int
         :param depth: The depth at which the score was calculated.
         :type depth: int
         :param score: The score associated with the board position.
@@ -50,12 +48,12 @@ class TranspositionTable:
         if not existing_entry or depth > existing_entry[self._DEPTH]:
             self._table[zobrist_hash] = (depth, score, flag, best_move)
 
-    def probe(self, zobrist_hash: np.int64, depth: int) -> Optional[Tuple]:
+    def probe(self, zobrist_hash: int, depth: int) -> Optional[Tuple]:
         """
         Retrieve an entry from the transposition table, if the existing entry depth is larger than the input one.
 
         :param zobrist_hash: The Zobrist hash value for the board position.
-        :type zobrist_hash: np.int64
+        :type zobrist_hash: int
         :param depth: The depth at which the score is needed.
         :type depth: int
 
@@ -67,13 +65,13 @@ class TranspositionTable:
             return entry
         return None
 
-    def get_best_move(self, zobrist_hash: np.int64):
+    def get_best_move(self, zobrist_hash: int):
         """
         Return the best move stored for this position, regardless of depth.
         Used for hash-move ordering at root nodes without requiring a depth match.
 
         :param zobrist_hash: The Zobrist hash value for the board position.
-        :type zobrist_hash: np.int64
+        :type zobrist_hash: int
 
         :return: The stored best move, or None if no entry or no move stored.
         """

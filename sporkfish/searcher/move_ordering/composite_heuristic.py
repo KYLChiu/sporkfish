@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import chess
 
@@ -32,6 +32,7 @@ class CompositeHeuristic(
         board: Board,
         killer_moves: List[List[chess.Move]],
         history_table: Dict[chess.Move, int],
+        counter_move_table: Optional[Dict[chess.Move, chess.Move]],
         depth: int,
         move_order_config: MoveOrderConfig = MoveOrderConfig(),
     ) -> None:
@@ -46,6 +47,10 @@ class CompositeHeuristic(
         self._w_mvv_lva = move_order_config.mvv_lva_weight
         self._w_killer = move_order_config.killer_moves_weight
         self._w_history = move_order_config.history_weight
+        self._w_counter = move_order_config.counter_move_weight
+        self._counter_move_table = (
+            counter_move_table if counter_move_table is not None else {}
+        )
 
     def evaluate(
         self,
@@ -82,4 +87,9 @@ class CompositeHeuristic(
 
         killer = self._w_killer * (1 if move in self._killer_moves[self._depth] else 0)
         history = self._w_history * self._history_table.get(move, 0)
-        return mvv_lva + killer + history
+        counter = 0.0
+        if self._counter_move_table and self._board.move_stack:
+            previous_move = self._board.move_stack[-1]
+            if self._counter_move_table.get(previous_move) == move:
+                counter = self._w_counter
+        return mvv_lva + killer + history + counter

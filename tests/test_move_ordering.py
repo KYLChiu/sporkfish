@@ -88,7 +88,7 @@ class TestCompositeHeuristic:
         board = init_board(board_setup["white"]["can_capture_queen"])
 
         base_heuristic = MvvLvaHeuristic(board)
-        composite_heuristic = CompositeHeuristic(board, [[]], {}, 0)
+        composite_heuristic = CompositeHeuristic(board, [[]], {}, None, 0)
 
         base_legal_moves = MoveOrderer.order_moves(base_heuristic, board.legal_moves)
         composite_legal_moves = MoveOrderer.order_moves(
@@ -104,7 +104,7 @@ class TestCompositeHeuristic:
             [chess.Move.from_uci("c4b6"), chess.Move.null()],
         ]
         base_heuristic = KillerMoveHeuristic(board, killer_moves, 1)
-        composite_heuristic = CompositeHeuristic(board, killer_moves, {}, 1)
+        composite_heuristic = CompositeHeuristic(board, killer_moves, {}, None, 1)
 
         base_legal_moves = MoveOrderer.order_moves(base_heuristic, board.legal_moves)
         composite_legal_moves = MoveOrderer.order_moves(
@@ -124,7 +124,7 @@ class TestCompositeHeuristic:
             [chess.Move.null(), chess.Move.null()],
             [chess.Move.from_uci("h2h3"), chess.Move.null()],
         ]
-        composite_heuristic = CompositeHeuristic(board, killer_moves, {}, 1)
+        composite_heuristic = CompositeHeuristic(board, killer_moves, {}, None, 1)
 
         pos_scores = sum(
             1 for move in board.legal_moves if composite_heuristic.evaluate(move) > 0
@@ -137,7 +137,7 @@ class TestCompositeHeuristic:
             [chess.Move.null(), chess.Move.null()],
             [chess.Move.null(), chess.Move.null()],
         ]
-        composite_heuristic = CompositeHeuristic(board, killer_moves, {}, 1)
+        composite_heuristic = CompositeHeuristic(board, killer_moves, {}, None, 1)
 
         # _move_order_weights was replaced by plain float attributes to eliminate
         # enum.__hash__ overhead from dict lookups in the hot evaluate() path.
@@ -145,5 +145,6 @@ class TestCompositeHeuristic:
             composite_heuristic._w_mvv_lva,
             composite_heuristic._w_killer,
             composite_heuristic._w_history,
+            composite_heuristic._w_counter,
         ):
             assert isinstance(value, float)

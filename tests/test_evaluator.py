@@ -1,9 +1,12 @@
+import pytest
 from init_board_helper import board_setup, score_fen
 
+from sporkfish.board.board_factory import BoardFactory, BoardPyChess
 from sporkfish.evaluator.evaluator import Evaluator
 from sporkfish.evaluator.evaluator_config import EvaluatorConfig, EvaluatorMode
 from sporkfish.evaluator.evaluator_factory import EvaluatorFactory
 from sporkfish.evaluator.pesto import Pesto
+from sporkfish.evaluator.simple import SimpleEval
 
 
 def _evaluator(
@@ -145,6 +148,15 @@ class TestEvaluatorFactory:
         evaluator = EvaluatorFactory.create(EvaluatorConfig())
         assert isinstance(evaluator, Pesto)
 
+    def test_create_unsupported_mode_raises(self) -> None:
+        cfg = EvaluatorConfig()
+        cfg.evaluator_mode = object()
+
+        with pytest.raises(
+            TypeError, match="does not support the creation of Evaluator"
+        ):
+            EvaluatorFactory.create(cfg)
+
 
 class TestScore:
     # NB: static evaluation function must return a score relative to the side to being evaluated, e.g. the simplest score evaluation could be:
@@ -164,3 +176,47 @@ class TestScore:
     def test_white_winning_black_to_move(self) -> None:
         score = score_fen("8/1Q6/8/8/1k1K4/8/8/8 b - - 16 74")
         assert score < 0
+
+
+class TestSimpleEvaluator:
+    def test_material_only_sign_flips_with_turn(self) -> None:
+        ev = SimpleEval()
+        board = BoardFactory.create(BoardPyChess)
+        board.set_fen("4k3/8/8/8/8/8/8/3QK3 w - - 0 1")
+
+        # White to move with an extra queen should be +1025 by pure material.
+        assert ev.evaluate(board) == 1025.0
+
+        # Same board, black to move should negate the side-to-move perspective.
+        board.set_fen("4k3/8/8/8/8/8/8/3QK3 b - - 0 1")
+        assert ev.evaluate(board) == -1025.0
+
+    def test_passed_pawn_bonus_for_white_side_to_move(self) -> None:
+        ev = SimpleEval()
+        board = BoardFactory.create(BoardPyChess)
+        board.set_fen("4k3/8/8/4P3/8/8/8/4K3 w - - 0 1")
+
+        # White pawn on e5: material 82 + passed-pawn bonus on rank 4 => 35.
+        assert ev.evaluate(board) == 117.0
+
+    def test_passed_pawn_bonus_for_black_side_to_move(self) -> None:
+        ev = SimpleEval()
+        board = BoardFactory.create(BoardPyChess)
+        board.set_fen("4k3/8/8/8/8/8/4p3/4K3 b - - 0 1")
+
+        # Black pawn on e2 from black POV: material 82 + near-promotion bonus (index 6) => 100.
+        assert ev.evaluate(board) == 182.0
+
+    def test_simple_eval_api_methods(self) -> None:
+        ev = SimpleEval()
+        board = BoardFactory.create(BoardPyChess)
+        board.set_fen(board_setup["white"]["open"])
+
+        # No-op incremental hooks should be callable and stable.
+        ev.init_from_board(board)
+        move = next(iter(board.legal_moves))
+        ev.on_push(board, move)
+        ev.on_pop()
+
+        assert ev.piece_values() == SimpleEval.MG_PIECE_VALUES
+        assert ev.delta() == SimpleEval.DELTA

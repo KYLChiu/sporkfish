@@ -54,7 +54,7 @@ class ZobristStateInfo:
     Stores the information from the current state of the board.
 
     :param zobrist_hash: The Zobrist hash value representing the current board state
-    :type zobrist_hash: np.int64
+    :type zobrist_hash: int
     :param ep_file: The file where en passant is possible, or _NO_EP_FILE (127) if none.
     :type ep_file: int
     :param castling_rights: 4-bit integer encoding castling rights (0–15).
@@ -63,7 +63,7 @@ class ZobristStateInfo:
     :type castling_rights: int
     """
 
-    zobrist_hash: np.int64
+    zobrist_hash: int
     ep_file: int
     castling_rights: int
 
@@ -139,7 +139,7 @@ class ZobristHasher:
         castling_rights = ZobristHasher._parse_castling_rights(board)
         board_hash ^= int(_CASTLING_KEYS_NP[castling_rights])
 
-        return ZobristStateInfo(np.int64(board_hash), ep_file, castling_rights)
+        return ZobristStateInfo(board_hash, ep_file, castling_rights)
 
     def incremental_zobrist_hash(
         self,
@@ -199,4 +199,4 @@ class ZobristHasher:
         h ^= _CASTLING_KEYS[prev_state.castling_rights]
         h ^= _CASTLING_KEYS[castling_rights]
 
-        return ZobristStateInfo(np.int64(h), ep_file, castling_rights)
+        return ZobristStateInfo(h, ep_file, castling_rights)

@@ -1,6 +1,6 @@
 import pytest
+from benchmark_utils import run_profile_analytics
 from init_board_helper import board_setup
-from perf_helper import run_perf_analytics
 
 from sporkfish.board.board_factory import BoardPyChess
 from sporkfish.endgame_tablebases.composite_tablebase import (
@@ -82,7 +82,7 @@ class TestEndgameTablebasePerformance:
         return request
 
     def test_et_query_perf(self, request_fixture, fen_string):
-        run_perf_analytics(request_fixture.node.name, move_from_et_query, fen_string)
+        run_profile_analytics(request_fixture.node.name, move_from_et_query, fen_string)
 
 
 class TestLilaEndgameTablebase:

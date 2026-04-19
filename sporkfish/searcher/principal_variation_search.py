@@ -189,6 +189,9 @@ class PVSSp(MiniMaxVariants):
 
         # --- Main search loop (PVS logic) ---
         for idx, move in enumerate(legal_moves):
+            # Always compute capture flag (needed for futility and killer updates).
+            capture = board.is_capture(move)
+
             # Snapshot board state BEFORE pushing, for incremental Zobrist hashing.
             # Use piece_type_at + color_at and compute the Zobrist index directly,
             # avoiding chess.Piece object creation (~600K __init__ calls eliminated).
@@ -198,11 +201,6 @@ class PVSSp(MiniMaxVariants):
                 from_cpt = zobrist_piece_index(from_pt, from_color)
             else:
                 from_cpt = -1
-            capture = (
-                board.is_capture(move)
-                if self._searcher_config.enable_futility_pruning or zobrist_state
-                else False
-            )
             if zobrist_state and capture:
                 cap_pt = board.piece_type_at(move.to_square)
                 if cap_pt:
@@ -309,8 +307,9 @@ class PVSSp(MiniMaxVariants):
                 # Update move ordering heuristics so this refutation is tried first
                 # in sibling nodes of future searches.
                 self._statistics.increment_visited(PruningTypes.ALPHA_BETA)
-                self._update_killer_moves(move, depth)
+                self._update_killer_moves(move, depth, capture)
                 self._update_history_table(move, depth)
+                self._update_counter_move_table(board, move, capture)
                 break
 
         # --- TT store ---
@@ -435,7 +434,9 @@ class PVSSp(MiniMaxVariants):
 
             alpha = max(alpha, value)
             if alpha >= beta:
-                self._update_killer_moves(move, depth)
+                capture = board.is_capture(move)
+                self._update_killer_moves(move, depth, capture)
+                self._update_counter_move_table(board, move, capture)
                 self._update_history_table(move, depth)
                 self._statistics.increment_visited(PruningTypes.ALPHA_BETA)
                 break

@@ -54,6 +54,32 @@ _RANKS_ABOVE = tuple(
 )
 _RANKS_BELOW = tuple((1 << (r * 8)) - 1 for r in range(8))
 
+# Constants for passed-pawn bitboard fill (see _passed_pawns).
+_FILE_A_BB = 0x0101010101010101  # all squares on the a-file
+_FILE_H_BB = 0x8080808080808080  # all squares on the h-file
+_BB_MASK = 0xFFFFFFFFFFFFFFFF  # 64-bit mask
+
+
+def _spread_files(bb: int) -> int:
+    """Spread a pawn bitboard to same file and both adjacent files."""
+    return bb | ((bb & ~_FILE_H_BB) << 1) | ((bb & ~_FILE_A_BB) >> 1)
+
+
+def _fill_south(bb: int) -> int:
+    """Flood-fill toward rank 0 (south); returns all squares AT OR BELOW each set bit."""
+    bb |= bb >> 8
+    bb |= bb >> 16
+    bb |= bb >> 32
+    return bb & _BB_MASK
+
+
+def _fill_north(bb: int) -> int:
+    """Flood-fill toward rank 7 (north); returns all squares AT OR ABOVE each set bit."""
+    bb |= bb << 8
+    bb |= bb << 16
+    bb |= bb << 32
+    return bb & _BB_MASK
+
 
 class Pesto(Evaluator):
     """
@@ -497,40 +523,73 @@ class Pesto(Evaluator):
 
         A pawn is passed if no enemy pawn can block or capture it on the way
         to promotion (no enemy pawn on same file or adjacent files ahead).
+
+        Uses a loop-free bitboard fill to find ALL passed pawns at once:
+        1. Spread each opponent pawn to same + adjacent files.
+        2. Flood-fill that mask toward own back rank — this creates the "block span":
+           every square that an opponent pawn prevents a passed pawn from occupying.
+        3. Passed pawns = own pawns NOT in the block span.
+
+        Iterating only over the (typically 0–3) passed pawn bits rather than all
+        own + opponent pawns (~16) is significantly faster on average.
         """
         stm = board.turn
-        opp = not stm
+        own_bb = int(board.pieces_mask(chess.PAWN, stm))
+        opp_bb = int(board.pieces_mask(chess.PAWN, not stm))
 
-        own_pawns = int(board.pieces_mask(chess.PAWN, stm))
-        opp_pawns = int(board.pieces_mask(chess.PAWN, opp))
+        if not own_bb and not opp_bb:
+            return 0.0
 
-        bonus = 0.0
         pp_bonus = Pesto._PASSED_PAWN_BONUS
-        adj = _ADJ_FILE_MASKS
-        above = _RANKS_ABOVE
-        below = _RANKS_BELOW
+        bonus = 0.0
 
-        # Check own passed pawns
-        bb = own_pawns
-        while bb:
-            sq = (bb & -bb).bit_length() - 1
-            bb &= bb - 1
-            f = sq & 7
-            r = sq >> 3
-            ahead_mask = above[r] if stm else below[r]
-            if not (opp_pawns & adj[f] & ahead_mask):
-                bonus += pp_bonus[r if stm else 7 - r]
+        if stm:  # White to move; own = white, opp = black
+            # White passed pawns: no black pawn on same/adjacent files NORTH of the white pawn.
+            # Block span = all squares strictly south of each black pawn on spread files.
+            # >> 8 steps one rank south from the black pawn; fill_south fills the rest.
+            black_span = _fill_south(_spread_files(opp_bb) >> 8)
+            own_passed = own_bb & ~black_span
 
-        # Check opponent passed pawns
-        bb = opp_pawns
-        while bb:
-            sq = (bb & -bb).bit_length() - 1
-            bb &= bb - 1
-            f = sq & 7
-            r = sq >> 3
-            ahead_mask = above[r] if opp else below[r]
-            if not (own_pawns & adj[f] & ahead_mask):
-                bonus -= pp_bonus[r if opp else 7 - r]
+            # Black passed pawns (for opponent score): no white pawn SOUTH of the black pawn.
+            white_span = _fill_north(_spread_files(own_bb) << 8)
+            opp_passed = opp_bb & ~white_span
+
+            # White passed: rank index 0 = own back rank; bonus[rank].
+            bb = own_passed
+            while bb:
+                lsb = bb & -bb
+                bb ^= lsb
+                bonus += pp_bonus[lsb.bit_length() - 1 >> 3]  # rank = bit_pos // 8
+
+            # Black passed: flip rank so 0 = black's own back rank (rank 7 in white coords).
+            bb = opp_passed
+            while bb:
+                lsb = bb & -bb
+                bb ^= lsb
+                bonus -= pp_bonus[7 - (lsb.bit_length() - 1 >> 3)]
+
+        else:  # Black to move; own = black, opp = white
+            # Black passed pawns: no white pawn on same/adjacent files SOUTH of the black pawn.
+            white_span = _fill_north(_spread_files(opp_bb) << 8)
+            own_passed = own_bb & ~white_span
+
+            # White passed pawns (for opponent score): no black pawn NORTH of the white pawn.
+            black_span = _fill_south(_spread_files(own_bb) >> 8)
+            opp_passed = opp_bb & ~black_span
+
+            # Black passed: flip rank so 0 = black's own back rank.
+            bb = own_passed
+            while bb:
+                lsb = bb & -bb
+                bb ^= lsb
+                bonus += pp_bonus[7 - (lsb.bit_length() - 1 >> 3)]
+
+            # White passed (opponent): normal rank index.
+            bb = opp_passed
+            while bb:
+                lsb = bb & -bb
+                bb ^= lsb
+                bonus -= pp_bonus[lsb.bit_length() - 1 >> 3]
 
         return bonus
 

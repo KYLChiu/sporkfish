@@ -190,7 +190,10 @@ class NegamaxSp(MiniMaxVariants):
         best_move_for_tt = None
 
         # --- Main search loop ---
-        for move in legal_moves:
+        for idx, move in enumerate(legal_moves):
+            # Always compute capture flag (needed for futility and killer updates).
+            capture = board.is_capture(move)
+
             # Snapshot board state BEFORE pushing the move.
             # Use piece_type_at + color_at to avoid chess.Piece object creation.
             if zobrist_state:
@@ -199,11 +202,6 @@ class NegamaxSp(MiniMaxVariants):
                 from_cpt = zobrist_piece_index(from_pt, from_color)
             else:
                 from_cpt = -1
-            capture = (
-                board.is_capture(move)
-                if self._searcher_config.enable_futility_pruning or zobrist_state
-                else False
-            )
             if zobrist_state and capture:
                 cap_pt = board.piece_type_at(move.to_square)
                 captured_cpt = (
@@ -263,8 +261,9 @@ class NegamaxSp(MiniMaxVariants):
                 # Record the move in killer/history tables to prioritise it in sibling
                 # nodes (where the same refutation likely applies).
                 self._statistics.increment_visited(PruningTypes.ALPHA_BETA)
-                self._update_killer_moves(move, depth)
+                self._update_killer_moves(move, depth, capture)
                 self._update_history_table(move, depth)
+                self._update_counter_move_table(board, move, capture)
                 break
 
         # --- TT store ---
@@ -383,7 +382,9 @@ class NegamaxSp(MiniMaxVariants):
 
             alpha = max(alpha, value)
             if alpha >= beta:
-                self._update_killer_moves(move, depth)
+                capture = board.is_capture(move)
+                self._update_killer_moves(move, depth, capture)
+                self._update_counter_move_table(board, move, capture)
                 self._statistics.increment_visited(PruningTypes.ALPHA_BETA)
                 break
 

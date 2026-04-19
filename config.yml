@@ -11,11 +11,10 @@ SearcherConfig:
   enable_futility_pruning: True # flag to enable futility_pruning, i.e. prune quiet moves that do not raise alpha in negamax search.
   enable_delta_pruning: True # flag to enable delta pruning, i.e. prune capturing moves that do not raise alpha in quiescence search.
   enable_transposition_table: True # flag to enable position cache, so positions are not evaluated twice
-  enable_aspiration_windows: True # flag to enable aspiration windows, i.e. doing a smaller window search around the score from previous iteration of iterative deepening.
+  enable_aspiration_windows: False # disabled by default: current implementation often re-searches and adds overhead
   enable_check_extensions: True # flag to extend search by 1 ply when the side to move is in check (critical tactical positions have few legal replies so cost is low)
   enable_lmr: True # flag to enable Late Move Reduction: quiet moves ordered late in the list are searched at reduced depth first, upgraded to full depth only if they raise alpha
   enable_reverse_futility_pruning: True # flag to enable reverse futility pruning: at shallow depths, if static eval exceeds beta by a margin, prune without searching
-  # TODO: I'd like to make these capital to match class vs variable, but for later.
   move_order_config: #  Move order config. Weights are only for composite move ordering, setting to 0 disables the underlying sigular move ordering.
     move_order_mode: COMPOSITE # mode of move ordering, choice of: MVV_LVA, KILLER_MOVE, COMPOSITE
     mvv_lva_weight: 2.0 # weight for Most Valuable Victim - Least Valuable Aggressor
