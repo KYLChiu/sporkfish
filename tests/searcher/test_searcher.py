@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+import time
 
 import chess
 import pytest
@@ -562,3 +563,27 @@ class TestIterativeDeepeningTimeBudget:
         assert calls["count"] >= 2
         assert move == first
         assert score == 42.0
+
+    def test_timeoutable_search_returns_timeout_tuple_on_budget_expiry(
+        self, init_searcher: Searcher, monkeypatch
+    ) -> None:
+        s = init_searcher
+        board = init_board(board_setup["white"]["open"])
+
+        def slow_search(_board_to_search, _depth, _prev_score):
+            time.sleep(0.03)
+            return 0.0, next(iter(board.legal_moves))
+
+        monkeypatch.setattr(s, "_aspiration_windows_search", slow_search)
+
+        score, move, elapsed, error_code = s._timeoutable_search(
+            board_to_search=board,
+            depth=1,
+            prev_score=0.0,
+            timeout=0.001,
+        )
+
+        assert error_code == 1
+        assert score == float("-inf")
+        assert move == chess.Move.null()
+        assert elapsed == 0.0

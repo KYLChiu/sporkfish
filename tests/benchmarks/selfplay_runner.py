@@ -12,6 +12,7 @@ from typing import Any, Dict, Iterable, List, Tuple
 import chess
 import chess.pgn
 import yaml
+from tqdm import tqdm
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -186,6 +187,7 @@ def run_match(
     out_dir: Path,
     seed: int,
     openings: List[str] | None,
+    show_progress: bool = True,
 ) -> int:
     with base_config_path.open("r", encoding="utf-8") as fh:
         base_cfg: Dict[str, Any] = yaml.safe_load(fh)
@@ -206,7 +208,11 @@ def run_match(
     rng = random.Random(seed)
     results: List[GameResult] = []
 
-    for i in range(games):
+    game_iter = range(games)
+    if show_progress:
+        game_iter = tqdm(game_iter, total=games, desc="Self-play", unit="game")
+
+    for i in game_iter:
         opening_fen = openings_to_use[i % len(openings_to_use)]
         candidate_white = i % 2 == 0
         if i >= len(openings_to_use):
@@ -301,6 +307,11 @@ def _parse_args() -> argparse.Namespace:
         default="ERROR",
         help="Python logging level (DEBUG, INFO, WARNING, ERROR). Default: ERROR",
     )
+    parser.add_argument(
+        "--no-progress",
+        action="store_true",
+        help="Disable progress bar output.",
+    )
     return parser.parse_args()
 
 
@@ -319,6 +330,7 @@ def main() -> int:
         out_dir=Path(args.out_dir),
         seed=args.seed,
         openings=args.opening_fen,
+        show_progress=not args.no_progress,
     )
 
 

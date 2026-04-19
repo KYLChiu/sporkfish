@@ -12,3 +12,4 @@ pyYAML==6.0.1
 ruff==0.2.0
 stopit==1.1.2
 tenacity==8.2.3
+tqdm==4.67.1

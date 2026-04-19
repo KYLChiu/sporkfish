@@ -660,12 +660,13 @@ class MiniMaxVariants(Searcher, ABC):
             else False
         )
 
-    @stopit.threading_timeoutable(default=(float("-inf"), chess.Move.null(), 0.0, 1))
     def _timeoutable_search(
         self,
         board_to_search: Board,
         depth: int,
         prev_score: float,
+        best_move_so_far: chess.Move,
+        timeout: Optional[float] = None,
     ) -> Tuple[float, chess.Move, float, int]:
         """
         Creates a search function wrapper with timeout argument, in seconds.
@@ -677,6 +678,9 @@ class MiniMaxVariants(Searcher, ABC):
         :type depth: int
         :param prev_score: The previous score from a shallower search.
         :type prev_score: float
+        :param best_move_so_far: The best move found in the previous completed depth
+                                 iteration. Used as the fallback if this search times out.
+        :type best_move_so_far: chess.Move
 
         :return: A tuple containing the following:
                  - The score of the best move found during the search.
@@ -687,7 +691,9 @@ class MiniMaxVariants(Searcher, ABC):
 
         :raises Exception: If an unexpected error occurs during the search.
         """
-        try:
+
+        @stopit.threading_timeoutable(default=(float("-inf"), best_move_so_far, 0.0, 1))
+        def _run() -> Tuple[float, chess.Move, float, int]:
             start_time = time.time()
             score, move = self._aspiration_windows_search(
                 board_to_search, depth, prev_score
@@ -695,10 +701,11 @@ class MiniMaxVariants(Searcher, ABC):
             elapsed = time.time() - start_time
             self._log_info(elapsed, score, move, depth)
             return score, move, elapsed, 0
+
+        try:
+            return _run(timeout=timeout)
         except stopit.utils.TimeoutException:
-            return float("-inf"), chess.Move.null(), 0.0, 1
-        except Exception:
-            raise
+            return float("-inf"), best_move_so_far, 0.0, 1
 
     def _iterative_deepening_search(
         self, board: Board, timeout: Optional[float]
@@ -747,6 +754,7 @@ class MiniMaxVariants(Searcher, ABC):
                 board_to_search=search_board,
                 depth=depth,
                 prev_score=score,
+                best_move_so_far=move,
             )
 
             # Timed out, return best move from previous depth.
