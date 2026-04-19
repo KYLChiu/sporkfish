@@ -604,7 +604,7 @@ def run_match(
     if enforce_gate:
         print()
         print("QUALITY GATE")
-        print(f"Enabled:      yes")
+        print("Enabled:      yes")
         print(
             f"Thresholds:   LOS >= {min_los:.1%}, Elo CI lower >= {min_elo_ci_lower:+.1f}"
         )
