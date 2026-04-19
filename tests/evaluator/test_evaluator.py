@@ -191,21 +191,21 @@ class TestSimpleEvaluator:
         board.set_fen("4k3/8/8/8/8/8/8/3QK3 b - - 0 1")
         assert ev.evaluate(board) == -1025.0
 
-    def test_passed_pawn_bonus_for_white_side_to_move(self) -> None:
+    def test_white_pawn_material_only_for_white_side_to_move(self) -> None:
         ev = SimpleEval()
         board = BoardFactory.create(BoardPyChess)
         board.set_fen("4k3/8/8/4P3/8/8/8/4K3 w - - 0 1")
 
-        # White pawn on e5: material 82 + passed-pawn bonus on rank 4 => 35.
-        assert ev.evaluate(board) == 117.0
+        # Material only: one extra pawn from side-to-move perspective.
+        assert ev.evaluate(board) == 82.0
 
-    def test_passed_pawn_bonus_for_black_side_to_move(self) -> None:
+    def test_black_pawn_material_only_for_black_side_to_move(self) -> None:
         ev = SimpleEval()
         board = BoardFactory.create(BoardPyChess)
         board.set_fen("4k3/8/8/8/8/8/4p3/4K3 b - - 0 1")
 
-        # Black pawn on e2 from black POV: material 82 + near-promotion bonus (index 6) => 100.
-        assert ev.evaluate(board) == 182.0
+        # Material only: one extra pawn from side-to-move perspective.
+        assert ev.evaluate(board) == 82.0
 
     def test_simple_eval_api_methods(self) -> None:
         ev = SimpleEval()

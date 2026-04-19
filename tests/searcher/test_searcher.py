@@ -520,3 +520,45 @@ class TestIterativeDeepeningTimeBudget:
         s._iterative_deepening_search(board, timeout=0.1)
 
         assert calls["count"] == 1
+
+    def test_iterative_deepening_returns_legal_fallback_on_immediate_timeout(
+        self, init_searcher: Searcher, monkeypatch
+    ) -> None:
+        s = init_searcher
+        board = init_board(board_setup["white"]["open"])
+
+        def fake_timeoutable_search(*, timeout, board_to_search, depth, prev_score):
+            return float("-inf"), chess.Move.null(), 0.0, 1
+
+        monkeypatch.setattr(s, "_timeoutable_search", fake_timeoutable_search)
+        monkeypatch.setattr(s._statistics, "reset_visited", lambda: None)
+
+        _, move = s._iterative_deepening_search(board, timeout=0.05)
+
+        assert move != chess.Move.null()
+        assert move in board.legal_moves
+
+    def test_iterative_deepening_keeps_last_valid_move_when_deeper_returns_null(
+        self, init_searcher: Searcher, monkeypatch
+    ) -> None:
+        s = init_searcher
+        board = init_board(board_setup["white"]["open"])
+
+        first = chess.Move.from_uci("e2e4")
+        second = chess.Move.null()
+        calls = {"count": 0}
+
+        def fake_timeoutable_search(*, timeout, board_to_search, depth, prev_score):
+            calls["count"] += 1
+            if depth == 1:
+                return 42.0, first, 0.01, 0
+            return -float("inf"), second, 0.01, 0
+
+        monkeypatch.setattr(s, "_timeoutable_search", fake_timeoutable_search)
+        monkeypatch.setattr(s._statistics, "reset_visited", lambda: None)
+
+        score, move = s._iterative_deepening_search(board, timeout=0.2)
+
+        assert calls["count"] >= 2
+        assert move == first
+        assert score == 42.0

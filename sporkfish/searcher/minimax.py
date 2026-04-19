@@ -722,8 +722,8 @@ class MiniMaxVariants(Searcher, ABC):
                  and the corresponding best move.
         :rtype: Tuple[float, chess.Move]
         """
-        score = -float("inf")
-        move = chess.Move.null()
+        move = next(iter(board.legal_moves), chess.Move.null())
+        score = self._evaluator.evaluate(board) if move != chess.Move.null() else 0.0
 
         # Deep-copy the board once before the ID loop. Each depth iteration
         # reuses the same copy - push/pop guarantees the board is restored to
@@ -763,7 +763,8 @@ class MiniMaxVariants(Searcher, ABC):
 
             # Else move onto next depth, unless we have no more time already.
             else:
-                score, move = new_score, new_move
+                if new_move != chess.Move.null():
+                    score, move = new_score, new_move
                 if time_left is not None:
                     time_left -= elapsed
                     if time_left <= 0:

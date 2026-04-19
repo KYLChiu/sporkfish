@@ -1,16 +1,18 @@
+import os
 from dataclasses import dataclass
 from typing import Iterable, List, Sequence, Tuple
 
 import pytest
-from benchmark_utils import (
+from init_board_helper import board_setup, searcher_with_fen
+
+from benchmarks.benchmark_utils import (
+    EPDSuiteScore,
     run_profile_analytics,
     run_search_once,
     score_epd_suite,
     write_csv_report,
 )
-from init_board_helper import board_setup, searcher_with_fen
-from test_bratko_kopec import epds as BK_EPDS_ALL
-
+from benchmarks.test_bratko_kopec import epds as BK_EPDS_ALL
 from sporkfish.evaluator.pesto import Pesto
 from sporkfish.evaluator.simple import SimpleEval
 from sporkfish.searcher.move_ordering.move_order_config import (
@@ -32,6 +34,8 @@ class BenchmarkResult:
     best_move: str
     bk_hits: int
     bk_total: int
+    bk_elapsed_s: float
+    bk_timed_out: int
 
 
 def _search_once(depth: int, evaluator) -> Tuple[float, float, str]:
@@ -39,8 +43,20 @@ def _search_once(depth: int, evaluator) -> Tuple[float, float, str]:
     return run_search_once(fen, depth, evaluator)
 
 
-def _bk_score(depth: int, evaluator_cls, epds: Sequence[str]) -> Tuple[int, int]:
-    return score_epd_suite(epds, depth, evaluator_cls)
+def _bk_score(
+    depth: int,
+    evaluator_cls,
+    epds: Sequence[str],
+    max_positions: int | None = None,
+    per_position_timeout_s: float | None = None,
+) -> EPDSuiteScore:
+    return score_epd_suite(
+        epds,
+        depth,
+        evaluator_cls,
+        max_positions=max_positions,
+        per_position_timeout_s=per_position_timeout_s,
+    )
 
 
 def _write_perf_report(results: Iterable[BenchmarkResult], file_name: str) -> None:
@@ -49,12 +65,14 @@ def _write_perf_report(results: Iterable[BenchmarkResult], file_name: str) -> No
         pct = 100.0 * row.bk_hits / row.bk_total if row.bk_total else 0.0
         rows.append(
             f"{row.label},{row.depth},{row.elapsed_s:.3f},{row.score:.2f},"
-            f"{row.best_move},{row.bk_hits},{row.bk_total},{pct:.1f}"
+            f"{row.best_move},{row.bk_hits},{row.bk_total},{pct:.1f},"
+            f"{row.bk_elapsed_s:.3f},{row.bk_timed_out}"
         )
     write_csv_report(
         file_name,
         "Evaluator depth tradeoff benchmark\n"
-        "label,depth,elapsed_s,score,best_move,bk_hits,bk_total,bk_pct",
+        "label,depth,elapsed_s,score,best_move,bk_hits,bk_total,bk_pct,"
+        "bk_elapsed_s,bk_timed_out",
         rows,
     )
 
@@ -72,7 +90,7 @@ class TestPerformance:
     """
     Tests only for performance analysis - skipped by marked as slow
     To run perf tests:
-    python3 -m pytest tests/test_searcher.py::TestPerformance -sv --runslow
+    python3 -m pytest tests/benchmarks/test_performance.py::TestPerformance -sv --runslow
     """
 
     @pytest.fixture
@@ -219,7 +237,7 @@ def test_perf_simple_vs_pesto_depth_tradeoff() -> None:
     - Answer whether running Simple much deeper gives a large practical gain.
 
     Run with:
-    pytest -q tests/test_performance.py -k simple_vs_pesto_depth_tradeoff --runslow -s
+    pytest -q tests/benchmarks/test_performance.py -k simple_vs_pesto_depth_tradeoff --runslow -s
     """
     scenarios = [
         ("pesto", 7, Pesto()),
@@ -227,11 +245,24 @@ def test_perf_simple_vs_pesto_depth_tradeoff() -> None:
         ("simple", 9, SimpleEval()),
     ]
 
+    max_positions_env = os.getenv("SPORKFISH_BK_LIMIT")
+    per_position_timeout_env = os.getenv("SPORKFISH_BK_TIMEOUT_S")
+    max_positions = int(max_positions_env) if max_positions_env else None
+    per_position_timeout_s = (
+        float(per_position_timeout_env) if per_position_timeout_env else None
+    )
+
     results: List[BenchmarkResult] = []
 
     for label, depth, evaluator in scenarios:
         elapsed_s, score, best_move = _search_once(depth, evaluator)
-        bk_hits, bk_total = _bk_score(depth, evaluator.__class__, BK_EPDS_SUBSET)
+        bk_score = _bk_score(
+            depth,
+            evaluator.__class__,
+            BK_EPDS_SUBSET,
+            max_positions=max_positions,
+            per_position_timeout_s=per_position_timeout_s,
+        )
 
         row = BenchmarkResult(
             label=label,
@@ -239,8 +270,10 @@ def test_perf_simple_vs_pesto_depth_tradeoff() -> None:
             elapsed_s=elapsed_s,
             score=score,
             best_move=best_move,
-            bk_hits=bk_hits,
-            bk_total=bk_total,
+            bk_hits=bk_score.hits,
+            bk_total=bk_score.total,
+            bk_elapsed_s=bk_score.elapsed_s,
+            bk_timed_out=bk_score.timed_out,
         )
         results.append(row)
 
@@ -251,10 +284,13 @@ def test_perf_simple_vs_pesto_depth_tradeoff() -> None:
         print(
             f"{row.label}@d{row.depth}: {row.elapsed_s:.3f}s "
             f"mid-score={row.score:.2f} move={row.best_move} "
-            f"BK={row.bk_hits}/{row.bk_total} ({bk_pct:.1f}%)"
+            f"BK={row.bk_hits}/{row.bk_total} ({bk_pct:.1f}%) "
+            f"bk_time={row.bk_elapsed_s:.3f}s timeouts={row.bk_timed_out}"
         )
 
     # Keep assertions robust/non-flaky: verify benchmark executed and produced sane values.
     assert len(results) == 3
     assert all(r.elapsed_s > 0 for r in results)
     assert all(0 <= r.bk_hits <= r.bk_total for r in results)
+    assert all(r.bk_elapsed_s >= 0 for r in results)
+    assert all(0 <= r.bk_timed_out <= r.bk_total for r in results)

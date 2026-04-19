@@ -3,7 +3,8 @@ import os
 import pstats
 import sys
 import time
-from typing import Any, Callable, Iterable, Sequence, Tuple
+from dataclasses import dataclass
+from typing import Any, Callable, Iterable, Optional, Sequence, Tuple
 
 import chess
 
@@ -14,6 +15,14 @@ from sporkfish.searcher.move_ordering.move_order_config import (
 )
 from sporkfish.searcher.searcher_config import SearcherConfig, SearchMode
 from sporkfish.searcher.searcher_factory import SearcherFactory
+
+
+@dataclass(frozen=True)
+class EPDSuiteScore:
+    hits: int
+    total: int
+    elapsed_s: float
+    timed_out: int
 
 
 def run_profile_analytics(
@@ -113,21 +122,34 @@ def score_epd_suite(
     max_depth: int,
     evaluator_factory,
     move_order_config: MoveOrderConfig | None = None,
-) -> Tuple[int, int]:
+    max_positions: Optional[int] = None,
+    per_position_timeout_s: Optional[float] = None,
+) -> EPDSuiteScore:
     config = build_pvs_perf_config(max_depth, move_order_config)
 
+    selected_epds = epds[:max_positions] if max_positions is not None else epds
+
     hits = 0
-    for epd in epds:
+    timed_out = 0
+    t0 = time.time()
+    for epd in selected_epds:
         board = chess.Board()
         epd_info = board.set_epd(epd)
         expected_moves = epd_info.get("bm", [])
 
         searcher = SearcherFactory.create(config, evaluator=evaluator_factory())
-        _, move = searcher.search(board)
+        _, move = searcher.search(board, timeout=per_position_timeout_s)
+        if move == chess.Move.null():
+            timed_out += 1
         if move in expected_moves:
             hits += 1
 
-    return hits, len(epds)
+    return EPDSuiteScore(
+        hits=hits,
+        total=len(selected_epds),
+        elapsed_s=time.time() - t0,
+        timed_out=timed_out,
+    )
 
 
 def write_csv_report(

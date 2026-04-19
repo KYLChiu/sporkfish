@@ -1,5 +1,5 @@
 import pytest
-from benchmark_utils import run_profile_analytics
+from benchmarks.benchmark_utils import run_profile_analytics
 from init_board_helper import board_setup
 
 from sporkfish.board.board_factory import BoardPyChess
