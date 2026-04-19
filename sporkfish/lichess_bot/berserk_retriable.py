@@ -1,10 +1,20 @@
 import functools
 import inspect
+import logging
 from typing import Any, Callable, Mapping, Sequence
 
 import berserk
 import berserk.exceptions
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
+import requests.exceptions
+from tenacity import (
+    before_sleep_log,
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
+
+logger = logging.getLogger(__name__)
 
 
 # TODO: I can't get this to work with metaclasses. Maybe in a future PR.
@@ -16,8 +26,17 @@ class BerserkRetriable:
     """
 
     # Retry configuration parameters
-    _NUM_RETRIES = 2
-    _TIME_TO_WAIT_SECONDS = 1
+    _NUM_RETRIES = 5
+    _WAIT_MIN_SECONDS = 1
+    _WAIT_MAX_SECONDS = 30
+
+    # Exception types that warrant a retry
+    _RETRIABLE_EXCEPTIONS = (
+        berserk.exceptions.ResponseError,
+        requests.exceptions.ConnectionError,
+        requests.exceptions.Timeout,
+        requests.exceptions.ReadTimeout,
+    )
 
     def __init__(self, token: str):
         """
@@ -60,8 +79,13 @@ class BerserkRetriable:
         @functools.wraps(func)
         @retry(
             stop=stop_after_attempt(BerserkRetriable._NUM_RETRIES),
-            wait=wait_fixed(BerserkRetriable._TIME_TO_WAIT_SECONDS),
-            retry=retry_if_exception_type(berserk.exceptions.ResponseError),
+            wait=wait_exponential(
+                min=BerserkRetriable._WAIT_MIN_SECONDS,
+                max=BerserkRetriable._WAIT_MAX_SECONDS,
+            ),
+            retry=retry_if_exception_type(BerserkRetriable._RETRIABLE_EXCEPTIONS),
+            before_sleep=before_sleep_log(logger, logging.WARNING),
+            reraise=True,
         )
         def wrapper(
             *args: Sequence[Any],

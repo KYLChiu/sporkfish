@@ -4,7 +4,8 @@ from enum import Enum, auto
 
 from config import load_config
 from sporkfish.board.board import Board
-from sporkfish.board.board_factory import BoardFactory, BoardPyChess
+from sporkfish.board.board_bitboard import BoardBitboard
+from sporkfish.board.board_factory import BoardFactory
 from sporkfish.endgame_tablebases.composite_tablebase import CompositeTablebase
 from sporkfish.endgame_tablebases.endgame_tablebase_config import EndgameTablebaseConfig
 from sporkfish.engine import Engine
@@ -142,10 +143,15 @@ class UCIClient:
                         assert (
                             len(tokens) >= idx + 3
                         ), "wtime or btime given in go string but no time or increment values passed."
+
                         # Convert to ms -> s
                         time = float(tokens[idx + 1]) / 1000.0
                         increment = float(tokens[idx + 3]) / 1000.0
-                        timeout = time_manager.get_timeout(time, increment)
+                        timeout = time_manager.get_timeout(
+                            time,
+                            increment,
+                            ply=len(board.move_stack),
+                        )
                         break
                     idx += 1
 
@@ -178,7 +184,7 @@ class UCIClient:
                 load_config().get("TimeManagerConfig")  # type: ignore
             )
         )
-        self._board = BoardFactory.create(BoardPyChess)
+        self._board = BoardFactory.create(BoardBitboard)
         if response_mode is UCIClient.UCIProtocol.ResponseMode.RETURN:
             response = self.send_command("uci")
             assert "uciok" in response, "UCIClient failed to initialize correctly."

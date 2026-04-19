@@ -6,20 +6,36 @@ import chess
 
 
 class NodeTypes(Enum):
+    """Tracks interior nodes visited during the main search."""
+
     NEGAMAX = "NEGAMAX"
-    NEGAMAX_LAZY_SMP = "NEGAMAX_LAZY_SMP"
     QUIESCENSE = "QUIESCENSE"
 
 
 class PruningTypes(Enum):
+    """Tracks nodes pruned by each pruning technique."""
+
     NULL_MOVE = "NULL_MOVE"
     DELTA = "DELTA"
     FUTILITY = "FUTILITY"
     ALPHA_BETA = "ALPHA_BETA"
+    REVERSE_FUTILITY = "REVERSE_FUTILITY"
 
 
 class TranspositionTable(Enum):
+    """Tracks nodes retrieved directly from the transposition table cache."""
+
     TRANSPOSITITON_TABLE = "TRANSPOSITITON_TABLE"
+
+
+class AspirationTypes(Enum):
+    """Tracks aspiration window outcomes during iterative deepening."""
+
+    ATTEMPT = "ATTEMPT"
+    FAIL_LOW = "FAIL_LOW"
+    FAIL_HIGH = "FAIL_HIGH"
+    IN_WINDOW = "IN_WINDOW"
+    FULL_FALLBACK = "FULL_FALLBACK"
 
 
 class Statistics:
@@ -34,20 +50,28 @@ class Statistics:
         and nodes stored in the transposition table to zero.
         """
         self._visited = {
-            key: 0 for key in [*NodeTypes, *PruningTypes, *TranspositionTable]
+            key: 0
+            for key in [
+                *NodeTypes,
+                *PruningTypes,
+                *TranspositionTable,
+                *AspirationTypes,
+            ]
         }
         self._fields: Dict = {}
 
     def increment_visited(
         self,
-        visited_type: Union[NodeTypes, PruningTypes, TranspositionTable],
+        visited_type: Union[
+            NodeTypes, PruningTypes, TranspositionTable, AspirationTypes
+        ],
         count: int = 1,
     ) -> None:
         """
         Increment the count of visited nodes of a specified type.
 
         :param visited_node_type: The type of node being visited.
-        :type visited_node_type: Union[NodeTypes, PruningTypes, TranspositionTable]
+        :type visited_node_type: Union[NodeTypes, PruningTypes, TranspositionTable, AspirationTypes]
         :param count: The number of nodes to increment the count by. Default is 1.
         :type count: int
         """
@@ -121,6 +145,24 @@ class Statistics:
         self._fields["Nodes from TT"] = self._visited[
             TranspositionTable.TRANSPOSITITON_TABLE
         ]
+
+        total_aspiration = 0
+        for type in AspirationTypes:  # type: ignore
+            count = self._visited[type]
+            self._fields[f"Aspiration: {type}"] = count
+            total_aspiration += count
+        self._fields["Total aspiration"] = total_aspiration
+
+        # Miss-rate among bounded aspiration attempts.
+        attempts = self._visited[AspirationTypes.ATTEMPT]
+        misses = (
+            self._visited[AspirationTypes.FAIL_LOW]
+            + self._visited[AspirationTypes.FAIL_HIGH]
+        )
+        self._fields["Aspiration miss-rate"] = (
+            float(misses / attempts) if attempts > 0 else 0.0
+        )
+
         self._fields["NPS"] = float(total_node / elapsed) if elapsed > 0 else 0
 
         # TODO: clean up / format self._info_str

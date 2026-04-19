@@ -8,7 +8,13 @@ from sporkfish.searcher.move_ordering.move_order_config import (
 )
 from sporkfish.searcher.searcher_config import SearcherConfig, SearchMode
 from sporkfish.searcher.searcher_factory import SearcherFactory
-from sporkfish.statistics import NodeTypes, PruningTypes, Statistics, TranspositionTable
+from sporkfish.statistics import (
+    AspirationTypes,
+    NodeTypes,
+    PruningTypes,
+    Statistics,
+    TranspositionTable,
+)
 
 
 class TestIncrementStatistics:
@@ -38,6 +44,12 @@ class TestIncrementStatistics:
         assert s.visited[NodeTypes.NEGAMAX] == 0
         s.increment_visited(NodeTypes.NEGAMAX)
         assert s.visited[NodeTypes.NEGAMAX] == 1
+
+    def test_increment_aspiration(self):
+        s = Statistics()
+        assert s.visited[AspirationTypes.FAIL_HIGH] == 0
+        s.increment_visited(AspirationTypes.FAIL_HIGH)
+        assert s.visited[AspirationTypes.FAIL_HIGH] == 1
 
 
 class TestResetStatistics:

@@ -1,10 +1,25 @@
+from typing import Dict, Optional
+
 import chess
 
 from sporkfish.board.board import Board
 from sporkfish.searcher.move_ordering.move_order_heuristic import MoveOrderHeuristic
+from sporkfish.searcher.see import static_exchange_eval
 
 
 class MvvLvaHeuristic(MoveOrderHeuristic):
+    """
+    Most Valuable Victim - Least Valuable Aggressor (MVV-LVA) move ordering.
+
+    Prioritises captures that win the most material: capturing a queen with a
+    pawn scores higher than capturing a pawn with a queen.  The table encodes
+    victim x attacker scores so the comparison is a single array lookup with no
+    arithmetic at query time.
+
+    King captures are assigned 0 (the king can never legally be captured).
+    Scores are integers in [10, 55]; higher = more desirable.
+    """
+
     # Columns: attacker P, N, B, R, Q, K
     _MVV_LVA = [
         [15, 14, 13, 12, 11, 10],  # victim P
@@ -15,9 +30,14 @@ class MvvLvaHeuristic(MoveOrderHeuristic):
         [0, 0, 0, 0, 0, 0],  # victim K
     ]
 
-    def __init__(self, board: Board) -> None:
+    def __init__(
+        self,
+        board: Board,
+        piece_values: Optional[Dict[chess.PieceType, float]] = None,
+    ) -> None:
         MoveOrderHeuristic.__init__(self)
         self._board = board
+        self._piece_values = piece_values
 
     def evaluate(self, move: chess.Move) -> float:
         """
@@ -32,11 +52,15 @@ class MvvLvaHeuristic(MoveOrderHeuristic):
 
         if (
             self._board.is_capture(move)
-            and (captured_piece := self._board.piece_at(move.to_square))
-            and (moving_piece := self._board.piece_at(move.from_square))
+            and (captured_type := self._board.piece_type_at(move.to_square))
+            and (moving_type := self._board.piece_type_at(move.from_square))
         ):
-            return MvvLvaHeuristic._MVV_LVA[captured_piece.piece_type - 1][
-                moving_piece.piece_type - 1
-            ]
+            mvv_lva = MvvLvaHeuristic._MVV_LVA[captured_type - 1][moving_type - 1]
+            if self._piece_values is None:
+                return mvv_lva
+
+            # SEE dominates ordering between winning/losing captures.
+            see = static_exchange_eval(self._board, move, self._piece_values)
+            return see * 100.0 + mvv_lva
         else:
             return 0

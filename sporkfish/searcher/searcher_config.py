@@ -7,7 +7,6 @@ from sporkfish.searcher.move_ordering.move_order_config import MoveOrderConfig
 
 class SearchMode(Enum):
     NEGAMAX_SINGLE_PROCESS = "NEGAMAX_SINGLE_PROCESS"
-    NEGAMAX_LAZY_SMP = "NEGAMAX_LAZY_SMP"
     PVS_SINGLE_PROCESS = "PVS_SINGLE_PROCESS"
 
 
@@ -43,7 +42,7 @@ class SearcherConfig(Configurable):
                                        of previously computed positions to avoid redundant
                                        computation.
     :type enable_transposition_table: bool
-    :param enable_aspiration_windows: Enable aspiration windows (default: True).
+    :param enable_aspiration_windows: Enable aspiration windows (default: False).
                                       Enables or disables aspiration windows, a technique
                                       used to focus the search around promising moves.
     :type enable_aspiration_windows: bool
@@ -58,15 +57,22 @@ class SearcherConfig(Configurable):
         enable_futility_pruning: bool = False,
         enable_delta_pruning: bool = True,
         enable_transposition_table: bool = False,
-        enable_aspiration_windows: bool = True,
+        enable_aspiration_windows: bool = False,
+        enable_check_extensions: bool = True,
+        enable_lmr: bool = True,
+        enable_reverse_futility_pruning: bool = True,
+        enable_counter_move_heuristic: bool = False,
+        enable_conservative_rfp_margin: bool = False,
     ) -> None:
         self.max_depth = max_depth
+
         # TODO: register the constructor function in yaml loader instead.
         self.search_mode = (
             search_mode
             if isinstance(search_mode, SearchMode)
             else SearchMode(search_mode)
         )
+
         # TODO: same here
         self.move_order_config = (
             move_order_config
@@ -78,3 +84,28 @@ class SearcherConfig(Configurable):
         self.enable_delta_pruning = enable_delta_pruning
         self.enable_transposition_table = enable_transposition_table
         self.enable_aspiration_windows = enable_aspiration_windows
+
+        # Check extensions: when the side to move is in check, the position is
+        # critical - extend the search by 1 ply so the engine sees escape/refutations.
+        # Positions in check typically have very few legal moves so the cost is small.
+        self.enable_check_extensions = enable_check_extensions
+
+        # Late Move Reduction (LMR): quiet moves ordered late in the list are
+        # statistically unlikely to be best. Search them at reduced depth first;
+        # only upgrade to full depth if the reduced search raises alpha.
+        # Effectively gives ~1 extra ply of search for free.
+        self.enable_lmr = enable_lmr
+
+        # Reverse futility pruning (static null-move pruning): at shallow depths,
+        # if the static eval is already well above beta by a margin, the position
+        # is so good that a full search is unlikely to change the result - prune.
+        # Much cheaper than null-move pruning (no recursive search call).
+        self.enable_reverse_futility_pruning = enable_reverse_futility_pruning
+
+        # Experimental: counter-move heuristic in composite move ordering.
+        # Kept off by default because benchmark impact is workload-dependent.
+        self.enable_counter_move_heuristic = enable_counter_move_heuristic
+
+        # Experimental: add a half-pawn safety term to reverse futility margin.
+        # Off by default to preserve historical behavior.
+        self.enable_conservative_rfp_margin = enable_conservative_rfp_margin

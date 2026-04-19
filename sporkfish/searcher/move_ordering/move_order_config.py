@@ -21,6 +21,7 @@ class MoveOrderConfig(Configurable):
         mvv_lva_weight: float = 3.0,
         killer_moves_weight: float = 2.0,
         history_weight: float = 1.0,
+        counter_move_weight: float = 1.5,
     ):
         """
         Initializes MoveOrderConfig with specified parameters.
@@ -40,3 +41,4 @@ class MoveOrderConfig(Configurable):
         self.mvv_lva_weight = mvv_lva_weight
         self.killer_moves_weight = killer_moves_weight
         self.history_weight = history_weight
+        self.counter_move_weight = counter_move_weight

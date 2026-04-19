@@ -1,6 +1,7 @@
 from sporkfish.evaluator.evaluator import Evaluator
 from sporkfish.evaluator.evaluator_config import EvaluatorConfig, EvaluatorMode
 from sporkfish.evaluator.pesto import Pesto
+from sporkfish.evaluator.simple import SimpleEval
 
 
 class EvaluatorFactory:
@@ -22,6 +23,8 @@ class EvaluatorFactory:
 
         if evaluator_cfg.evaluator_mode is EvaluatorMode.PESTO:
             return Pesto()
+        elif evaluator_cfg.evaluator_mode is EvaluatorMode.SIMPLE:
+            return SimpleEval()
         else:
             raise TypeError(
                 f"EvaluatorFactory does not support the creation of Evaluator type: \

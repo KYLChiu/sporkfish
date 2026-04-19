@@ -7,6 +7,19 @@ from sporkfish.searcher.move_ordering.move_order_heuristic import MoveOrderHeuri
 
 
 class KillerMoveHeuristic(MoveOrderHeuristic):
+    """
+    Killer move heuristic for move ordering.
+
+    A *killer move* is a quiet (non-capture) move that caused a beta cutoff at a
+    given depth in a previous sibling node.  Because the same refutation often
+    works across sibling nodes, storing and trying these moves first can
+    dramatically increase pruning without any extra search.
+
+    Two killer slots are kept per depth so that the best recent refutation is not
+    immediately overwritten.  Captures are always ordered by MVV-LVA instead;
+    killers only boost quiet moves.
+    """
+
     def __init__(
         self,
         board: Board,

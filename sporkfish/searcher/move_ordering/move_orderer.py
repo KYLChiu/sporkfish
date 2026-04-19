@@ -1,4 +1,6 @@
-from typing import Any
+from typing import Any, List
+
+import chess
 
 from sporkfish.searcher.move_ordering.move_order_heuristic import MoveOrderHeuristic
 
@@ -7,7 +9,7 @@ class MoveOrderer:
     @staticmethod
     def order_moves(
         move_ordering_heuristic: MoveOrderHeuristic, legal_moves: Any
-    ) -> Any:
+    ) -> List[chess.Move]:
         """
         Order the given legal moves from best to worst based on a move ordering heuristic.
 
@@ -20,10 +22,11 @@ class MoveOrderer:
         :param legal_moves: The legal moves to be ordered.
         :type legal_moves: Any
         :return: The ordered legal moves.
-        :rtype: Any
+        :rtype: List[chess.Move]
         """
-        return sorted(
-            legal_moves,
-            key=lambda move: (move_ordering_heuristic.evaluate(move),),
-            reverse=True,
-        )
+        moves = list(legal_moves)
+        if not moves:
+            return moves
+
+        moves.sort(key=move_ordering_heuristic.evaluate, reverse=True)
+        return moves

@@ -1,6 +1,6 @@
 import pytest
+from benchmarks.benchmark_utils import run_profile_analytics
 from init_board_helper import board_setup
-from perf_helper import run_perf_analytics
 
 from sporkfish.board.board_factory import BoardPyChess
 from sporkfish.endgame_tablebases.composite_tablebase import (
@@ -55,8 +55,10 @@ class TestLocalTablebase:
         et = LocalTablebase(EndgameTablebaseConfig("data/endgame_tablebases"))
         move = et.query(board)
         board.push(move)
+
         # Play black move
         board.push(next(iter(board.legal_moves)))
+
         # Check there is a move returned on second probe
         # Cannot check dtz(move) > dtz(move2), this isn't public API unfortunately
         move2 = et.query(board)
@@ -80,7 +82,7 @@ class TestEndgameTablebasePerformance:
         return request
 
     def test_et_query_perf(self, request_fixture, fen_string):
-        run_perf_analytics(request_fixture.node.name, move_from_et_query, fen_string)
+        run_profile_analytics(request_fixture.node.name, move_from_et_query, fen_string)
 
 
 class TestLilaEndgameTablebase:
@@ -99,6 +101,7 @@ class TestCompositeTablebase:
 
     def test_composite_lila_bestmove(self):
         board = BoardPyChess()
+
         # We dont' have this in the local tablebase
         board.set_fen("8/4k3/8/8/8/8/3BB3/3K4 w - - 0 1")
         lila_bestmove = CompositeTablebase(
@@ -108,12 +111,14 @@ class TestCompositeTablebase:
 
     def test_composite_local_bestmove(self):
         board = BoardPyChess()
+
         # One step to mate
         board.set_fen("7k/8/7K/3B4/8/8/8/2B5 w - - 0 1")
         lila_bestmove = CompositeTablebase(
             EndgameTablebaseConfig(endgame_tablebase_mode="LILA")
         ).query(board)
         assert lila_bestmove
+
         # Check its equal to local bestmove
         local_bestmove = move_from_et_query(board.fen())
         assert lila_bestmove == local_bestmove

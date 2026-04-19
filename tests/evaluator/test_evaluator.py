@@ -1,9 +1,12 @@
+import pytest
 from init_board_helper import board_setup, score_fen
 
+from sporkfish.board.board_factory import BoardFactory, BoardPyChess
 from sporkfish.evaluator.evaluator import Evaluator
 from sporkfish.evaluator.evaluator_config import EvaluatorConfig, EvaluatorMode
 from sporkfish.evaluator.evaluator_factory import EvaluatorFactory
 from sporkfish.evaluator.pesto import Pesto
+from sporkfish.evaluator.simple import SimpleEval
 
 
 def _evaluator(
@@ -18,10 +21,13 @@ class TestEvaluator:
     def _eval_kings_pos(self) -> list[float, float]:
         ev = _evaluator()
 
-        white_mg_score = ev.MG_KING[44]
-        white_eg_score = ev.EG_KING[44]
-        black_mg_score = ev.MG_KING[26 ^ 56]
-        black_eg_score = ev.EG_KING[26 ^ 56]
+        # White king at e6 = chess square 44, PSQT index = 44 ^ 56 = 20
+        white_mg_score = ev.MG_KING[44 ^ 56]
+        white_eg_score = ev.EG_KING[44 ^ 56]
+
+        # Black king at c4 = chess square 26, PSQT index = 26
+        black_mg_score = ev.MG_KING[26]
+        black_eg_score = ev.EG_KING[26]
 
         mg_score = white_mg_score - black_mg_score
         eg_score = white_eg_score - black_eg_score
@@ -30,12 +36,17 @@ class TestEvaluator:
     def _eval_kings_pawn_pos(self) -> list[float, float]:
         ev = _evaluator()
 
-        white_mg_score = ev.MG_KING[44]
-        white_eg_score = ev.EG_KING[44]
-        black_mg_score = ev.MG_KING[34 ^ 56]
-        black_eg_score = ev.EG_KING[34 ^ 56]
-        black_mg_score += ev.MG_PAWN[26 ^ 56]
-        black_eg_score += ev.EG_PAWN[26 ^ 56]
+        # White king at e6 = chess square 44, PSQT index = 44 ^ 56 = 20
+        white_mg_score = ev.MG_KING[44 ^ 56]
+        white_eg_score = ev.EG_KING[44 ^ 56]
+
+        # Black king at c5 = chess square 34, PSQT index = 34
+        black_mg_score = ev.MG_KING[34]
+        black_eg_score = ev.EG_KING[34]
+
+        # Black pawn at c4 = chess square 26, PSQT index = 26
+        black_mg_score += ev.MG_PAWN[26]
+        black_eg_score += ev.EG_PAWN[26]
 
         mg_score = white_mg_score - black_mg_score
         eg_score = white_eg_score - black_eg_score
@@ -96,7 +107,12 @@ class TestEvaluator:
         eg_phase = 24 - mg_phase
 
         [mg_score, eg_score] = self._eval_kings_pawn_pos()
-        expected = ((mg_score * mg_phase) + (eg_score * eg_phase)) / 24
+        pesto = ((mg_score * mg_phase) + (eg_score * eg_phase)) / 24
+        # Black pawn on c4 is passed (rank 3, bonus index 4 = 35cp)
+        pp_bonus = -35  # negative because it's opponent's passed pawn
+        # Black c4 pawn is isolated (no adjacent pawns), opponent's weakness = +12cp for white
+        ps_bonus = 12.0
+        expected = pesto + pp_bonus * (0.5 + 0.5 * eg_phase / 24) + ps_bonus
 
         assert score == expected
 
@@ -117,7 +133,12 @@ class TestEvaluator:
 
         [mg_score, eg_score] = self._eval_kings_pawn_pos()
         mg_score, eg_score = -mg_score, -eg_score
-        expected = ((mg_score * mg_phase) + (eg_score * eg_phase)) / 24
+        pesto = ((mg_score * mg_phase) + (eg_score * eg_phase)) / 24
+        # Black pawn on c4 is passed (rank 3, bonus index 4 = 35cp)
+        pp_bonus = 35  # positive because it's own passed pawn for black
+        # Black c4 pawn is isolated (no adjacent pawns), own weakness = -12cp for black
+        ps_bonus = -12.0
+        expected = pesto + pp_bonus * (0.5 + 0.5 * eg_phase / 24) + ps_bonus
 
         assert score == expected
 
@@ -126,6 +147,15 @@ class TestEvaluatorFactory:
     def test_create_default(self) -> None:
         evaluator = EvaluatorFactory.create(EvaluatorConfig())
         assert isinstance(evaluator, Pesto)
+
+    def test_create_unsupported_mode_raises(self) -> None:
+        cfg = EvaluatorConfig()
+        cfg.evaluator_mode = object()
+
+        with pytest.raises(
+            TypeError, match="does not support the creation of Evaluator"
+        ):
+            EvaluatorFactory.create(cfg)
 
 
 class TestScore:
@@ -146,3 +176,47 @@ class TestScore:
     def test_white_winning_black_to_move(self) -> None:
         score = score_fen("8/1Q6/8/8/1k1K4/8/8/8 b - - 16 74")
         assert score < 0
+
+
+class TestSimpleEvaluator:
+    def test_material_only_sign_flips_with_turn(self) -> None:
+        ev = SimpleEval()
+        board = BoardFactory.create(BoardPyChess)
+        board.set_fen("4k3/8/8/8/8/8/8/3QK3 w - - 0 1")
+
+        # White to move with an extra queen should be +1025 by pure material.
+        assert ev.evaluate(board) == 1025.0
+
+        # Same board, black to move should negate the side-to-move perspective.
+        board.set_fen("4k3/8/8/8/8/8/8/3QK3 b - - 0 1")
+        assert ev.evaluate(board) == -1025.0
+
+    def test_white_pawn_material_only_for_white_side_to_move(self) -> None:
+        ev = SimpleEval()
+        board = BoardFactory.create(BoardPyChess)
+        board.set_fen("4k3/8/8/4P3/8/8/8/4K3 w - - 0 1")
+
+        # Material only: one extra pawn from side-to-move perspective.
+        assert ev.evaluate(board) == 82.0
+
+    def test_black_pawn_material_only_for_black_side_to_move(self) -> None:
+        ev = SimpleEval()
+        board = BoardFactory.create(BoardPyChess)
+        board.set_fen("4k3/8/8/8/8/8/4p3/4K3 b - - 0 1")
+
+        # Material only: one extra pawn from side-to-move perspective.
+        assert ev.evaluate(board) == 82.0
+
+    def test_simple_eval_api_methods(self) -> None:
+        ev = SimpleEval()
+        board = BoardFactory.create(BoardPyChess)
+        board.set_fen(board_setup["white"]["open"])
+
+        # No-op incremental hooks should be callable and stable.
+        ev.init_from_board(board)
+        move = next(iter(board.legal_moves))
+        ev.on_push(board, move)
+        ev.on_pop()
+
+        assert ev.piece_values() == SimpleEval.MG_PIECE_VALUES
+        assert ev.delta() == SimpleEval.DELTA
